@@ -1,26 +1,138 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #FBFAF5;
+  --color-bg-alt: #FBF9F4;
+  --color-ink: #2E2A24;
+  --color-ink-secondary: #6B6259;
+  --color-ink-muted: #4A443B;
+  --color-ink-tertiary: #8F857C;
+  --color-gold: #D4AF37;
+  --color-gold-hover: #C09827;
+  --color-gold-text: #8A6B12;
+  --color-gold-text-hover: #7E6210;
+  --color-gold-soft: #B8942A;
+  --color-border: #EAE4D8;
+  --color-border-soft: #E3DBCC;
+  --color-border-subtle: #F2EEE7;
+  --color-hoverbg: #F7F4EC;
+  --color-success: #4F5E35;
+  --color-success-soft: #D8DEC4;
+  --color-success-bg: #F5F7EE;
+  --color-danger: #A6533B;
+  --color-danger-soft: #EFDDD2;
+  --color-danger-bg: #FBF3EE;
+  --color-adminbg: #2E2A24;
+  --color-adminbg-hover: #3A342C;
+  --color-adminbg-active: #4A4238;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+
+  --shadow-xs: 0 1px 2px -1px rgba(46, 42, 36, 0.06), 0 1px 1px -1px rgba(46, 42, 36, 0.04);
+  --shadow-sm: 0 4px 14px -8px rgba(46, 42, 36, 0.12);
+  --shadow-md: 0 12px 28px -12px rgba(46, 42, 36, 0.16);
+  --shadow-lg: 0 22px 44px -20px rgba(46, 42, 36, 0.22);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--color-bg);
+  --color-bg-alt: var(--color-bg-alt);
+  --color-ink: var(--color-ink);
+  --color-ink-secondary: var(--color-ink-secondary);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-tertiary: var(--color-ink-tertiary);
+  --color-gold: var(--color-gold);
+  --color-gold-hover: var(--color-gold-hover);
+  --color-gold-text: var(--color-gold-text);
+  --color-gold-text-hover: var(--color-gold-text-hover);
+  --color-gold-soft: var(--color-gold-soft);
+  --color-border: var(--color-border);
+  --color-border-soft: var(--color-border-soft);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-hoverbg: var(--color-hoverbg);
+  --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-success-bg: var(--color-success-bg);
+  --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-danger-bg: var(--color-danger-bg);
+  --color-adminbg: var(--color-adminbg);
+  --color-adminbg-hover: var(--color-adminbg-hover);
+  --color-adminbg-active: var(--color-adminbg-active);
+  --font-serif: var(--font-cormorant), Georgia, serif;
+  --font-sans: var(--font-jost), system-ui, sans-serif;
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--color-gold-text);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--color-gold-text-hover);
+}
+
+::selection {
+  background: #EFE3C2;
+}
+::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-soft);
+  border-radius: 4px;
+}
+
+@keyframes zshimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+@keyframes zfade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes ztoast {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-zfade {
+  animation: zfade 0.3s ease;
+}
+.animate-ztoast {
+  animation: ztoast 0.3s ease;
+}
+
+.img-placeholder {
+  background: repeating-linear-gradient(135deg, #F7F4EC 0 7px, #EFE9DC 7px 14px);
+}
+.img-placeholder-skeleton {
+  background: linear-gradient(90deg, #F2EEE7 0%, #EFE9DC 50%, #F2EEE7 100%);
+  background-size: 800px 100%;
+  animation: zshimmer 1.4s ease infinite;
 }

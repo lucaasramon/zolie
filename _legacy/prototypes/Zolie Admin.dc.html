@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;background:#FBFAF5;color:#2E2A24;font-family:'Jost',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+    a{color:#8A6B12;text-decoration:none}
+    a:hover{color:#7E6210}
+    button{font-family:'Jost',sans-serif}
+    input,select,textarea{font-family:'Jost',sans-serif;font-size:14px;color:#2E2A24}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#D4AF37}
+    ::selection{background:#EFE3C2}
+    ::-webkit-scrollbar{height:8px;width:8px}
+    ::-webkit-scrollbar-thumb{background:#DED3BE;border-radius:4px}
+    @keyframes afade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+    @keyframes atoast{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+  </style>
+</helmet>
+
+<div style="min-height:100vh;display:flex;align-items:stretch;background:#FBFAF5">
+
+  <aside style="flex:0 0 232px;background:#2E2A24;color:#F2EEE7;display:flex;flex-direction:column;gap:4px;padding:22px 14px;position:sticky;top:0;height:100vh;overflow-y:auto">
+    <div style="display:flex;align-items:center;gap:9px;padding:0 8px 22px">
+      <span style="height:38px;width:38px;border-radius:50%;background:#D4AF37;display:grid;place-items:center;flex:0 0 auto"><img src="assets/zolie-logo-transparent.png" alt="Zoliê Semijoias" style="height:28px;width:28px;object-fit:contain;filter:brightness(0) saturate(100%) invert(13%) sepia(9%) saturate(600%) hue-rotate(6deg)" /></span>
+      <span style="display:flex;flex-direction:column;gap:2px">
+        <span style="font:500 22px/1 'Cormorant Garamond',Georgia,serif;letter-spacing:.14em">ZOLIÊ</span>
+        <span style="font:300 8px/1 'Jost',sans-serif;letter-spacing:.28em;text-transform:uppercase;color:#D4AF37">administração</span>
+      </span>
+    </div>
+    <sc-for list="{{ navGroups }}" as="g" hint-placeholder-count="3">
+      <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:14px">
+        <span style="font:400 9px/1 'Jost',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#8F857C;padding:8px 8px 6px">{{ g.titulo }}</span>
+        <sc-for list="{{ g.itens }}" as="t" hint-placeholder-count="4">
+          <button type="button" onClick="{{ t.onClick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;border:none;background:{{ t.bg }};color:{{ t.color }};padding:11px 10px;border-radius:3px;cursor:pointer;font:400 13px/1.2 'Jost',sans-serif;transition:background .18s ease,color .18s ease" style-hover="background:#3A342C;color:#fff">
+            <span>{{ t.label }}</span>
+            <sc-if value="{{ t.temBadge }}" hint-placeholder-val="{{ false }}">
+              <span style="background:#D4AF37;color:#2E2A24;border-radius:9px;min-width:19px;padding:0 6px;font:500 10px/19px 'Jost',sans-serif;text-align:center">{{ t.badge }}</span>
+            </sc-if>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+    <a href="Zolie Loja.dc.html" style="margin-top:auto;border:1px solid #4A4238;color:#F2EEE7;padding:11px 10px;border-radius:3px;font:400 11px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;text-align:center">Ver a loja ↗</a>
+  </aside>
+
+  <div style="flex:1 1 640px;min-width:0;display:flex;flex-direction:column">
+
+    <header style="position:sticky;top:0;z-index:20;background:rgba(251,250,245,.94);backdrop-filter:blur(8px);border-bottom:1px solid #EAE4D8;padding:16px 26px;display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center;justify-content:space-between">
+      <div style="display:flex;flex-direction:column;gap:3px;min-width:0">
+        <span style="font:300 10px/1 'Jost',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#8F857C">{{ crumb }}</span>
+        <h1 style="margin:0;font:400 25px/1.15 'Cormorant Garamond',Georgia,serif;color:#2E2A24">{{ tituloPagina }}</h1>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input value="{{ busca }}" onChange="{{ onBusca }}" placeholder="Buscar produto, pedido, cliente..." aria-label="Busca global" style="width:min(280px,60vw);border:1px solid #E3DBCC;background:#fff;border-radius:3px;padding:11px 13px" />
+        <button type="button" onClick="{{ onNovoProduto }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:12px 18px;border-radius:3px;font:500 11px/1.3 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;cursor:pointer;transition:background .2s ease" style-hover="background:#C09827">+ Novo anúncio</button>
+        <span style="display:flex;align-items:center;gap:9px;border-left:1px solid #EAE4D8;padding-left:14px">
+          <span style="width:32px;height:32px;border-radius:50%;background:#EADFC6;display:grid;place-items:center;font:500 12px/1 'Jost',sans-serif;color:#7E6210">MA</span>
+          <span style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:400 12px/1 'Jost',sans-serif;color:#2E2A24">Maria Alves</span>
+            <span style="font:300 10px/1 'Jost',sans-serif;color:#8F857C">Administradora</span>
+          </span>
+        </span>
+      </div>
+    </header>
+
+    <main style="flex:1;padding:24px 26px 60px;min-width:0">
+
+      <sc-if value="{{ isDash }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:18px;animation:afade .3s ease">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:12px">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:18px;display:flex;flex-direction:column;gap:7px">
+                <span style="font:400 10px/1 'Jost',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8F857C">{{ k.label }}</span>
+                <span style="font:400 27px/1 'Jost',sans-serif;color:#2E2A24">{{ k.valor }}</span>
+                <span style="font:300 11px/1.3 'Jost',sans-serif;color:{{ k.deltaColor }}">{{ k.delta }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:stretch">
+            <section style="flex:2 1 400px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:16px">
+              <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:baseline;justify-content:space-between">
+                <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Faturamento dos últimos 7 dias</span>
+                <span style="font:300 12px/1 'Jost',sans-serif;color:#8F857C">total {{ totalSemana }}</span>
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:10px;height:170px">
+                <sc-for list="{{ chart }}" as="b" hint-placeholder-count="7">
+                  <span style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:7px;height:100%">
+                    <span style="font:300 10px/1 'Jost',sans-serif;color:#8F857C">{{ b.valor }}</span>
+                    <span style="width:100%;background:{{ b.cor }};border-radius:2px 2px 0 0;display:block;height:{{ b.h }}"></span>
+                    <span style="font:300 10px/1 'Jost',sans-serif;color:#6B6259">{{ b.dia }}</span>
+                  </span>
+                </sc-for>
+              </div>
+            </section>
+            <section style="flex:1 1 260px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Mais vendidos no mês</span>
+              <sc-for list="{{ topProdutos }}" as="p" hint-placeholder-count="5">
+                <div style="display:flex;gap:11px;align-items:center;border-bottom:1px solid #F2EEE7;padding-bottom:9px">
+                  <span style="flex:0 0 34px;height:34px;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 5px,#EFE9DC 5px 10px)"></span>
+                  <span style="flex:1;display:flex;flex-direction:column;gap:2px;min-width:0">
+                    <span style="font:400 13px/1.25 'Jost',sans-serif;color:#2E2A24;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ p.nome }}</span>
+                    <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ p.vendas }} vendas</span>
+                  </span>
+                  <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ p.receita }}</span>
+                </div>
+              </sc-for>
+            </section>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+            <section style="flex:2 1 400px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+                <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Pedidos recentes</span>
+                <button type="button" onClick="{{ onVerPedidos }}" style="border:none;background:none;padding:0;cursor:pointer;font:400 11px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#8A6B12">Ver todos →</button>
+              </div>
+              <sc-for list="{{ pedidosRecentes }}" as="o" hint-placeholder-count="4">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border-bottom:1px solid #F2EEE7;padding-bottom:10px">
+                  <span style="display:flex;flex-direction:column;gap:3px">
+                    <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ o.numero }} · {{ o.cliente }}</span>
+                    <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ o.data }} · {{ o.itensTxt }} · {{ o.pagamento }}</span>
+                  </span>
+                  <span style="font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:{{ o.statusColor }};border:1px solid {{ o.statusBorder }};background:{{ o.statusBg }};padding:7px 11px;border-radius:16px">{{ o.status }}</span>
+                  <span style="font:400 14px/1 'Jost',sans-serif;color:#2E2A24">{{ o.totalFmt }}</span>
+                </div>
+              </sc-for>
+            </section>
+            <section style="flex:1 1 260px;background:#FBF3EE;border:1px solid #EFDDD2;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#A6533B">Precisa de atenção</span>
+              <sc-for list="{{ alertas }}" as="a" hint-placeholder-count="3">
+                <button type="button" onClick="{{ a.onClick }}" style="text-align:left;border:none;background:none;padding:0 0 9px;border-bottom:1px solid #EFDDD2;cursor:pointer;display:flex;flex-direction:column;gap:3px">
+                  <span style="font:400 13px/1.3 'Jost',sans-serif;color:#2E2A24">{{ a.titulo }}</span>
+                  <span style="font:300 11px/1.4 'Jost',sans-serif;color:#6B6259">{{ a.texto }}</span>
+                </button>
+              </sc-for>
+            </section>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isProdutos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;animation:afade .3s ease">
+          <div style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+              <select value="{{ filtroCategoria }}" onChange="{{ onFiltroCategoria }}" aria-label="Filtrar por categoria" style="border:1px solid #E3DBCC;border-radius:3px;padding:10px 12px;background:#fff;cursor:pointer">
+                <option value="">Todas as categorias</option>
+                <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="6">
+                  <option value="{{ c.slug }}">{{ c.nome }}</option>
+                </sc-for>
+              </select>
+              <select value="{{ filtroStatus }}" onChange="{{ onFiltroStatus }}" aria-label="Filtrar por status" style="border:1px solid #E3DBCC;border-radius:3px;padding:10px 12px;background:#fff;cursor:pointer">
+                <option value="">Todos os status</option>
+                <option value="ativo">Ativos</option>
+                <option value="inativo">Pausados</option>
+                <option value="baixo">Estoque baixo</option>
+                <option value="zerado">Sem estoque</option>
+              </select>
+              <span style="font:300 12px/1 'Jost',sans-serif;color:#8F857C">{{ produtosCount }} anúncios</span>
+            </div>
+            <button type="button" onClick="{{ onNovoProduto }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:11px 18px;border-radius:3px;font:500 11px/1.3 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;cursor:pointer">+ Novo anúncio</button>
+          </div>
+
+          <div style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:820px">
+              <thead>
+                <tr style="background:#F7F4EC">
+                  <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Anúncio</th>
+                  <th style="text-align:left;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Categoria</th>
+                  <th style="text-align:left;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Material</th>
+                  <th style="text-align:right;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Preço</th>
+                  <th style="text-align:right;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Estoque</th>
+                  <th style="text-align:left;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Status</th>
+                  <th style="text-align:right;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ produtosLista }}" as="p" hint-placeholder-count="8">
+                  <tr style="border-top:1px solid #F2EEE7">
+                    <td style="padding:11px 16px">
+                      <span style="display:flex;gap:11px;align-items:center">
+                        <span style="flex:0 0 38px;height:38px;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 5px,#EFE9DC 5px 10px)"></span>
+                        <span style="display:flex;flex-direction:column;gap:3px">
+                          <span style="font:400 13px/1.25 'Jost',sans-serif;color:#2E2A24">{{ p.nome }}</span>
+                          <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ p.sku }} · {{ p.slug }}</span>
+                        </span>
+                      </span>
+                    </td>
+                    <td style="padding:11px 12px;font:300 12px/1.3 'Jost',sans-serif;color:#6B6259">{{ p.categoriaNome }}</td>
+                    <td style="padding:11px 12px;font:300 12px/1.3 'Jost',sans-serif;color:#6B6259">{{ p.materialLabel }}</td>
+                    <td style="padding:11px 12px;text-align:right">
+                      <span style="display:flex;flex-direction:column;gap:2px;align-items:flex-end">
+                        <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ p.precoFmt }}</span>
+                        <sc-if value="{{ p.temDesconto }}" hint-placeholder-val="{{ false }}">
+                          <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C;text-decoration:line-through">{{ p.precoDeFmt }}</span>
+                        </sc-if>
+                      </span>
+                    </td>
+                    <td style="padding:11px 12px;text-align:right;font:400 13px/1 'Jost',sans-serif;color:{{ p.estoqueColor }}">{{ p.estoque }}</td>
+                    <td style="padding:11px 12px">
+                      <button type="button" onClick="{{ p.onToggleAtivo }}" style="border:1px solid {{ p.statusBorder }};background:{{ p.statusBg }};color:{{ p.statusColor }};border-radius:16px;padding:6px 11px;font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">{{ p.statusLabel }}</button>
+                    </td>
+                    <td style="padding:11px 16px;text-align:right">
+                      <span style="display:inline-flex;gap:6px">
+                        <button type="button" onClick="{{ p.onEdit }}" style="border:1px solid #E3DBCC;background:#fff;color:#8A6B12;padding:8px 12px;font:400 11px/1 'Jost',sans-serif;border-radius:3px;cursor:pointer" style-hover="border-color:#D4AF37">Editar</button>
+                        <button type="button" onClick="{{ p.onDuplicar }}" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:8px 12px;font:400 11px/1 'Jost',sans-serif;border-radius:3px;cursor:pointer" style-hover="border-color:#D4AF37">Duplicar</button>
+                        <button type="button" onClick="{{ p.onRemover }}" style="border:1px solid #EFDDD2;background:#fff;color:#A6533B;padding:8px 12px;font:400 11px/1 'Jost',sans-serif;border-radius:3px;cursor:pointer" style-hover="background:#FBF3EE">Excluir</button>
+                      </span>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+          <sc-if value="{{ produtosVazio }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0;padding:44px 20px;text-align:center;border:1px dashed #DED3BE;border-radius:3px;font:300 13px/1.6 'Jost',sans-serif;color:#8F857C">Nenhum anúncio com esses filtros.</p>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <div style="flex:2 1 460px;display:flex;flex-direction:column;gap:14px;min-width:0">
+
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Informações do anúncio</span>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Nome da peça *
+                <input value="{{ f.nome.value }}" onChange="{{ f.nome.onChange }}" placeholder="Ex: Colar Ponto de Luz Zircônia" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <div style="display:flex;gap:12px;flex-wrap:wrap">
+                <span style="flex:1 1 240px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">URL da página
+                  <span style="border:1px dashed #E3DBCC;border-radius:3px;padding:13px;font:300 13px/1 'Jost',sans-serif;color:#6B6259;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">zolie.com.br/{{ slugPreview }}</span>
+                </span>
+                <span style="flex:0 1 150px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Código (SKU)
+                  <span style="border:1px dashed #E3DBCC;border-radius:3px;padding:13px;font:300 13px/1 'Jost',sans-serif;color:#6B6259">{{ skuPreview }}</span>
+                </span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Categoria *
+                  <select value="{{ f.categoria.value }}" onChange="{{ f.categoria.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;background:#fff;cursor:pointer">
+                    <option value="">Selecione</option>
+                    <sc-for list="{{ categorias }}" as="c" hint-placeholder-count="6">
+                      <option value="{{ c.slug }}">{{ c.nome }}</option>
+                    </sc-for>
+                  </select>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Material *
+                  <select value="{{ f.material.value }}" onChange="{{ f.material.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;background:#fff;cursor:pointer">
+                    <option value="prata925">Prata 925</option>
+                    <option value="ouro">Banhado a ouro 18k</option>
+                  </select>
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Pedra
+                  <select value="{{ f.pedra.value }}" onChange="{{ f.pedra.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;background:#fff;cursor:pointer">
+                    <option value="sem">Sem pedra</option>
+                    <option value="zirconia">Zircônia</option>
+                    <option value="cristal">Cristal</option>
+                    <option value="perola">Pérola</option>
+                  </select>
+                </label>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Descrição *
+                <textarea rows="4" value="{{ f.descricao.value }}" onChange="{{ f.descricao.onChange }}" placeholder="Conte o que faz essa peça especial: acabamento, uso, embalagem..." style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;resize:vertical"></textarea>
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Cuidados com a peça
+                <textarea rows="2" value="{{ f.cuidados.value }}" onChange="{{ f.cuidados.onChange }}" placeholder="Evite perfume e cloro, guarde em saquinho individual..." style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;resize:vertical"></textarea>
+              </label>
+            </section>
+
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap">
+                <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Fotos</span>
+                <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">a primeira é a foto de capa · 1000×1000px</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px">
+                <sc-for list="{{ slotsFoto }}" as="s" hint-placeholder-count="4">
+                  <span style="aspect-ratio:1/1;border:1px dashed #DED3BE;border-radius:3px;background:repeating-linear-gradient(135deg,#F7F4EC 0 6px,#EFE9DC 6px 12px);display:grid;place-items:center;padding:10px;cursor:pointer">
+                    <span style="font:400 9px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:#8F857C;text-align:center">{{ s.label }}<br />arraste a foto</span>
+                  </span>
+                </sc-for>
+              </div>
+            </section>
+
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Preço e estoque</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Preço cheio (R$) *
+                  <input value="{{ f.preco.value }}" onChange="{{ f.preco.onChange }}" placeholder="149,90" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Preço promocional (R$)
+                  <input value="{{ f.promo.value }}" onChange="{{ f.promo.onChange }}" placeholder="opcional" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Estoque *
+                  <input value="{{ f.estoque.value }}" onChange="{{ f.estoque.onChange }}" placeholder="10" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+                </label>
+                <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Peso (g)
+                  <input value="{{ f.peso.value }}" onChange="{{ f.peso.onChange }}" placeholder="3,4" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+                </label>
+              </div>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Tamanhos disponíveis (separe por vírgula)
+                <input value="{{ f.tamanhos.value }}" onChange="{{ f.tamanhos.onChange }}" placeholder="40cm, 45cm, 50cm" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ tamanhoChips }}" as="t" hint-placeholder-count="0">
+                  <span style="border:1px solid #E3DBCC;background:#F7F4EC;border-radius:16px;padding:7px 13px;font:300 12px/1 'Jost',sans-serif;color:#4A443B">{{ t }}</span>
+                </sc-for>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;background:#F7F4EC;border:1px solid #EAE4D8;border-radius:3px;padding:14px">
+                <span style="font:400 12px/1.5 'Jost',sans-serif;color:#4A443B">Como a cliente vai ver: <strong style="font-weight:500;color:#2E2A24">{{ previewPreco }}</strong></span>
+                <span style="font:300 12px/1.5 'Jost',sans-serif;color:#6B6259">{{ previewPix }} no Pix · {{ previewParcela }}</span>
+              </div>
+            </section>
+          </div>
+
+          <aside style="flex:1 1 270px;display:flex;flex-direction:column;gap:14px;position:sticky;top:104px;min-width:0">
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:14px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Publicação</span>
+              <sc-for list="{{ flags }}" as="fl" hint-placeholder-count="4">
+                <label style="display:flex;gap:10px;align-items:flex-start;font:300 13px/1.45 'Jost',sans-serif;color:#4A443B;cursor:pointer">
+                  <input type="checkbox" checked="{{ fl.value }}" onChange="{{ fl.onChange }}" style="margin-top:3px;accent-color:#D4AF37;width:16px;height:16px" />
+                  <span style="display:flex;flex-direction:column;gap:2px">
+                    <span>{{ fl.label }}</span>
+                    <span style="font:300 11px/1.4 'Jost',sans-serif;color:#8F857C">{{ fl.hint }}</span>
+                  </span>
+                </label>
+              </sc-for>
+              <sc-if value="{{ erro }}" hint-placeholder-val="{{ false }}">
+                <span style="background:#FBF3EE;border:1px solid #EFDDD2;border-radius:3px;padding:11px;font:300 12px/1.5 'Jost',sans-serif;color:#A6533B">{{ erro }}</span>
+              </sc-if>
+              <button type="button" onClick="{{ onSalvar }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:15px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;transition:background .2s ease" style-hover="background:#C09827">{{ salvarLabel }}</button>
+              <button type="button" onClick="{{ onCancelar }}" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:13px;border-radius:3px;font:400 12px/1 'Jost',sans-serif;cursor:pointer">Cancelar</button>
+            </section>
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:9px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Prévia do card</span>
+              <span style="aspect-ratio:1/1;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 7px,#EFE9DC 7px 14px);display:grid;place-items:center">
+                <span style="font:400 9px/1.4 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:#8F857C">foto de capa</span>
+              </span>
+              <span style="font:300 9px/1 'Jost',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8F857C">{{ previewMaterial }}</span>
+              <span style="font:400 15px/1.3 'Cormorant Garamond',serif;color:#2E2A24">{{ previewNome }}</span>
+              <span style="font:500 18px/1 'Jost',sans-serif;color:#2E2A24">{{ previewPreco }}</span>
+              <span style="font:400 11px/1.4 'Jost',sans-serif;color:#8A6B12">{{ previewPix }} no Pix</span>
+            </section>
+          </aside>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isCategorias }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <section style="flex:2 1 420px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:520px">
+              <thead>
+                <tr style="background:#F7F4EC">
+                  <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Categoria</th>
+                  <th style="text-align:left;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Slug</th>
+                  <th style="text-align:right;padding:12px 12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Anúncios</th>
+                  <th style="text-align:right;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ categoriasLista }}" as="c" hint-placeholder-count="6">
+                  <tr style="border-top:1px solid #F2EEE7">
+                    <td style="padding:12px 16px">
+                      <span style="display:flex;gap:11px;align-items:center">
+                        <span style="flex:0 0 34px;height:34px;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 5px,#EFE9DC 5px 10px)"></span>
+                        <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ c.nome }}</span>
+                      </span>
+                    </td>
+                    <td style="padding:12px;font:300 12px/1 'Jost',sans-serif;color:#6B6259">{{ c.slug }}</td>
+                    <td style="padding:12px;text-align:right;font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ c.total }}</td>
+                    <td style="padding:12px 16px;text-align:right">
+                      <span style="display:inline-flex;gap:6px">
+                        <button type="button" onClick="{{ c.onSubir }}" aria-label="Subir ordem" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:7px 10px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">↑</button>
+                        <button type="button" onClick="{{ c.onDescer }}" aria-label="Descer ordem" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:7px 10px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">↓</button>
+                        <button type="button" onClick="{{ c.onRemover }}" style="border:1px solid #EFDDD2;background:#fff;color:#A6533B;padding:7px 11px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Excluir</button>
+                      </span>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </section>
+          <section style="flex:1 1 260px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Nova categoria</span>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Nome
+              <input value="{{ f.catNome.value }}" onChange="{{ f.catNome.onChange }}" placeholder="Ex: Tornozeleiras" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <span style="font:300 11px/1.5 'Jost',sans-serif;color:#8F857C">Slug gerado: {{ catSlugPreview }}</span>
+            <span style="aspect-ratio:16/9;border:1px dashed #DED3BE;border-radius:3px;background:repeating-linear-gradient(135deg,#F7F4EC 0 6px,#EFE9DC 6px 12px);display:grid;place-items:center;cursor:pointer">
+              <span style="font:400 9px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:#8F857C;text-align:center">imagem da categoria<br />arraste aqui</span>
+            </span>
+            <button type="button" onClick="{{ onAddCategoria }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:14px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Criar categoria</button>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isEstoque }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;animation:afade .3s ease">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px">
+            <sc-for list="{{ estoqueKpis }}" as="k" hint-placeholder-count="3">
+              <div style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:18px;display:flex;flex-direction:column;gap:6px">
+                <span style="font:400 10px/1 'Jost',sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#8F857C">{{ k.label }}</span>
+                <span style="font:400 25px/1 'Jost',sans-serif;color:{{ k.cor }}">{{ k.valor }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:560px">
+              <thead>
+                <tr style="background:#F7F4EC">
+                  <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Peça</th>
+                  <th style="text-align:right;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Estoque</th>
+                  <th style="text-align:right;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Repor</th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ estoqueLista }}" as="p" hint-placeholder-count="6">
+                  <tr style="border-top:1px solid #F2EEE7">
+                    <td style="padding:12px 16px">
+                      <span style="display:flex;flex-direction:column;gap:3px">
+                        <span style="font:400 13px/1.2 'Jost',sans-serif;color:#2E2A24">{{ p.nome }}</span>
+                        <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ p.sku }} · {{ p.categoriaNome }}</span>
+                      </span>
+                    </td>
+                    <td style="padding:12px;text-align:right;font:400 15px/1 'Jost',sans-serif;color:{{ p.estoqueColor }}">{{ p.estoque }}</td>
+                    <td style="padding:12px 16px;text-align:right">
+                      <span style="display:inline-flex;gap:6px;align-items:center">
+                        <button type="button" onClick="{{ p.onMenos }}" aria-label="Diminuir estoque" style="border:1px solid #E3DBCC;background:#fff;width:32px;height:32px;border-radius:3px;cursor:pointer;font-size:15px;color:#6B6259">−</button>
+                        <button type="button" onClick="{{ p.onMais }}" aria-label="Aumentar estoque" style="border:1px solid #E3DBCC;background:#fff;width:32px;height:32px;border-radius:3px;cursor:pointer;font-size:15px;color:#6B6259">+</button>
+                        <button type="button" onClick="{{ p.onRepor }}" style="border:1px solid #D4AF37;background:#fff;color:#8A6B12;padding:8px 12px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif;letter-spacing:.06em">+10</button>
+                      </span>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPedidos }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;animation:afade .3s ease">
+          <div style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:12px 16px;display:flex;gap:7px;flex-wrap:wrap">
+            <sc-for list="{{ filtrosPedido }}" as="t" hint-placeholder-count="6">
+              <button type="button" onClick="{{ t.onClick }}" style="border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};border-radius:16px;padding:8px 14px;font:400 12px/1 'Jost',sans-serif;cursor:pointer">{{ t.label }} {{ t.count }}</button>
+            </sc-for>
+          </div>
+          <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;min-width:760px">
+              <thead>
+                <tr style="background:#F7F4EC">
+                  <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Pedido</th>
+                  <th style="text-align:left;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Cliente</th>
+                  <th style="text-align:left;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Pagamento</th>
+                  <th style="text-align:right;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Total</th>
+                  <th style="text-align:left;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Status</th>
+                  <th style="text-align:right;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <sc-for list="{{ pedidosLista }}" as="o" hint-placeholder-count="6">
+                  <tr style="border-top:1px solid #F2EEE7">
+                    <td style="padding:12px 16px">
+                      <span style="display:flex;flex-direction:column;gap:3px">
+                        <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ o.numero }}</span>
+                        <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ o.data }} · {{ o.itensTxt }}</span>
+                      </span>
+                    </td>
+                    <td style="padding:12px;font:300 12px/1.4 'Jost',sans-serif;color:#4A443B">{{ o.cliente }}<br /><span style="color:#8F857C">{{ o.cidade }}</span></td>
+                    <td style="padding:12px;font:300 12px/1.4 'Jost',sans-serif;color:#4A443B">{{ o.pagamento }}</td>
+                    <td style="padding:12px;text-align:right;font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ o.totalFmt }}</td>
+                    <td style="padding:12px">
+                      <select value="{{ o.status }}" onChange="{{ o.onStatus }}" aria-label="Status do pedido" style="border:1px solid {{ o.statusBorder }};background:{{ o.statusBg }};color:{{ o.statusColor }};border-radius:3px;padding:9px 10px;cursor:pointer;font:400 12px/1 'Jost',sans-serif">
+                        <option value="Aguardando pagamento">Aguardando pagamento</option>
+                        <option value="Processando">Processando</option>
+                        <option value="Separando">Separando</option>
+                        <option value="Enviado">Enviado</option>
+                        <option value="Entregue">Entregue</option>
+                        <option value="Cancelado">Cancelado</option>
+                      </select>
+                    </td>
+                    <td style="padding:12px 16px;text-align:right">
+                      <button type="button" onClick="{{ o.onAbrir }}" style="border:1px solid #E3DBCC;background:#fff;color:#8A6B12;padding:8px 13px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Detalhes</button>
+                    </td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPedido }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <div style="flex:2 1 420px;display:flex;flex-direction:column;gap:14px;min-width:0">
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+                <span style="font:400 20px/1 'Cormorant Garamond',serif;color:#2E2A24">{{ pedido.numero }}</span>
+                <span style="font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:{{ pedido.statusColor }};border:1px solid {{ pedido.statusBorder }};background:{{ pedido.statusBg }};padding:7px 12px;border-radius:16px">{{ pedido.status }}</span>
+              </div>
+              <sc-for list="{{ pedidoItens }}" as="i" hint-placeholder-count="2">
+                <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;border-bottom:1px solid #F2EEE7;padding-bottom:11px">
+                  <span style="flex:0 0 46px;height:46px;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 5px,#EFE9DC 5px 10px)"></span>
+                  <span style="flex:1 1 180px;display:flex;flex-direction:column;gap:3px">
+                    <span style="font:400 13px/1.3 'Jost',sans-serif;color:#2E2A24">{{ i.nome }}</span>
+                    <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ i.variacao }} · {{ i.qtd }}× {{ i.unit }}</span>
+                  </span>
+                  <span style="font:400 14px/1 'Jost',sans-serif;color:#2E2A24">{{ i.subtotal }}</span>
+                </div>
+              </sc-for>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <sc-for list="{{ pedidoResumo }}" as="l" hint-placeholder-count="4">
+                  <span style="display:flex;justify-content:space-between;font:300 13px/1 'Jost',sans-serif;color:{{ l.cor }}"><span>{{ l.k }}</span><span>{{ l.v }}</span></span>
+                </sc-for>
+                <span style="display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid #EDE7DA;padding-top:10px"><span style="font:400 14px/1 'Jost',sans-serif">Total</span><span style="font:500 22px/1 'Jost',sans-serif">{{ pedido.totalFmt }}</span></span>
+              </div>
+            </section>
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Histórico</span>
+              <sc-for list="{{ pedidoEventos }}" as="e" hint-placeholder-count="3">
+                <span style="display:flex;gap:12px;align-items:flex-start">
+                  <span style="flex:0 0 7px;height:7px;border-radius:50%;background:#D4AF37;margin-top:6px"></span>
+                  <span style="display:flex;flex-direction:column;gap:2px">
+                    <span style="font:400 13px/1.3 'Jost',sans-serif;color:#2E2A24">{{ e.titulo }}</span>
+                    <span style="font:300 11px/1.4 'Jost',sans-serif;color:#8F857C">{{ e.quando }}</span>
+                  </span>
+                </span>
+              </sc-for>
+            </section>
+          </div>
+          <aside style="flex:1 1 270px;display:flex;flex-direction:column;gap:14px;min-width:0">
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Atualizar status</span>
+              <select value="{{ pedido.status }}" onChange="{{ pedido.onStatus }}" aria-label="Novo status" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;background:#fff;cursor:pointer">
+                <option value="Aguardando pagamento">Aguardando pagamento</option>
+                <option value="Processando">Processando</option>
+                <option value="Separando">Separando</option>
+                <option value="Enviado">Enviado</option>
+                <option value="Entregue">Entregue</option>
+                <option value="Cancelado">Cancelado</option>
+              </select>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Código de rastreio
+                <input value="{{ f.rastreio.value }}" onChange="{{ f.rastreio.onChange }}" placeholder="BR123456789XX" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <button type="button" onClick="{{ onSalvarRastreio }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:14px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Salvar e avisar cliente</button>
+              <button type="button" onClick="{{ onVoltarPedidos }}" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:12px;border-radius:3px;font:400 12px/1 'Jost',sans-serif;cursor:pointer">← Voltar aos pedidos</button>
+            </section>
+            <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:9px;font:300 13px/1.6 'Jost',sans-serif;color:#4A443B">
+              <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Cliente e entrega</span>
+              <span>{{ pedido.cliente }}<br />{{ pedido.email }}<br />{{ pedido.telefone }}</span>
+              <span style="border-top:1px solid #F2EEE7;padding-top:9px">{{ pedido.endereco }}</span>
+              <span style="border-top:1px solid #F2EEE7;padding-top:9px">{{ pedido.pagamento }}</span>
+            </section>
+          </aside>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isClientes }}" hint-placeholder-val="{{ false }}">
+        <section style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;overflow-x:auto;animation:afade .3s ease">
+          <table style="width:100%;border-collapse:collapse;min-width:700px">
+            <thead>
+              <tr style="background:#F7F4EC">
+                <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Cliente</th>
+                <th style="text-align:left;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Contato</th>
+                <th style="text-align:right;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Pedidos</th>
+                <th style="text-align:right;padding:12px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Total gasto</th>
+                <th style="text-align:left;padding:12px 16px;font:500 10px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#8F857C">Última compra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <sc-for list="{{ clientes }}" as="c" hint-placeholder-count="6">
+                <tr style="border-top:1px solid #F2EEE7">
+                  <td style="padding:12px 16px">
+                    <span style="display:flex;gap:11px;align-items:center">
+                      <span style="flex:0 0 32px;height:32px;border-radius:50%;background:#EADFC6;display:grid;place-items:center;font:500 11px/1 'Jost',sans-serif;color:#7E6210">{{ c.iniciais }}</span>
+                      <span style="display:flex;flex-direction:column;gap:2px">
+                        <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ c.nome }}</span>
+                        <span style="font:300 11px/1 'Jost',sans-serif;color:#8F857C">{{ c.tag }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td style="padding:12px;font:300 12px/1.5 'Jost',sans-serif;color:#4A443B">{{ c.email }}<br /><span style="color:#8F857C">{{ c.telefone }}</span></td>
+                  <td style="padding:12px;text-align:right;font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ c.pedidos }}</td>
+                  <td style="padding:12px;text-align:right;font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ c.gasto }}</td>
+                  <td style="padding:12px 16px;font:300 12px/1 'Jost',sans-serif;color:#6B6259">{{ c.ultima }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </section>
+      </sc-if>
+
+      <sc-if value="{{ isCupons }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <div style="flex:2 1 420px;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <sc-for list="{{ cuponsLista }}" as="c" hint-placeholder-count="3">
+              <article style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between">
+                <span style="display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span style="font:500 15px/1 'Jost',sans-serif;letter-spacing:.12em;color:#8A6B12">{{ c.codigo }}</span>
+                  <span style="font:300 12px/1.4 'Jost',sans-serif;color:#6B6259">{{ c.regra }}</span>
+                </span>
+                <span style="font:300 12px/1.5 'Jost',sans-serif;color:#8F857C">válido até {{ c.validade }}<br />{{ c.usosTxt }}</span>
+                <span style="display:flex;gap:7px;align-items:center">
+                  <button type="button" onClick="{{ c.onToggle }}" style="border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.cor }};border-radius:16px;padding:7px 12px;font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">{{ c.statusLabel }}</button>
+                  <button type="button" onClick="{{ c.onRemover }}" style="border:1px solid #EFDDD2;background:#fff;color:#A6533B;padding:8px 12px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Excluir</button>
+                </span>
+              </article>
+            </sc-for>
+          </div>
+          <section style="flex:1 1 280px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Novo cupom</span>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Código
+              <input value="{{ f.cupomCodigo.value }}" onChange="{{ f.cupomCodigo.onChange }}" placeholder="BRILHE10" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;text-transform:uppercase" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Tipo de desconto
+              <select value="{{ f.cupomTipo.value }}" onChange="{{ f.cupomTipo.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;background:#fff;cursor:pointer">
+                <option value="percent">Percentual (%)</option>
+                <option value="fixo">Valor fixo (R$)</option>
+                <option value="frete">Frete grátis</option>
+              </select>
+            </label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="flex:1 1 100px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Valor
+                <input value="{{ f.cupomValor.value }}" onChange="{{ f.cupomValor.onChange }}" placeholder="10" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="flex:1 1 100px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Pedido mínimo
+                <input value="{{ f.cupomMinimo.value }}" onChange="{{ f.cupomMinimo.onChange }}" placeholder="R$ 0" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="flex:1 1 110px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Validade
+                <input value="{{ f.cupomValidade.value }}" onChange="{{ f.cupomValidade.onChange }}" placeholder="31/12/2026" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="flex:1 1 110px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Limite de usos
+                <input value="{{ f.cupomLimite.value }}" onChange="{{ f.cupomLimite.onChange }}" placeholder="ilimitado" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+            </div>
+            <label style="display:flex;gap:10px;align-items:center;font:300 13px/1.4 'Jost',sans-serif;color:#4A443B;cursor:pointer">
+              <input type="checkbox" checked="{{ f.cupomPrimeira.value }}" onChange="{{ f.cupomPrimeira.onChange }}" style="accent-color:#D4AF37;width:16px;height:16px" />
+              Só na primeira compra
+            </label>
+            <button type="button" onClick="{{ onAddCupom }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:14px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Criar cupom</button>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isBanners }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <div style="flex:2 1 420px;display:flex;flex-direction:column;gap:12px;min-width:0">
+            <sc-for list="{{ bannersLista }}" as="b" hint-placeholder-count="3">
+              <article style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:center">
+                <span style="flex:0 0 120px;aspect-ratio:16/9;border-radius:2px;background:repeating-linear-gradient(135deg,#F7F4EC 0 6px,#EFE9DC 6px 12px);display:grid;place-items:center">
+                  <span style="font:400 8px/1.4 ui-monospace,Menlo,monospace;text-transform:uppercase;color:#8F857C;text-align:center">imagem<br />{{ b.posicao }}</span>
+                </span>
+                <span style="flex:1 1 200px;display:flex;flex-direction:column;gap:4px;min-width:0">
+                  <span style="font:300 9px/1 'Jost',sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#8A6B12">{{ b.tag }}</span>
+                  <span style="font:400 17px/1.2 'Cormorant Garamond',serif;color:#2E2A24">{{ b.titulo }}</span>
+                  <span style="font:300 12px/1.5 'Jost',sans-serif;color:#6B6259">{{ b.subtitulo }}</span>
+                  <span style="font:300 11px/1.4 'Jost',sans-serif;color:#8F857C">botão “{{ b.cta }}” → {{ b.link }}</span>
+                </span>
+                <span style="display:flex;gap:6px;align-items:center">
+                  <button type="button" onClick="{{ b.onSubir }}" aria-label="Subir" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:7px 10px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">↑</button>
+                  <button type="button" onClick="{{ b.onDescer }}" aria-label="Descer" style="border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:7px 10px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">↓</button>
+                  <button type="button" onClick="{{ b.onToggle }}" style="border:1px solid {{ b.border }};background:{{ b.bg }};color:{{ b.cor }};border-radius:16px;padding:7px 12px;font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;cursor:pointer">{{ b.statusLabel }}</button>
+                  <button type="button" onClick="{{ b.onRemover }}" style="border:1px solid #EFDDD2;background:#fff;color:#A6533B;padding:8px 12px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Excluir</button>
+                </span>
+              </article>
+            </sc-for>
+          </div>
+          <section style="flex:1 1 280px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Novo banner da home</span>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Etiqueta (linha fina)
+              <input value="{{ f.bTag.value }}" onChange="{{ f.bTag.onChange }}" placeholder="Coleção Luz de Inverno" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Título
+              <input value="{{ f.bTitulo.value }}" onChange="{{ f.bTitulo.onChange }}" placeholder="Até 30% off em prata 925" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Subtítulo
+              <textarea rows="2" value="{{ f.bSub.value }}" onChange="{{ f.bSub.onChange }}" placeholder="Frete grátis acima de R$ 199." style="border:1px solid #E3DBCC;border-radius:3px;padding:13px;resize:vertical"></textarea>
+            </label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="flex:1 1 110px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Texto do botão
+                <input value="{{ f.bCta.value }}" onChange="{{ f.bCta.onChange }}" placeholder="Aproveitar" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="flex:1 1 110px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Link
+                <input value="{{ f.bLink.value }}" onChange="{{ f.bLink.onChange }}" placeholder="/promocoes" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+            </div>
+            <span style="aspect-ratio:16/9;border:1px dashed #DED3BE;border-radius:3px;background:repeating-linear-gradient(135deg,#F7F4EC 0 6px,#EFE9DC 6px 12px);display:grid;place-items:center;cursor:pointer">
+              <span style="font:400 9px/1.5 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;color:#8F857C;text-align:center">imagem do banner<br />1920×720 · arraste aqui</span>
+            </span>
+            <button type="button" onClick="{{ onAddBanner }}" style="border:none;background:#D4AF37;color:#2E2A24;padding:14px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Publicar banner</button>
+          </section>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isAvaliacoes }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px;animation:afade .3s ease">
+          <sc-for list="{{ avaliacoes }}" as="a" hint-placeholder-count="4">
+            <article style="background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:18px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start;justify-content:space-between">
+              <span style="flex:1 1 320px;display:flex;flex-direction:column;gap:6px;min-width:0">
+                <span style="font-size:12px;color:#B8942A;letter-spacing:.08em">{{ a.estrelas }}</span>
+                <span style="font:400 13px/1 'Jost',sans-serif;color:#2E2A24">{{ a.autor }} <span style="font-weight:300;color:#8F857C">· {{ a.produto }} · {{ a.data }}</span></span>
+                <span style="font:300 13px/1.65 'Jost',sans-serif;color:#4A443B;text-wrap:pretty">{{ a.texto }}</span>
+              </span>
+              <span style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">
+                <span style="font:400 10px/1 'Jost',sans-serif;letter-spacing:.1em;text-transform:uppercase;color:{{ a.cor }};border:1px solid {{ a.border }};background:{{ a.bg }};padding:7px 11px;border-radius:16px">{{ a.statusLabel }}</span>
+                <button type="button" onClick="{{ a.onAprovar }}" style="border:1px solid #D8DEC4;background:#F5F7EE;color:#6B7A4B;padding:9px 13px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Aprovar</button>
+                <button type="button" onClick="{{ a.onReprovar }}" style="border:1px solid #EFDDD2;background:#fff;color:#A6533B;padding:9px 13px;border-radius:3px;cursor:pointer;font:400 11px/1 'Jost',sans-serif">Reprovar</button>
+              </span>
+            </article>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isConfig }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;animation:afade .3s ease">
+          <section style="flex:1 1 320px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Regras de venda</span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Frete grátis acima de (R$)
+                <input value="{{ f.cfgFrete.value }}" onChange="{{ f.cfgFrete.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Desconto no Pix (%)
+                <input value="{{ f.cfgPix.value }}" onChange="{{ f.cfgPix.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Máx. de parcelas
+                <input value="{{ f.cfgParcelas.value }}" onChange="{{ f.cfgParcelas.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Alerta de estoque baixo
+                <input value="{{ f.cfgEstoque.value }}" onChange="{{ f.cfgEstoque.onChange }}" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+            </div>
+            <span style="font:300 12px/1.6 'Jost',sans-serif;color:#8F857C">Essas regras valem para toda a vitrine: selo de frete grátis, preço no Pix e parcelamento exibido nos cards e na página do produto.</span>
+            <button type="button" onClick="{{ onSalvarConfig }}" style="align-self:flex-start;border:none;background:#D4AF37;color:#2E2A24;padding:14px 24px;border-radius:3px;font:500 11px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer">Salvar regras</button>
+          </section>
+          <section style="flex:1 1 300px;background:#fff;border:1px solid #EAE4D8;border-radius:3px;padding:22px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:500 12px/1 'Jost',sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#2E2A24">Dados da loja</span>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Razão social
+              <input value="Zoliê Semijoias LTDA" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <label style="flex:1 1 130px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">CNPJ
+                <input value="00.000.000/0001-00" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+              <label style="flex:1 1 130px;display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">WhatsApp
+                <input value="(11) 90000-0000" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+              </label>
+            </div>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">E-mail de atendimento
+              <input value="oi@zolie.com.br" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:6px;font:300 12px/1 'Jost',sans-serif;color:#8F857C">Instagram
+              <input value="@zolie.semijoias" style="border:1px solid #E3DBCC;border-radius:3px;padding:13px" />
+            </label>
+            <button type="button" onClick="{{ onSalvarConfig }}" style="align-self:flex-start;border:1px solid #E3DBCC;background:#fff;color:#6B6259;padding:13px 22px;border-radius:3px;font:400 12px/1 'Jost',sans-serif;cursor:pointer">Salvar dados</button>
+          </section>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <div style="position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:80;background:#2E2A24;color:#F2EEE7;padding:14px 22px;border-radius:3px;box-shadow:0 20px 40px -18px rgba(46,42,36,.55);font:300 13px/1.4 'Jost',sans-serif;animation:atoast .25s ease;max-width:calc(100vw - 32px)">{{ toast }}</div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:900}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'dash', busca: '', toast: null, erro: '',
+    filtroCategoria: '', filtroStatus: '', filtroPedido: 'todos',
+    editingId: null, pedidoId: 'ZL-2481',
+    form: {
+      nome: '', categoria: '', material: 'prata925', pedra: 'sem', descricao: '', cuidados: '',
+      preco: '', promo: '', estoque: '', peso: '', tamanhos: '',
+      destaque: false, lancamento: false, ativo: true, promoHome: false,
+      catNome: '', rastreio: '',
+      cupomCodigo: '', cupomTipo: 'percent', cupomValor: '', cupomMinimo: '', cupomValidade: '', cupomLimite: '', cupomPrimeira: false,
+      bTag: '', bTitulo: '', bSub: '', bCta: '', bLink: '',
+      cfgFrete: '199', cfgPix: '10', cfgParcelas: '12', cfgEstoque: '8'
+    },
+    categorias: [
+      { id: 1, nome: 'Colares', slug: 'colares' }, { id: 2, nome: 'Brincos', slug: 'brincos' },
+      { id: 3, nome: 'Anéis', slug: 'aneis' }, { id: 4, nome: 'Pulseiras', slug: 'pulseiras' },
+      { id: 5, nome: 'Conjuntos', slug: 'conjuntos' }, { id: 6, nome: 'Piercings', slug: 'piercings' }
+    ],
+    produtos: [
+      { id: 1, nome: 'Colar Ponto de Luz Zircônia', cat: 'colares', material: 'prata925', preco: 149.9, promo: 119.9, estoque: 4, ativo: true, destaque: true, lancamento: false, vendas: 214 },
+      { id: 2, nome: 'Colar Coração Cravejado', cat: 'colares', material: 'ouro', preco: 189.9, promo: 0, estoque: 18, ativo: true, destaque: true, lancamento: false, vendas: 156 },
+      { id: 3, nome: 'Brinco Argola Texturizada', cat: 'brincos', material: 'ouro', preco: 99.9, promo: 79.9, estoque: 27, ativo: true, destaque: true, lancamento: false, vendas: 302 },
+      { id: 4, nome: 'Brinco Ponto de Luz 4mm', cat: 'brincos', material: 'prata925', preco: 69.9, promo: 49.9, estoque: 3, ativo: true, destaque: true, lancamento: false, vendas: 411 },
+      { id: 5, nome: 'Anel Solitário Zircônia', cat: 'aneis', material: 'ouro', preco: 159.9, promo: 0, estoque: 14, ativo: true, destaque: true, lancamento: false, vendas: 188 },
+      { id: 6, nome: 'Anel Trilha Eternity', cat: 'aneis', material: 'ouro', preco: 179.9, promo: 149.9, estoque: 5, ativo: true, destaque: true, lancamento: true, vendas: 143 },
+      { id: 7, nome: 'Pulseira Riviera Cravejada', cat: 'pulseiras', material: 'ouro', preco: 199.9, promo: 0, estoque: 8, ativo: true, destaque: true, lancamento: false, vendas: 131 },
+      { id: 8, nome: 'Pulseira Elos Portuguesa', cat: 'pulseiras', material: 'prata925', preco: 149.9, promo: 119.9, estoque: 16, ativo: true, destaque: false, lancamento: false, vendas: 88 },
+      { id: 9, nome: 'Conjunto Ponto de Luz', cat: 'conjuntos', material: 'prata925', preco: 219.9, promo: 179.9, estoque: 6, ativo: true, destaque: true, lancamento: false, vendas: 176 },
+      { id: 10, nome: 'Conjunto Elos + Colar', cat: 'conjuntos', material: 'ouro', preco: 329.9, promo: 259.9, estoque: 0, ativo: false, destaque: true, lancamento: true, vendas: 38 },
+      { id: 11, nome: 'Piercing Helix Cravejado', cat: 'piercings', material: 'ouro', preco: 64.9, promo: 44.9, estoque: 7, ativo: true, destaque: true, lancamento: false, vendas: 91 },
+      { id: 12, nome: 'Piercing Tragus Zircônia', cat: 'piercings', material: 'prata925', preco: 59.9, promo: 0, estoque: 26, ativo: true, destaque: false, lancamento: true, vendas: 118 }
+    ],
+    pedidos: [
+      { id: 'ZL-2481', cliente: 'Maria A. Silva', email: 'maria@email.com', telefone: '(11) 98888-7777', cidade: 'São Paulo/SP', data: '18 jul 2026', pagamento: 'Pix à vista', itens: 3, total: 389.7, status: 'Enviado', endereco: 'Rua das Flores, 123 — Apto 42, Jardim Paulista, São Paulo/SP · 01415-000' },
+      { id: 'ZL-2480', cliente: 'Juliana Moraes', email: 'ju@email.com', telefone: '(31) 97777-1122', cidade: 'Belo Horizonte/MG', data: '17 jul 2026', pagamento: 'Cartão 6x', itens: 1, total: 149.9, status: 'Separando', endereco: 'Av. Afonso Pena, 900 — Centro, Belo Horizonte/MG · 30130-002' },
+      { id: 'ZL-2479', cliente: 'Camila Reis', email: 'camila@email.com', telefone: '(81) 96666-3344', cidade: 'Recife/PE', data: '16 jul 2026', pagamento: 'Boleto', itens: 2, total: 229.8, status: 'Aguardando pagamento', endereco: 'Rua da Aurora, 45 — Boa Vista, Recife/PE · 50050-000' },
+      { id: 'ZL-2478', cliente: 'Renata Lopes', email: 'renata@email.com', telefone: '(41) 95555-8899', cidade: 'Curitiba/PR', data: '15 jul 2026', pagamento: 'Cartão 12x', itens: 4, total: 612.4, status: 'Processando', endereco: 'Rua XV de Novembro, 700 — Centro, Curitiba/PR · 80020-310' },
+      { id: 'ZL-2477', cliente: 'Paula Souza', email: 'paula@email.com', telefone: '(21) 94444-5566', cidade: 'Niterói/RJ', data: '14 jul 2026', pagamento: 'Pix à vista', itens: 2, total: 269.8, status: 'Entregue', endereco: 'Rua Gavião Peixoto, 88 — Icaraí, Niterói/RJ · 24230-100' },
+      { id: 'ZL-2476', cliente: 'Fernanda Alves', email: 'fe@email.com', telefone: '(85) 93333-2211', cidade: 'Fortaleza/CE', data: '13 jul 2026', pagamento: 'Cartão 3x', itens: 1, total: 99.9, status: 'Cancelado', endereco: 'Av. Beira Mar, 1200 — Meireles, Fortaleza/CE · 60165-121' }
+    ],
+    cupons: [
+      { id: 1, codigo: 'BRILHE10', tipo: 'percent', valor: 10, minimo: 0, validade: '31/12/2026', limite: 0, usos: 128, primeira: true, ativo: true },
+      { id: 2, codigo: 'ZOLIE20', tipo: 'percent', valor: 20, minimo: 200, validade: '31/08/2026', limite: 500, usos: 74, primeira: false, ativo: true },
+      { id: 3, codigo: 'FRETEGRATIS', tipo: 'frete', valor: 0, minimo: 0, validade: '30/09/2026', limite: 0, usos: 39, primeira: false, ativo: false }
+    ],
+    banners: [
+      { id: 1, tag: 'Coleção Luz de Inverno', titulo: 'Até 30% off em prata 925', subtitulo: 'Peças com brilho de todo dia, agora com o melhor preço do ano.', cta: 'Aproveitar ofertas', link: '/promocoes', ativo: true },
+      { id: 2, tag: 'Banho de ouro 18k', titulo: 'O dourado que não sai de moda', subtitulo: 'Camada reforçada com garantia de 1 ano.', cta: 'Ver banhados a ouro', link: '/banhado-a-ouro', ativo: true },
+      { id: 3, tag: 'Novidades da semana', titulo: 'Lançamentos para você brilhar', subtitulo: 'Estoque pequeno, escolha a sua.', cta: 'Ver lançamentos', link: '/lancamentos', ativo: false }
+    ],
+    avaliacoes: [
+      { id: 1, autor: 'Juliana M.', produto: 'Colar Ponto de Luz', nota: 5, data: '18 jul 2026', texto: 'Chegou rápido e mais bonito que na foto. Uso todos os dias e não escureceu.', status: 'pendente' },
+      { id: 2, autor: 'Camila R.', produto: 'Conjunto Gota Cristal', nota: 5, data: '16 jul 2026', texto: 'Presenteei minha mãe e ela amou. A embalagem é um charme.', status: 'pendente' },
+      { id: 3, autor: 'Aline P.', produto: 'Anel Trilha Eternity', nota: 4, data: '14 jul 2026', texto: 'Linda! Só achei o fecho um pouco delicado, mas o brilho compensa.', status: 'aprovada' },
+      { id: 4, autor: 'Anônimo', produto: 'Brinco Argola Média', nota: 1, data: '12 jul 2026', texto: 'Comprem no meu site, muito melhor: www.exemplo-spam.com', status: 'pendente' }
+    ]
+  };
+
+  MAT = { prata925: 'Prata 925', ouro: 'Banhado a ouro 18k' };
+
+  componentWillUnmount() { if (this._t) clearTimeout(this._t); }
+
+  brl(v) {
+    const p = (Math.round(Number(v) * 100) / 100).toFixed(2).split('.');
+    return 'R$ ' + p[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + p[1];
+  }
+  num(v) { return Number(String(v).replace(/\./g, '').replace(',', '.')) || 0; }
+  slugify(s) {
+    return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  }
+  stars(n) { const f = Math.round(n); return '★★★★★'.slice(0, f) + '☆☆☆☆☆'.slice(0, 5 - f); }
+  toast(msg) {
+    this.setState({ toast: msg });
+    if (this._t) clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: null }), 3000);
+  }
+  setForm(patch) { this.setState(s => ({ form: Object.assign({}, s.form, patch) })); }
+  go(tab, extra) { this.setState(Object.assign({ tab, erro: '' }, extra || {})); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+  bind(name, type) {
+    this._binds = this._binds || {};
+    if (!this._binds[name]) {
+      this._binds[name] = type === 'check'
+        ? e => this.setForm({ [name]: e.target.checked })
+        : e => this.setForm({ [name]: e.target.value });
+    }
+    return { value: this.state.form[name], onChange: this._binds[name] };
+  }
+
+  statusStyle(s) {
+    if (s === 'Entregue') return { color: '#4F5E35', border: '#D8DEC4', bg: '#F5F7EE' };
+    if (s === 'Enviado') return { color: '#7E6210', border: '#EADFC6', bg: '#FBF7EA' };
+    if (s === 'Cancelado') return { color: '#A6533B', border: '#EFDDD2', bg: '#FBF3EE' };
+    if (s === 'Separando' || s === 'Processando') return { color: '#6B6259', border: '#E3DBCC', bg: '#F7F4EC' };
+    return { color: '#8A6B12', border: '#EADFC6', bg: '#FBF7EA' };
+  }
+
+  novoProduto() {
+    this.setState(s => ({
+      tab: 'form', editingId: null, erro: '',
+      form: Object.assign({}, s.form, {
+        nome: '', categoria: '', material: 'prata925', pedra: 'sem', descricao: '', cuidados: '',
+        preco: '', promo: '', estoque: '', peso: '', tamanhos: '',
+        destaque: false, lancamento: true, ativo: true, promoHome: false
+      })
+    }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  editar(p) {
+    this.setState(s => ({
+      tab: 'form', editingId: p.id, erro: '',
+      form: Object.assign({}, s.form, {
+        nome: p.nome, categoria: p.cat, material: p.material, pedra: p.pedra || 'sem',
+        descricao: p.descricao || (p.nome + ' em ' + this.MAT[p.material].toLowerCase() + ', acabamento polido.'),
+        cuidados: p.cuidados || 'Evite perfume e cloro. Guarde em saquinho individual e limpe com flanela seca.',
+        preco: String(p.preco).replace('.', ','), promo: p.promo ? String(p.promo).replace('.', ',') : '',
+        estoque: String(p.estoque), peso: p.peso || '', tamanhos: (p.tamanhos || []).join(', '),
+        destaque: p.destaque, lancamento: p.lancamento, ativo: p.ativo, promoHome: !!p.promo
+      })
+    }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  salvarProduto() {
+    const f = this.state.form;
+    if (!f.nome.trim()) return this.setState({ erro: 'Dê um nome para a peça.' });
+    if (!f.categoria) return this.setState({ erro: 'Escolha uma categoria.' });
+    if (!this.num(f.preco)) return this.setState({ erro: 'Informe o preço cheio.' });
+    if (!f.descricao.trim()) return this.setState({ erro: 'Escreva uma descrição — é o que mais converte.' });
+    if (f.promo && this.num(f.promo) >= this.num(f.preco)) return this.setState({ erro: 'O preço promocional precisa ser menor que o cheio.' });
+
+    const data = {
+      nome: f.nome.trim(), cat: f.categoria, material: f.material, pedra: f.pedra,
+      descricao: f.descricao, cuidados: f.cuidados,
+      preco: this.num(f.preco), promo: this.num(f.promo), estoque: Number(f.estoque) || 0,
+      peso: f.peso, tamanhos: f.tamanhos.split(',').map(t => t.trim()).filter(Boolean),
+      destaque: f.destaque, lancamento: f.lancamento, ativo: f.ativo
+    };
+    if (this.state.editingId) {
+      this.setState(s => ({
+        produtos: s.produtos.map(p => p.id === s.editingId ? Object.assign({}, p, data) : p),
+        tab: 'produtos', erro: ''
+      }));
+      this.toast('Anúncio atualizado');
+    } else {
+      this.setState(s => ({
+        produtos: [Object.assign({ id: Date.now(), vendas: 0 }, data)].concat(s.produtos),
+        tab: 'produtos', erro: ''
+      }));
+      this.toast('Anúncio publicado na vitrine');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  renderVals() {
+    const st = this.state, f = st.form;
+    const q = st.busca.trim().toLowerCase();
+    const catNome = slug => (st.categorias.find(c => c.slug === slug) || { nome: '—' }).nome;
+    const limiteBaixo = Number(f.cfgEstoque) || 8;
+
+    const decP = p => {
+      const preco = p.promo || p.preco;
+      const sty = p.ativo ? { color: '#4F5E35', border: '#D8DEC4', bg: '#F5F7EE' } : { color: '#8F857C', border: '#E3DBCC', bg: '#F7F4EC' };
+      return {
+        ...p, sku: 'ZL-' + (1000 + p.id % 1000), slug: this.slugify(p.nome),
+        categoriaNome: catNome(p.cat), materialLabel: this.MAT[p.material],
+        precoFmt: this.brl(preco), precoDeFmt: this.brl(p.preco), temDesconto: !!p.promo,
+        estoqueColor: p.estoque === 0 ? '#A6533B' : p.estoque <= limiteBaixo ? '#8A6B12' : '#2E2A24',
+        statusLabel: p.ativo ? 'Ativo' : 'Pausado', statusColor: sty.color, statusBorder: sty.border, statusBg: sty.bg,
+        onEdit: () => this.editar(p),
+        onToggleAtivo: () => {
+          this.setState(s => ({ produtos: s.produtos.map(x => x.id === p.id ? { ...x, ativo: !x.ativo } : x) }));
+          this.toast(p.ativo ? p.nome + ' pausado' : p.nome + ' ativado na vitrine');
+        },
+        onDuplicar: () => {
+          this.setState(s => ({ produtos: [{ ...p, id: Date.now(), nome: p.nome + ' (cópia)', ativo: false, vendas: 0 }].concat(s.produtos) }));
+          this.toast('Cópia criada como pausada');
+        },
+        onRemover: () => {
+          this.setState(s => ({ produtos: s.produtos.filter(x => x.id !== p.id) }));
+          this.toast(p.nome + ' excluído');
+        },
+        onMais: () => this.setState(s => ({ produtos: s.produtos.map(x => x.id === p.id ? { ...x, estoque: x.estoque + 1 } : x) })),
+        onMenos: () => this.setState(s => ({ produtos: s.produtos.map(x => x.id === p.id ? { ...x, estoque: Math.max(0, x.estoque - 1) } : x) })),
+        onRepor: () => { this.setState(s => ({ produtos: s.produtos.map(x => x.id === p.id ? { ...x, estoque: x.estoque + 10 } : x) })); this.toast('+10 peças em ' + p.nome); }
+      };
+    };
+
+    let produtos = st.produtos.map(decP);
+    if (q) produtos = produtos.filter(p => (p.nome + ' ' + p.sku + ' ' + p.categoriaNome).toLowerCase().includes(q));
+    if (st.filtroCategoria) produtos = produtos.filter(p => p.cat === st.filtroCategoria);
+    if (st.filtroStatus === 'ativo') produtos = produtos.filter(p => p.ativo);
+    else if (st.filtroStatus === 'inativo') produtos = produtos.filter(p => !p.ativo);
+    else if (st.filtroStatus === 'baixo') produtos = produtos.filter(p => p.estoque > 0 && p.estoque <= limiteBaixo);
+    else if (st.filtroStatus === 'zerado') produtos = produtos.filter(p => p.estoque === 0);
+
+    const decO = o => {
+      const sty = this.statusStyle(o.status);
+      return {
+        ...o, numero: '#' + o.id, itensTxt: o.itens + (o.itens > 1 ? ' peças' : ' peça'),
+        totalFmt: this.brl(o.total),
+        statusColor: sty.color, statusBorder: sty.border, statusBg: sty.bg,
+        onStatus: e => {
+          const status = e.target.value;
+          this.setState(s => ({ pedidos: s.pedidos.map(x => x.id === o.id ? { ...x, status } : x) }));
+          this.toast(o.id + ' → ' + status);
+        },
+        onAbrir: () => this.go('pedido', { pedidoId: o.id })
+      };
+    };
+    let pedidos = st.pedidos.map(decO);
+    if (q) pedidos = pedidos.filter(o => (o.id + ' ' + o.cliente + ' ' + o.cidade).toLowerCase().includes(q));
+    if (st.filtroPedido !== 'todos') pedidos = pedidos.filter(o => o.status === st.filtroPedido);
+
+    const pedido = st.pedidos.map(decO).find(o => o.id === st.pedidoId) || st.pedidos.map(decO)[0];
+    const itensPedido = [
+      { nome: 'Colar Ponto de Luz Zircônia', variacao: 'Tam 45cm · Polido', qtd: 1, unit: this.brl(119.9), subtotal: this.brl(119.9) },
+      { nome: 'Brinco Ponto de Luz 4mm', variacao: 'Único · Polido', qtd: 2, unit: this.brl(49.9), subtotal: this.brl(99.8) }
+    ];
+
+    const vendasDia = [['seg', 4820], ['ter', 6210], ['qua', 5540], ['qui', 7830], ['sex', 9610], ['sáb', 8420], ['dom', 4110]];
+    const maxDia = Math.max.apply(null, vendasDia.map(d => d[1]));
+    const faturamento = vendasDia.reduce((a, d) => a + d[1], 0);
+    const semEstoque = st.produtos.filter(p => p.estoque === 0).length;
+    const estoqueBaixo = st.produtos.filter(p => p.estoque > 0 && p.estoque <= limiteBaixo).length;
+    const pendentes = st.avaliacoes.filter(a => a.status === 'pendente').length;
+    const aPagar = st.pedidos.filter(o => o.status === 'Aguardando pagamento').length;
+
+    const titulos = {
+      dash: 'Visão geral', produtos: 'Anúncios', form: st.editingId ? 'Editar anúncio' : 'Novo anúncio',
+      categorias: 'Categorias', estoque: 'Estoque', pedidos: 'Pedidos', pedido: 'Pedido ' + (pedido ? '#' + pedido.id : ''),
+      clientes: 'Clientes', cupons: 'Cupons e promoções', banners: 'Banners da home',
+      avaliacoes: 'Avaliações', config: 'Configurações'
+    };
+
+    const tabBtn = (key, label, badge) => ({
+      label, badge, temBadge: !!badge,
+      bg: st.tab === key || (key === 'produtos' && st.tab === 'form') || (key === 'pedidos' && st.tab === 'pedido') ? '#3A342C' : 'transparent',
+      color: st.tab === key || (key === 'produtos' && st.tab === 'form') || (key === 'pedidos' && st.tab === 'pedido') ? '#D4AF37' : '#E3DBCC',
+      onClick: () => this.go(key)
+    });
+
+    const flagDefs = [
+      { key: 'ativo', label: 'Publicar na vitrine', hint: 'Desmarque para deixar como rascunho.' },
+      { key: 'destaque', label: 'Mostrar em “As mais amadas”', hint: 'Aparece no carrossel de destaques da home.' },
+      { key: 'lancamento', label: 'Marcar como lançamento', hint: 'Ganha selo e entra na vitrine de novidades.' },
+      { key: 'promoHome', label: 'Incluir em “Ofertas da semana”', hint: 'Só faz efeito com preço promocional preenchido.' }
+    ];
+
+    const precoAtual = this.num(f.promo) || this.num(f.preco);
+    const pixPct = Number(f.cfgPix) || 10;
+    const parcelasMax = Number(f.cfgParcelas) || 12;
+
+    return {
+      toast: st.toast, erro: st.erro, busca: st.busca,
+      onBusca: e => this.setState({ busca: e.target.value }),
+      crumb: st.tab === 'form' || st.tab === 'produtos' ? 'Catálogo' : st.tab === 'pedido' ? 'Pedidos' : 'Zoliê Admin',
+      tituloPagina: titulos[st.tab] || 'Zoliê Admin',
+      onNovoProduto: () => this.novoProduto(),
+      onVerPedidos: () => this.go('pedidos'),
+      onVoltarPedidos: () => this.go('pedidos'),
+
+      navGroups: [
+        { titulo: 'Loja', itens: [tabBtn('dash', 'Visão geral'), tabBtn('pedidos', 'Pedidos', aPagar || 0), tabBtn('clientes', 'Clientes')] },
+        { titulo: 'Catálogo', itens: [tabBtn('produtos', 'Anúncios'), tabBtn('categorias', 'Categorias'), tabBtn('estoque', 'Estoque', semEstoque + estoqueBaixo || 0)] },
+        { titulo: 'Marketing', itens: [tabBtn('cupons', 'Cupons'), tabBtn('banners', 'Banners da home'), tabBtn('avaliacoes', 'Avaliações', pendentes || 0)] },
+        { titulo: 'Sistema', itens: [tabBtn('config', 'Configurações')] }
+      ],
+
+      isDash: st.tab === 'dash', isProdutos: st.tab === 'produtos', isForm: st.tab === 'form',
+      isCategorias: st.tab === 'categorias', isEstoque: st.tab === 'estoque',
+      isPedidos: st.tab === 'pedidos', isPedido: st.tab === 'pedido', isClientes: st.tab === 'clientes',
+      isCupons: st.tab === 'cupons', isBanners: st.tab === 'banners',
+      isAvaliacoes: st.tab === 'avaliacoes', isConfig: st.tab === 'config',
+
+      kpis: [
+        { label: 'Faturamento no mês', valor: this.brl(48320), delta: '+18% vs. junho', deltaColor: '#4F5E35' },
+        { label: 'Pedidos', valor: '312', delta: '+24 esta semana', deltaColor: '#4F5E35' },
+        { label: 'Ticket médio', valor: this.brl(154.9), delta: '+R$ 9,20', deltaColor: '#4F5E35' },
+        { label: 'Conversão', valor: '2,4%', delta: '+0,3 p.p.', deltaColor: '#4F5E35' }
+      ],
+      totalSemana: this.brl(faturamento),
+      chart: vendasDia.map(([dia, v]) => ({ dia, valor: 'R$ ' + Math.round(v / 100) / 10 + 'k', h: Math.round(v / maxDia * 100) + '%', cor: v === maxDia ? '#D4AF37' : '#E3DBCC' })),
+      topProdutos: st.produtos.slice().sort((a, b) => b.vendas - a.vendas).slice(0, 5)
+        .map(p => ({ nome: p.nome, vendas: p.vendas, receita: this.brl((p.promo || p.preco) * p.vendas / 10) })),
+      pedidosRecentes: st.pedidos.map(decO).slice(0, 4),
+      alertas: [
+        { titulo: semEstoque + ' peças sem estoque', texto: 'Reponha ou pause os anúncios para não frustrar a cliente.', onClick: () => this.go('estoque') },
+        { titulo: estoqueBaixo + ' peças com estoque baixo', texto: 'Abaixo de ' + limiteBaixo + ' unidades — o selo de urgência já está ativo.', onClick: () => this.go('estoque') },
+        { titulo: pendentes + ' avaliações para moderar', texto: 'Aprovar prova social ajuda direto na conversão.', onClick: () => this.go('avaliacoes') },
+        { titulo: aPagar + ' pedidos aguardando pagamento', texto: 'Boletos e Pix pendentes há mais de 24h.', onClick: () => this.go('pedidos') }
+      ],
+
+      categorias: st.categorias,
+      categoriasLista: st.categorias.map((c, i) => ({
+        ...c, total: st.produtos.filter(p => p.cat === c.slug).length,
+        onSubir: () => this.setState(s => {
+          if (i === 0) return {};
+          const arr = s.categorias.slice();
+          arr.splice(i - 1, 0, arr.splice(i, 1)[0]);
+          return { categorias: arr };
+        }),
+        onDescer: () => this.setState(s => {
+          if (i >= s.categorias.length - 1) return {};
+          const arr = s.categorias.slice();
+          arr.splice(i + 1, 0, arr.splice(i, 1)[0]);
+          return { categorias: arr };
+        }),
+        onRemover: () => {
+          if (st.produtos.some(p => p.cat === c.slug)) return this.toast('Mova os anúncios dessa categoria antes de excluir');
+          this.setState(s => ({ categorias: s.categorias.filter(x => x.id !== c.id) }));
+          this.toast(c.nome + ' excluída');
+        }
+      })),
+      catSlugPreview: this.slugify(f.catNome) || '—',
+      onAddCategoria: () => {
+        if (!f.catNome.trim()) return this.toast('Escreva o nome da categoria');
+        this.setState(s => ({
+          categorias: s.categorias.concat([{ id: Date.now(), nome: f.catNome.trim(), slug: this.slugify(f.catNome) }]),
+          form: Object.assign({}, s.form, { catNome: '' })
+        }));
+        this.toast('Categoria criada');
+      },
+
+      produtosLista: produtos, produtosCount: produtos.length, produtosVazio: produtos.length === 0,
+      filtroCategoria: st.filtroCategoria, filtroStatus: st.filtroStatus,
+      onFiltroCategoria: e => this.setState({ filtroCategoria: e.target.value }),
+      onFiltroStatus: e => this.setState({ filtroStatus: e.target.value }),
+
+      f: {
+        nome: this.bind('nome'), categoria: this.bind('categoria'), material: this.bind('material'),
+        pedra: this.bind('pedra'), descricao: this.bind('descricao'), cuidados: this.bind('cuidados'),
+        preco: this.bind('preco'), promo: this.bind('promo'), estoque: this.bind('estoque'),
+        peso: this.bind('peso'), tamanhos: this.bind('tamanhos'),
+        catNome: this.bind('catNome'), rastreio: this.bind('rastreio'),
+        cupomCodigo: this.bind('cupomCodigo'), cupomTipo: this.bind('cupomTipo'), cupomValor: this.bind('cupomValor'),
+        cupomMinimo: this.bind('cupomMinimo'), cupomValidade: this.bind('cupomValidade'),
+        cupomLimite: this.bind('cupomLimite'), cupomPrimeira: this.bind('cupomPrimeira', 'check'),
+        bTag: this.bind('bTag'), bTitulo: this.bind('bTitulo'), bSub: this.bind('bSub'),
+        bCta: this.bind('bCta'), bLink: this.bind('bLink'),
+        cfgFrete: this.bind('cfgFrete'), cfgPix: this.bind('cfgPix'),
+        cfgParcelas: this.bind('cfgParcelas'), cfgEstoque: this.bind('cfgEstoque')
+      },
+      flags: flagDefs.map(d => ({ label: d.label, hint: d.hint, value: !!f[d.key], onChange: this.bind(d.key, 'check').onChange })),
+      slugPreview: this.slugify(f.nome) || 'nome-da-peca',
+      skuPreview: st.editingId ? 'ZL-' + (1000 + st.editingId % 1000) : 'gerado ao salvar',
+      tamanhoChips: f.tamanhos.split(',').map(t => t.trim()).filter(Boolean),
+      previewNome: f.nome || 'Nome da peça',
+      previewMaterial: this.MAT[f.material],
+      previewPreco: precoAtual ? this.brl(precoAtual) : 'R$ 0,00',
+      previewPix: this.brl(precoAtual * (1 - pixPct / 100)),
+      previewParcela: parcelasMax + 'x de ' + this.brl(precoAtual / parcelasMax),
+      salvarLabel: st.editingId ? 'Salvar alterações' : 'Publicar anúncio',
+      onSalvar: () => this.salvarProduto(),
+      onCancelar: () => this.go('produtos'),
+
+      estoqueKpis: [
+        { label: 'Peças cadastradas', valor: st.produtos.length, cor: '#2E2A24' },
+        { label: 'Estoque baixo', valor: estoqueBaixo, cor: '#8A6B12' },
+        { label: 'Sem estoque', valor: semEstoque, cor: '#A6533B' }
+      ],
+      estoqueLista: produtos.slice().sort((a, b) => a.estoque - b.estoque),
+
+      pedidosLista: pedidos,
+      filtrosPedido: [['todos', 'Todos'], ['Aguardando pagamento', 'Aguardando'], ['Processando', 'Processando'], ['Separando', 'Separando'], ['Enviado', 'Enviados'], ['Entregue', 'Entregues']]
+        .map(([k, label]) => ({
+          label, count: k === 'todos' ? st.pedidos.length : st.pedidos.filter(o => o.status === k).length,
+          border: st.filtroPedido === k ? '#D4AF37' : '#E3DBCC',
+          bg: st.filtroPedido === k ? '#FBF7EA' : '#fff',
+          color: st.filtroPedido === k ? '#7E6210' : '#6B6259',
+          onClick: () => this.setState({ filtroPedido: k })
+        })),
+      pedido, pedidoItens: itensPedido,
+      pedidoResumo: [
+        { k: 'Subtotal', v: this.brl(219.7), cor: '#4A443B' },
+        { k: 'Frete (PAC)', v: 'Grátis', cor: '#4F5E35' },
+        { k: 'Desconto BRILHE10', v: '− ' + this.brl(21.97), cor: '#4F5E35' },
+        { k: 'Desconto Pix', v: '− ' + this.brl(19.8), cor: '#4F5E35' }
+      ],
+      pedidoEventos: [
+        { titulo: 'Pedido criado', quando: '18 jul 2026 · 09:14' },
+        { titulo: 'Pagamento aprovado (Pix)', quando: '18 jul 2026 · 09:16' },
+        { titulo: 'Em separação', quando: '18 jul 2026 · 14:02' },
+        { titulo: 'Enviado · PAC BR123456789XX', quando: '19 jul 2026 · 10:31' }
+      ],
+      onSalvarRastreio: () => this.toast('Rastreio salvo e e-mail enviado à cliente'),
+
+      clientes: [
+        { nome: 'Maria A. Silva', iniciais: 'MA', tag: 'Cliente VIP · 5 pedidos', email: 'maria@email.com', telefone: '(11) 98888-7777', pedidos: 5, gasto: this.brl(1289.5), ultima: '18 jul 2026' },
+        { nome: 'Juliana Moraes', iniciais: 'JM', tag: 'Recorrente', email: 'ju@email.com', telefone: '(31) 97777-1122', pedidos: 3, gasto: this.brl(612.7), ultima: '17 jul 2026' },
+        { nome: 'Camila Reis', iniciais: 'CR', tag: 'Primeira compra', email: 'camila@email.com', telefone: '(81) 96666-3344', pedidos: 1, gasto: this.brl(229.8), ultima: '16 jul 2026' },
+        { nome: 'Renata Lopes', iniciais: 'RL', tag: 'Ticket alto', email: 'renata@email.com', telefone: '(41) 95555-8899', pedidos: 2, gasto: this.brl(918.3), ultima: '15 jul 2026' },
+        { nome: 'Paula Souza', iniciais: 'PS', tag: 'Recorrente', email: 'paula@email.com', telefone: '(21) 94444-5566', pedidos: 4, gasto: this.brl(742.1), ultima: '14 jul 2026' },
+        { nome: 'Fernanda Alves', iniciais: 'FA', tag: 'Cancelou 1 pedido', email: 'fe@email.com', telefone: '(85) 93333-2211', pedidos: 1, gasto: this.brl(99.9), ultima: '13 jul 2026' }
+      ],
+
+      cuponsLista: st.cupons.map(c => ({
+        ...c,
+        regra: c.tipo === 'percent' ? c.valor + '% de desconto' + (c.minimo ? ' acima de ' + this.brl(c.minimo) : '') + (c.primeira ? ' · só primeira compra' : '')
+          : c.tipo === 'fixo' ? this.brl(c.valor) + ' de desconto' + (c.minimo ? ' acima de ' + this.brl(c.minimo) : '')
+          : 'Frete grátis sem mínimo',
+        usosTxt: c.usos + (c.limite ? ' de ' + c.limite + ' usos' : ' usos'),
+        statusLabel: c.ativo ? 'Ativo' : 'Pausado',
+        cor: c.ativo ? '#4F5E35' : '#8F857C', border: c.ativo ? '#D8DEC4' : '#E3DBCC', bg: c.ativo ? '#F5F7EE' : '#F7F4EC',
+        onToggle: () => { this.setState(s => ({ cupons: s.cupons.map(x => x.id === c.id ? { ...x, ativo: !x.ativo } : x) })); this.toast(c.codigo + (c.ativo ? ' pausado' : ' ativado')); },
+        onRemover: () => { this.setState(s => ({ cupons: s.cupons.filter(x => x.id !== c.id) })); this.toast(c.codigo + ' excluído'); }
+      })),
+      onAddCupom: () => {
+        if (!f.cupomCodigo.trim()) return this.toast('Escreva o código do cupom');
+        if (f.cupomTipo !== 'frete' && !this.num(f.cupomValor)) return this.toast('Informe o valor do desconto');
+        this.setState(s => ({
+          cupons: s.cupons.concat([{
+            id: Date.now(), codigo: f.cupomCodigo.trim().toUpperCase(), tipo: f.cupomTipo,
+            valor: this.num(f.cupomValor), minimo: this.num(f.cupomMinimo),
+            validade: f.cupomValidade || 'sem prazo', limite: Number(f.cupomLimite) || 0,
+            usos: 0, primeira: f.cupomPrimeira, ativo: true
+          }]),
+          form: Object.assign({}, s.form, { cupomCodigo: '', cupomValor: '', cupomMinimo: '', cupomValidade: '', cupomLimite: '', cupomPrimeira: false })
+        }));
+        this.toast('Cupom criado e já valendo no checkout');
+      },
+
+      bannersLista: st.banners.map((b, i) => ({
+        ...b, posicao: (i + 1) + 'º',
+        statusLabel: b.ativo ? 'No ar' : 'Pausado',
+        cor: b.ativo ? '#4F5E35' : '#8F857C', border: b.ativo ? '#D8DEC4' : '#E3DBCC', bg: b.ativo ? '#F5F7EE' : '#F7F4EC',
+        onToggle: () => { this.setState(s => ({ banners: s.banners.map(x => x.id === b.id ? { ...x, ativo: !x.ativo } : x) })); this.toast(b.ativo ? 'Banner pausado' : 'Banner no ar'); },
+        onSubir: () => this.setState(s => {
+          if (i === 0) return {};
+          const arr = s.banners.slice();
+          arr.splice(i - 1, 0, arr.splice(i, 1)[0]);
+          return { banners: arr };
+        }),
+        onDescer: () => this.setState(s => {
+          if (i >= s.banners.length - 1) return {};
+          const arr = s.banners.slice();
+          arr.splice(i + 1, 0, arr.splice(i, 1)[0]);
+          return { banners: arr };
+        }),
+        onRemover: () => { this.setState(s => ({ banners: s.banners.filter(x => x.id !== b.id) })); this.toast('Banner excluído'); }
+      })),
+      onAddBanner: () => {
+        if (!f.bTitulo.trim()) return this.toast('Escreva o título do banner');
+        this.setState(s => ({
+          banners: s.banners.concat([{
+            id: Date.now(), tag: f.bTag || 'Destaque', titulo: f.bTitulo.trim(),
+            subtitulo: f.bSub || '', cta: f.bCta || 'Ver agora', link: f.bLink || '/', ativo: true
+          }]),
+          form: Object.assign({}, s.form, { bTag: '', bTitulo: '', bSub: '', bCta: '', bLink: '' })
+        }));
+        this.toast('Banner publicado na home');
+      },
+
+      avaliacoes: st.avaliacoes.map(a => {
+        const sty = a.status === 'aprovada' ? { cor: '#4F5E35', border: '#D8DEC4', bg: '#F5F7EE' }
+          : a.status === 'reprovada' ? { cor: '#A6533B', border: '#EFDDD2', bg: '#FBF3EE' }
+          : { cor: '#8A6B12', border: '#EADFC6', bg: '#FBF7EA' };
+        return {
+          ...a, estrelas: this.stars(a.nota),
+          statusLabel: a.status === 'aprovada' ? 'Publicada' : a.status === 'reprovada' ? 'Reprovada' : 'Pendente',
+          cor: sty.cor, border: sty.border, bg: sty.bg,
+          onAprovar: () => { this.setState(s => ({ avaliacoes: s.avaliacoes.map(x => x.id === a.id ? { ...x, status: 'aprovada' } : x) })); this.toast('Avaliação publicada na página do produto'); },
+          onReprovar: () => { this.setState(s => ({ avaliacoes: s.avaliacoes.map(x => x.id === a.id ? { ...x, status: 'reprovada' } : x) })); this.toast('Avaliação reprovada'); }
+        };
+      }),
+
+      onSalvarConfig: () => this.toast('Configurações salvas')
+    };
+  }
+}
+</script>
+</body>
+</html>

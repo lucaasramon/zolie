@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: zolie-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: zolie
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-k-ihPWqh5FgW0ygK9iQv2P-U}
+      POSTGRES_DB: zolie
+    ports:
+      - "5432:5432"
+    volumes:
+      - zolie_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U zolie -d zolie"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  zolie_pgdata:

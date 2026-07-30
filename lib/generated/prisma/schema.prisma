@@ -1,0 +1,295 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Material {
+  PRATA_925
+  BANHADO_OURO
+}
+
+enum OrderStatus {
+  AGUARDANDO_PAGAMENTO
+  PROCESSANDO
+  SEPARANDO
+  ENVIADO
+  ENTREGUE
+  CANCELADO
+}
+
+enum PaymentMethod {
+  CARTAO_CREDITO
+  PIX
+  BOLETO
+}
+
+enum DiscountType {
+  PERCENT
+  FIXED
+  FREE_SHIPPING
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+}
+
+model User {
+  id            String   @id @default(uuid())
+  nome          String
+  email         String   @unique
+  senhaHash     String   @map("senha_hash")
+  telefone      String?
+  cpf           String?  @unique
+  role          UserRole @default(CUSTOMER)
+  emailVerified Boolean  @default(false) @map("email_verified")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  addresses   Address[]
+  cart        Cart?
+  orders      Order[]
+  reviews     ProductReview[]
+  wishlist    WishlistItem[]
+  resetTokens PasswordResetToken[]
+
+  @@map("users")
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  apelido     String?
+  cep         String
+  rua         String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  estado      String   @db.Char(2)
+  principal   Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  nome      String
+  slug      String   @unique
+  imagem    String?
+  ordem     Int      @default(0)
+  ativa     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id               String   @id @default(uuid())
+  nome             String
+  slug             String   @unique
+  descricao        String
+  cuidados         String?
+  preco            Decimal  @db.Decimal(10, 2)
+  precoPromocional Decimal? @map("preco_promocional") @db.Decimal(10, 2)
+  material         Material
+  categoriaId      String   @map("categoria_id")
+  estoque          Int      @default(0)
+  pesoGramas       Decimal? @map("peso_gramas") @db.Decimal(6, 2)
+  pedra            String?
+  tamanhos         String[]
+  imagens          String[]
+  destaque         Boolean  @default(false)
+  lancamento       Boolean  @default(false)
+  ativo            Boolean  @default(true)
+  notaMedia        Decimal  @default(0) @map("nota_media") @db.Decimal(2, 1)
+  totalAvaliacoes  Int      @default(0) @map("total_avaliacoes")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  categoria  Category        @relation(fields: [categoriaId], references: [id])
+  reviews    ProductReview[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  wishlist   WishlistItem[]
+
+  @@index([categoriaId])
+  @@index([material])
+  @@index([destaque])
+  @@index([lancamento])
+  @@map("products")
+}
+
+model ProductReview {
+  id         String   @id @default(uuid())
+  productId  String   @map("product_id")
+  userId     String   @map("user_id")
+  nota       Int
+  titulo     String?
+  comentario String?
+  aprovado   Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, userId])
+  @@index([productId])
+  @@map("product_reviews")
+}
+
+model Cart {
+  id        String   @id @default(uuid())
+  userId    String   @unique @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id         String  @id @default(uuid())
+  cartId     String  @map("cart_id")
+  productId  String  @map("product_id")
+  quantidade Int     @default(1)
+  tamanho    String?
+  acabamento String?
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([cartId, productId, tamanho, acabamento])
+  @@map("cart_items")
+}
+
+model Order {
+  id             String        @id @default(uuid())
+  numero         String        @unique
+  userId         String        @map("user_id")
+  enderecoId     String        @map("endereco_id")
+  status         OrderStatus   @default(AGUARDANDO_PAGAMENTO)
+  formaPagamento PaymentMethod @map("forma_pagamento")
+  parcelas       Int           @default(1)
+  subtotal       Decimal       @db.Decimal(10, 2)
+  frete          Decimal       @db.Decimal(10, 2)
+  desconto       Decimal       @default(0) @db.Decimal(10, 2)
+  total          Decimal       @db.Decimal(10, 2)
+  cupomCodigo    String?       @map("cupom_codigo")
+  transportadora String?
+  codigoRastreio String?       @map("codigo_rastreio")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  user     User         @relation(fields: [userId], references: [id])
+  endereco Address      @relation(fields: [enderecoId], references: [id])
+  items    OrderItem[]
+  events   OrderEvent[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id            String  @id @default(uuid())
+  orderId       String  @map("order_id")
+  productId     String  @map("product_id")
+  nomeProduto   String  @map("nome_produto")
+  precoUnitario Decimal @map("preco_unitario") @db.Decimal(10, 2)
+  quantidade    Int
+  tamanho       String?
+  acabamento    String?
+  subtotal      Decimal @db.Decimal(10, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderEvent {
+  id        String      @id @default(uuid())
+  orderId   String      @map("order_id")
+  status    OrderStatus
+  descricao String?
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("order_events")
+}
+
+model Coupon {
+  id             String       @id @default(uuid())
+  codigo         String       @unique
+  descricao      String?
+  tipoDesconto   DiscountType @map("tipo_desconto")
+  valor          Decimal      @db.Decimal(10, 2)
+  minimoPedido   Decimal?     @map("minimo_pedido") @db.Decimal(10, 2)
+  usoMaximo      Int?         @map("uso_maximo")
+  usos           Int          @default(0)
+  primeiraCompra Boolean      @default(false) @map("primeira_compra")
+  validade       DateTime?
+  ativo          Boolean      @default(true)
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  @@map("coupons")
+}
+
+model WishlistItem {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@map("wishlist_items")
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  titulo    String
+  subtitulo String?
+  tag       String?
+  cta       String?
+  link      String?
+  imagem    String?
+  ordem     Int      @default(0)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("banners")
+}

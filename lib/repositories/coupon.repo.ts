@@ -1,0 +1,11 @@
+import { prisma } from '@/lib/prisma';
+
+export const couponRepo = {
+  list: () => prisma.coupon.findMany({ orderBy: { createdAt: 'desc' } }),
+  findByCode: (codigo: string) => prisma.coupon.findUnique({ where: { codigo: String(codigo).toUpperCase() } }),
+  findById: (id: string) => prisma.coupon.findUnique({ where: { id } }),
+  create: (data: any) => prisma.coupon.create({ data: { ...data, codigo: String(data.codigo).toUpperCase() } }),
+  update: (id: string, data: any) => prisma.coupon.update({ where: { id }, data }),
+  remove: (id: string) => prisma.coupon.update({ where: { id }, data: { ativo: false } }).then(() => true),
+  incrementUse: (id: string) => prisma.coupon.update({ where: { id }, data: { usos: { increment: 1 } } }),
+};

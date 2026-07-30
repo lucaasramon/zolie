@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+  <g stroke="#FFFFFF" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Head, neck and back forming the "Z" -->
+    <path d="M182 118
+             C182 104 193 92 207 92
+             C216 92 224 96 233 103
+             C246 113 262 118 279 118
+             C296 118 311 112 322 101
+             C293 148 262 187 245 217
+             C270 200 300 183 316 178
+             C270 230 213 300 197 330
+             C230 275 260 240 285 222" />
+
+    <!-- Head detail: eye -->
+    <circle cx="200" cy="103" r="4" fill="#FFFFFF" stroke="none" />
+
+    <!-- Beak -->
+    <path d="M182 118 L160 132" />
+
+    <!-- Body / breast curve down to the base of the Z -->
+    <path d="M197 330
+             C175 300 165 280 160 255" stroke-width="0" />
+    <path d="M245 217
+             C200 265 165 300 150 340
+             C145 353 148 365 158 372" />
+
+    <!-- Base stroke of the Z (bottom horizontal) -->
+    <path d="M158 372 C210 350 300 350 345 372" />
+
+    <!-- Tail feathers fanning out to the right -->
+    <path d="M245 300
+             C300 275 360 275 400 320
+             C420 342 428 368 420 392" />
+    <path d="M215 330
+             C280 315 345 320 385 355
+             C405 373 415 393 410 412" />
+    <path d="M190 358
+             C255 355 320 372 355 405
+             C372 421 380 438 375 452" />
+
+    <!-- Crossing tail line at the front -->
+    <path d="M345 372 C368 400 395 425 430 440" />
+  </g>
+</svg>
