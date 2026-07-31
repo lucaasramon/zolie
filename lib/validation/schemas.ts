@@ -47,10 +47,11 @@ export const orderSchema = z
     cep: z.string().optional(),
     envioId: z.string().optional(),
     cupom: z.string().optional(),
+    creditCardToken: z.string().optional(),
     cartao: cardSchema.optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.formaPagamento === 'CARTAO_CREDITO' && !data.cartao) {
+    if (data.formaPagamento === 'CARTAO_CREDITO' && !data.creditCardToken && !data.cartao) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cartao'], message: 'Dados do cartão são obrigatórios para pagamento com cartão de crédito' });
     }
   });
@@ -76,6 +77,7 @@ export const reviewSchema = z.object({
   nota: z.number().int().min(1).max(5),
   titulo: z.string().max(80).optional(),
   comentario: z.string().max(1000).optional(),
+  imagens: z.array(z.string()).max(4).optional(),
 });
 
 export const couponSchema = z.object({

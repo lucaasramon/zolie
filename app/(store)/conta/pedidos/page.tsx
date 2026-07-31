@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
+import { OrderRowSkeleton } from '@/components/ui/Skeleton';
 
 interface Order {
   id: string;
@@ -23,7 +24,15 @@ export default function MeusPedidosPage() {
     api.get<Order[]>('/orders?perPage=20').then(({ data }) => setOrders(data));
   }, []);
 
-  if (!orders) return <p className="text-sm text-ink-tertiary">Carregando pedidos...</p>;
+  if (!orders) {
+    return (
+      <div className="flex flex-col gap-3">
+        <OrderRowSkeleton />
+        <OrderRowSkeleton />
+        <OrderRowSkeleton />
+      </div>
+    );
+  }
 
   if (orders.length === 0) {
     return <p className="text-sm text-ink-tertiary">Você ainda não fez nenhum pedido.</p>;

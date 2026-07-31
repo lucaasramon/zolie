@@ -2,7 +2,6 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api } from '@/lib/api-client';
-import { useAuth } from '@/components/providers/AuthProvider';
 
 interface CartSummary {
   itemCount: number;
@@ -24,14 +23,11 @@ export function useCart() {
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
   const [summary, setSummary] = useState<CartSummary>({ itemCount: 0, totalFmt: 'R$ 0,00' });
 
+  // O carrinho existe tanto para usuários logados quanto para sessões anônimas
+  // (identificadas por cookie httpOnly no backend), então é buscado sempre.
   const refresh = useCallback(async () => {
-    if (!user) {
-      setSummary({ itemCount: 0, totalFmt: 'R$ 0,00' });
-      return;
-    }
     try {
       const { data } = await api.get<{ items: { quantidade: number }[]; resumo: { total: number } }>('/cart');
       const itemCount = data.items.reduce((a, i) => a + i.quantidade, 0);
@@ -42,7 +38,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       setSummary({ itemCount: 0, totalFmt: 'R$ 0,00' });
     }
-  }, [user]);
+  }, []);
 
   useEffect(() => {
     refresh();

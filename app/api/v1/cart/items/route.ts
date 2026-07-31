@@ -1,9 +1,12 @@
 import { cartItemSchema } from '@/lib/validation/schemas';
 import * as cartService from '@/lib/services/cart.service';
 import { created } from '@/lib/http/envelope';
-import { withAuth } from '@/lib/http/withAuth';
+import { withOptionalAuth } from '@/lib/http/withAuth';
+import { resolveCartOwner, withGuestCartCookie } from '@/lib/http/cartOwner';
 
-export const POST = withAuth(async (req, _ctx, user) => {
+export const POST = withOptionalAuth(async (req, _ctx, user) => {
+  const { owner, newSessionId } = resolveCartOwner(req, user);
   const body = cartItemSchema.parse(await req.json());
-  return created(await cartService.addItem(user.sub, body));
+  const data = await cartService.addItem(owner, body);
+  return withGuestCartCookie(created(data), newSessionId);
 });

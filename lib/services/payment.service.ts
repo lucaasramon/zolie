@@ -16,11 +16,14 @@ interface CriarCobrancaOpts {
   parcelas?: number;
   user: { id: string; nome: string; email: string; cpf: string; telefone?: string | null };
   endereco: { cep: string; rua: string; numero: string; bairro: string; complemento?: string | null };
+  /** Token gerado no client via Asaas.js — preferencial, evita que o PAN/CVV trafeguem pelo backend. */
+  creditCardToken?: string;
+  /** Fallback legado: dados crus do cartão, usados apenas se nenhum token for enviado. */
   cartao?: CartaoInput;
   remoteIp: string;
 }
 
-export async function criarCobranca({ order, formaPagamento, parcelas = 1, user, endereco, cartao, remoteIp }: CriarCobrancaOpts) {
+export async function criarCobranca({ order, formaPagamento, parcelas = 1, user, endereco, creditCardToken, cartao, remoteIp }: CriarCobrancaOpts) {
   const customerId = await resolveCustomerId({
     userId: user.id,
     nome: user.nome,
@@ -50,24 +53,29 @@ export async function criarCobranca({ order, formaPagamento, parcelas = 1, user,
   }
 
   if (formaPagamento === 'CARTAO_CREDITO') {
-    if (!cartao) throw new AppError('Dados do cartão são obrigatórios', 422, 'CARD_DATA_REQUIRED');
-    payload.creditCard = {
-      holderName: cartao.nomeImpresso,
-      number: cartao.numero.replace(/\s/g, ''),
-      expiryMonth: cartao.validadeMes,
-      expiryYear: cartao.validadeAno,
-      ccv: cartao.cvv,
-    };
-    payload.creditCardHolderInfo = {
-      name: user.nome,
-      email: user.email,
-      cpfCnpj: user.cpf.replace(/\D/g, ''),
-      postalCode: endereco.cep.replace(/\D/g, ''),
-      addressNumber: endereco.numero,
-      addressComplement: endereco.complemento || undefined,
-      phone: user.telefone?.replace(/\D/g, ''),
-      mobilePhone: user.telefone?.replace(/\D/g, ''),
-    };
+    if (!creditCardToken && !cartao) throw new AppError('Dados do cartão são obrigatórios', 422, 'CARD_DATA_REQUIRED');
+
+    if (creditCardToken) {
+      payload.creditCardToken = creditCardToken;
+    } else if (cartao) {
+      payload.creditCard = {
+        holderName: cartao.nomeImpresso,
+        number: cartao.numero.replace(/\s/g, ''),
+        expiryMonth: cartao.validadeMes,
+        expiryYear: cartao.validadeAno,
+        ccv: cartao.cvv,
+      };
+      payload.creditCardHolderInfo = {
+        name: user.nome,
+        email: user.email,
+        cpfCnpj: user.cpf.replace(/\D/g, ''),
+        postalCode: endereco.cep.replace(/\D/g, ''),
+        addressNumber: endereco.numero,
+        addressComplement: endereco.complemento || undefined,
+        phone: user.telefone?.replace(/\D/g, ''),
+        mobilePhone: user.telefone?.replace(/\D/g, ''),
+      };
+    }
     payload.remoteIp = remoteIp;
   }
 

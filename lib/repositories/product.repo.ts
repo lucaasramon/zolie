@@ -1,5 +1,7 @@
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+
+type Db = PrismaClient | Prisma.TransactionClient;
 
 export interface ProductFilters {
   q?: string;
@@ -68,6 +70,26 @@ export const productRepo = {
   create: (data: any) => prisma.product.create({ data }),
   update: (id: string, data: any) => prisma.product.update({ where: { id }, data }),
   remove: (id: string) => prisma.product.update({ where: { id }, data: { ativo: false } }).then(() => true),
-  decrementStock: (id: string, qtd: number) =>
-    prisma.product.update({ where: { id }, data: { estoque: { decrement: qtd } } }),
+  decrementStock: (id: string, qtd: number, db: Db = prisma) =>
+    db.product.update({ where: { id }, data: { estoque: { decrement: qtd } } }),
+  incrementStock: (id: string, qtd: number, db: Db = prisma) =>
+    db.product.update({ where: { id }, data: { estoque: { increment: qtd } } }),
+  findFrequentlyBoughtWith: async (productId: string, take = 6) => {
+    // Produtos que apareceram no mesmo pedido de quem comprou `productId`,
+    // ordenados por quantas vezes isso aconteceu.
+    const rows = await prisma.$queryRaw<{ productId: string; vezes: bigint }[]>`
+      SELECT oi2."product_id" AS "productId", COUNT(*) AS vezes
+      FROM "order_items" oi1
+      JOIN "order_items" oi2 ON oi1."order_id" = oi2."order_id" AND oi2."product_id" != oi1."product_id"
+      WHERE oi1."product_id" = ${productId}
+      GROUP BY oi2."product_id"
+      ORDER BY vezes DESC
+      LIMIT ${take}
+    `;
+    if (rows.length === 0) return [];
+    const ids = rows.map(r => r.productId);
+    const products = await prisma.product.findMany({ where: { id: { in: ids }, ativo: true }, include: { categoria: true } });
+    const byId = new Map(products.map(p => [p.id, p]));
+    return ids.map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+  },
 };

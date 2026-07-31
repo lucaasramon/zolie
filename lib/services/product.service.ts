@@ -42,17 +42,28 @@ export async function list(filters: ProductFilters, sort: string, pagination: { 
 export async function bySlug(slug: string) {
   const p = await productRepo.findBySlug(slug);
   if (!p) throw notFound('Produto');
-  const relacionados = await productRepo.search(
-    { categoria: p.categoria ? p.categoria.slug : undefined },
-    'relevancia',
-    { skip: 0, take: 7 },
-  );
+
+  const compradosJuntos = await productRepo.findFrequentlyBoughtWith(p.id, 6);
+  const relacionadosIds = new Set(compradosJuntos.map(r => r.id));
+
+  let relacionados = compradosJuntos;
+  if (relacionados.length < 6) {
+    const porCategoria = await productRepo.search(
+      { categoria: p.categoria ? p.categoria.slug : undefined },
+      'relevancia',
+      { skip: 0, take: 12 },
+    );
+    for (const r of porCategoria.items) {
+      if (relacionados.length >= 6) break;
+      if (r.id === p.id || relacionadosIds.has(r.id)) continue;
+      relacionados.push(r);
+      relacionadosIds.add(r.id);
+    }
+  }
+
   return {
     ...decorate(p),
-    relacionados: relacionados.items
-      .filter(r => r.id !== p.id)
-      .slice(0, 6)
-      .map(decorate),
+    relacionados: relacionados.slice(0, 6).map(decorate),
   };
 }
 

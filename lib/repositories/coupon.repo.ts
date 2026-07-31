@@ -8,4 +8,13 @@ export const couponRepo = {
   update: (id: string, data: any) => prisma.coupon.update({ where: { id }, data }),
   remove: (id: string) => prisma.coupon.update({ where: { id }, data: { ativo: false } }).then(() => true),
   incrementUse: (id: string) => prisma.coupon.update({ where: { id }, data: { usos: { increment: 1 } } }),
+  findActiveWelcomeCoupon: () =>
+    prisma.coupon.findFirst({
+      where: {
+        ativo: true,
+        primeiraCompra: true,
+        OR: [{ validade: null }, { validade: { gt: new Date() } }],
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
 };

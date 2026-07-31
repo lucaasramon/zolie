@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface OrderDetail {
   numero: string;
@@ -53,7 +54,15 @@ export default function DetalhePedidoPage() {
     }
   }
 
-  if (!order) return <p className="text-sm text-ink-tertiary">Carregando pedido...</p>;
+  if (!order) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   const style = STATUS_STYLE[order.status];
 

@@ -1,4 +1,4 @@
-import { cartRepo } from '@/lib/repositories/cart.repo';
+import { cartRepo, CartOwner } from '@/lib/repositories/cart.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { AppError, notFound } from '@/lib/utils/errors';
 import * as pricing from '@/lib/services/pricing.service';
@@ -10,8 +10,8 @@ interface CartOpts {
   cupom?: string;
 }
 
-export async function get(userId: string, { cep, cupom }: CartOpts = {}) {
-  const cart = await cartRepo.getByUser(userId);
+export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
+  const cart = await cartRepo.getByOwner(owner);
   const items = cart.items.filter(i => i.product);
   let frete = 0;
   let cotacao = null;
@@ -24,7 +24,7 @@ export async function get(userId: string, { cep, cupom }: CartOpts = {}) {
   let cupomAplicado = null;
   if (cupom) {
     const subtotalBruto = pricing.resumo(items).subtotal;
-    const r = await coupons.validar(cupom, { subtotal: subtotalBruto, userId, frete });
+    const r = await coupons.validar(cupom, { subtotal: subtotalBruto, userId: 'userId' in owner ? owner.userId : null, frete });
     desconto = r.desconto;
     if (r.freteGratis) frete = 0;
     cupomAplicado = { codigo: r.cupom.codigo, descricao: r.cupom.descricao };
@@ -50,29 +50,31 @@ export async function get(userId: string, { cep, cupom }: CartOpts = {}) {
   };
 }
 
-export async function addItem(userId: string, payload: { productId: string; quantidade: number; tamanho?: string | null; acabamento?: string | null }) {
+export async function addItem(owner: CartOwner, payload: { productId: string; quantidade: number; tamanho?: string | null; acabamento?: string | null }) {
   const product = await productRepo.findById(payload.productId);
   if (!product) throw notFound('Produto');
   if (product.estoque < payload.quantidade) throw new AppError('Estoque insuficiente para esta peça', 422, 'OUT_OF_STOCK');
-  await cartRepo.addItem(userId, payload);
-  return get(userId);
+  await cartRepo.addItem(owner, payload);
+  return get(owner);
 }
 
-async function assertOwnedItem(userId: string, itemId: string) {
+async function assertOwnedItem(owner: CartOwner, itemId: string) {
   const item = await cartRepo.findItem(itemId);
-  if (!item || item.cart.userId !== userId) throw notFound('Item do carrinho');
+  if (!item) throw notFound('Item do carrinho');
+  const ownsIt = 'userId' in owner ? item.cart.userId === owner.userId : item.cart.sessionId === owner.sessionId;
+  if (!ownsIt) throw notFound('Item do carrinho');
 }
 
-export async function updateItem(userId: string, itemId: string, quantidade: number) {
-  await assertOwnedItem(userId, itemId);
-  await cartRepo.updateItem(userId, itemId, quantidade);
-  return get(userId);
+export async function updateItem(owner: CartOwner, itemId: string, quantidade: number) {
+  await assertOwnedItem(owner, itemId);
+  await cartRepo.updateItem(itemId, quantidade);
+  return get(owner);
 }
 
-export async function removeItem(userId: string, itemId: string) {
-  await assertOwnedItem(userId, itemId);
-  await cartRepo.removeItem(userId, itemId);
-  return get(userId);
+export async function removeItem(owner: CartOwner, itemId: string) {
+  await assertOwnedItem(owner, itemId);
+  await cartRepo.removeItem(itemId);
+  return get(owner);
 }
 
-export const clear = (userId: string) => cartRepo.clear(userId);
+export const clear = (owner: CartOwner) => cartRepo.clear(owner);

@@ -10,6 +10,8 @@ import * as shipping from '@/lib/services/shipping.service';
 import * as coupons from '@/lib/services/coupon.service';
 import * as payments from '@/lib/services/payment.service';
 import * as email from '@/lib/services/email.service';
+import { logger } from '@/lib/logger';
+import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 
 export const STATUS_FLOW: OrderStatus[] = ['AGUARDANDO_PAGAMENTO', 'PROCESSANDO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE'];
@@ -29,16 +31,17 @@ interface CreateOrderInput {
   cep?: string;
   cupom?: string;
   envioId?: string;
+  creditCardToken?: string;
   cartao?: CartaoInput;
   remoteIp: string;
 }
 
-export async function create(userId: string, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', cartao, remoteIp }: CreateOrderInput) {
+export async function create(userId: string, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp }: CreateOrderInput) {
   const user = await userRepo.findById(userId);
   if (!user) throw notFound('Usuário');
   if (!user.cpf) throw new AppError('Cadastre seu CPF antes de finalizar a compra', 422, 'CPF_REQUIRED');
 
-  const cart = await cartRepo.getByUser(userId);
+  const cart = await cartRepo.getByOwner({ userId });
   const items = cart.items.filter(i => i.product);
   if (!items.length) throw new AppError('Sua sacola está vazia', 422, 'EMPTY_CART');
 
@@ -71,47 +74,73 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
   const total = formaPagamento === 'PIX' ? resumo.totalPix : resumo.total;
 
   const numero = await orderRepo.nextNumber();
-  const order = await orderRepo.create(
-    {
-      numero,
-      userId,
-      enderecoId,
-      status: 'AGUARDANDO_PAGAMENTO',
-      formaPagamento,
-      parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
-      subtotal: resumo.subtotal,
-      frete: resumo.frete,
-      desconto: resumo.desconto,
-      total,
-      cupomCodigo,
-      transportadora: opcao.nome,
-      codigoRastreio: null,
-    },
-    items.map(i => ({
-      productId: i.productId,
-      nomeProduto: i.product.nome,
-      precoUnitario: pricing.precoEfetivo(i.product),
-      quantidade: i.quantidade,
-      tamanho: i.tamanho,
-      acabamento: i.acabamento,
-      subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
-    })),
-  );
 
-  const pagamento = await payments.criarCobranca({
-    order: { id: order.id, total: order.total, numero: order.numero },
-    formaPagamento,
-    parcelas,
-    cartao,
-    remoteIp,
-    user: { id: user.id, nome: user.nome, email: user.email, cpf: user.cpf, telefone: user.telefone },
-    endereco: { cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, bairro: endereco.bairro, complemento: endereco.complemento },
+  // Cria o pedido, baixa o estoque e limpa o carrinho atomicamente: se qualquer
+  // passo falhar (ex: estoque mudou entre a checagem e agora), nada é persistido.
+  const order = await prisma.$transaction(async (tx) => {
+    const created = await orderRepo.create(
+      {
+        numero,
+        userId,
+        enderecoId,
+        status: 'AGUARDANDO_PAGAMENTO',
+        formaPagamento,
+        parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
+        subtotal: resumo.subtotal,
+        frete: resumo.frete,
+        desconto: resumo.desconto,
+        total,
+        cupomCodigo,
+        transportadora: opcao.nome,
+        codigoRastreio: null,
+      },
+      items.map(i => ({
+        productId: i.productId,
+        nomeProduto: i.product.nome,
+        precoUnitario: pricing.precoEfetivo(i.product),
+        quantidade: i.quantidade,
+        tamanho: i.tamanho,
+        acabamento: i.acabamento,
+        subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
+      })),
+      tx,
+    );
+
+    for (const i of items) {
+      const updated = await productRepo.decrementStock(i.productId, i.quantidade, tx);
+      if (updated.estoque < 0) {
+        throw new AppError(`Estoque insuficiente: ${i.product.nome}`, 422, 'OUT_OF_STOCK');
+      }
+    }
+
+    await cartRepo.clear({ userId }, tx);
+    return created;
   });
 
-  await orderRepo.setAsaasPayment(order.id, pagamento.asaasPaymentId as string, pagamento.asaasStatus as string);
+  // A chamada ao gateway fica fora da transação de banco (é uma chamada de rede externa).
+  // Se falhar, compensamos manualmente: repõe estoque e marca o pedido como cancelado.
+  let pagamento: Awaited<ReturnType<typeof payments.criarCobranca>>;
+  try {
+    pagamento = await payments.criarCobranca({
+      order: { id: order.id, total: order.total, numero: order.numero },
+      formaPagamento,
+      parcelas,
+      creditCardToken,
+      cartao,
+      remoteIp,
+      user: { id: user.id, nome: user.nome, email: user.email, cpf: user.cpf, telefone: user.telefone },
+      endereco: { cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, bairro: endereco.bairro, complemento: endereco.complemento },
+    });
+  } catch (err) {
+    await prisma.$transaction(async (tx) => {
+      for (const i of items) await productRepo.incrementStock(i.productId, i.quantidade, tx);
+      await orderRepo.updateStatus(order.id, 'CANCELADO', 'Falha ao criar cobrança no gateway de pagamento', tx);
+    });
+    logger.error('Falha ao criar cobrança Asaas; pedido cancelado e estoque revertido', err, { orderId: order.id });
+    throw err;
+  }
 
-  for (const i of items) await productRepo.decrementStock(i.productId, i.quantidade);
-  await cartRepo.clear(userId);
+  await orderRepo.setAsaasPayment(order.id, pagamento.asaasPaymentId as string, pagamento.asaasStatus as string);
 
   await email.enviarConfirmacaoPedido(user.email, user.nome, order.numero, order.items, order.total);
 

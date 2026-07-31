@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: zolie
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-k-ihPWqh5FgW0ygK9iQv2P-U}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env antes de subir o container}
       POSTGRES_DB: zolie
     ports:
       - "5432:5432"

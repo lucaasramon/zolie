@@ -10,6 +10,7 @@ interface User {
   telefone: string | null;
   cpf: string | null;
   role: 'CUSTOMER' | 'ADMIN';
+  emailVerified: boolean;
   createdAt: string;
 }
 
@@ -18,7 +19,7 @@ interface AuthContextValue {
   loading: boolean;
   login: (email: string, senha: string) => Promise<User>;
   register: (data: { nome: string; email: string; senha: string; telefone?: string; cpf?: string }) => Promise<User>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
 
@@ -64,9 +65,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const logout = useCallback(() => {
-    document.cookie = 'zolie_token=; path=/; max-age=0';
-    setUser(null);
+  const logout = useCallback(async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      setUser(null);
+    }
   }, []);
 
   return (

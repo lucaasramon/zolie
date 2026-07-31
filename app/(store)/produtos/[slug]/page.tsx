@@ -1,10 +1,12 @@
 import Link from 'next/link';
-import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { bySlug } from '@/lib/services/product.service';
 import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
+import { ProductGallery } from '@/components/product/ProductGallery';
+import { ReviewForm } from '@/components/product/ReviewForm';
+import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
 import { brl } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
@@ -37,19 +39,7 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        {produto.imagens?.[0] ? (
-          <div className="relative aspect-square overflow-hidden rounded-xl shadow-xs">
-            <Image src={produto.imagens[0]} alt={produto.nome} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" priority />
-          </div>
-        ) : (
-          <div className="img-placeholder grid aspect-square place-items-center rounded-xl shadow-xs p-4">
-            <span className="text-center font-mono text-xs uppercase tracking-[0.12em] text-ink-tertiary">
-              foto do produto
-              <br />
-              {produto.slug}
-            </span>
-          </div>
-        )}
+        <ProductGallery imagens={produto.imagens || []} nome={produto.nome} slug={produto.slug} />
 
         <div className="flex flex-col gap-4">
           <div>
@@ -117,7 +107,10 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       <div className="mt-14">
-        <h2 className="mb-4 font-sans text-xl font-semibold text-ink">Avaliações</h2>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-sans text-xl font-semibold text-ink">Avaliações</h2>
+          <ReviewForm productId={produto.id} />
+        </div>
         {reviews.length === 0 ? (
           <p className="text-sm text-ink-tertiary">Ainda não há avaliações para esta peça.</p>
         ) : (
@@ -127,9 +120,23 @@ export default async function ProdutoPage({ params }: Props) {
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gold-text">{stars(r.nota)}</span>
                   <span className="text-sm font-medium text-ink">{r.user?.nome || 'Cliente Zoliê'}</span>
+                  {r.compraVerificada && (
+                    <span className="rounded-full bg-hoverbg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold-text">
+                      Compra verificada
+                    </span>
+                  )}
                 </div>
                 {r.titulo && <p className="mt-1 text-sm font-medium text-ink">{r.titulo}</p>}
                 {r.comentario && <p className="mt-1 text-sm text-ink-muted">{r.comentario}</p>}
+                {r.imagens?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {r.imagens.map((url: string) => (
+                      <div key={url} className="relative h-16 w-16 overflow-hidden rounded-md">
+                        <Image src={url} alt="" fill sizes="64px" className="object-cover" />
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

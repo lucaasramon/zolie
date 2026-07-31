@@ -1,15 +1,20 @@
 import { quantitySchema } from '@/lib/validation/schemas';
 import * as cartService from '@/lib/services/cart.service';
 import { ok } from '@/lib/http/envelope';
-import { withAuth } from '@/lib/http/withAuth';
+import { withOptionalAuth } from '@/lib/http/withAuth';
+import { resolveCartOwner, withGuestCartCookie } from '@/lib/http/cartOwner';
 
-export const PATCH = withAuth(async (req, ctx, user) => {
+export const PATCH = withOptionalAuth(async (req, ctx, user) => {
+  const { owner, newSessionId } = resolveCartOwner(req, user);
   const { id } = await ctx.params;
   const { quantidade } = quantitySchema.parse(await req.json());
-  return ok(await cartService.updateItem(user.sub, id, quantidade));
+  const data = await cartService.updateItem(owner, id, quantidade);
+  return withGuestCartCookie(ok(data), newSessionId);
 });
 
-export const DELETE = withAuth(async (_req, ctx, user) => {
+export const DELETE = withOptionalAuth(async (req, ctx, user) => {
+  const { owner, newSessionId } = resolveCartOwner(req, user);
   const { id } = await ctx.params;
-  return ok(await cartService.removeItem(user.sub, id));
+  const data = await cartService.removeItem(owner, id);
+  return withGuestCartCookie(ok(data), newSessionId);
 });

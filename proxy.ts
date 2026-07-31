@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
+if (!process.env.JWT_SECRET) {
+  throw new Error('Variável de ambiente obrigatória ausente: JWT_SECRET');
+}
+const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+
 export async function proxy(req: NextRequest) {
   const token = req.cookies.get('zolie_token')?.value;
 
@@ -9,8 +14,7 @@ export async function proxy(req: NextRequest) {
   }
 
   try {
-    const secret = new TextEncoder().encode(process.env.JWT_SECRET || 'dev-secret-nao-use-em-producao');
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, JWT_SECRET);
     if (payload.role !== 'ADMIN') {
       return NextResponse.redirect(new URL('/login', req.url));
     }

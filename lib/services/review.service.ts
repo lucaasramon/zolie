@@ -8,12 +8,16 @@ export async function list(productId: string, pagination: { skip?: number; take?
   return reviewRepo.listByProduct(productId, pagination);
 }
 
-export async function create(userId: string, productId: string, { nota, titulo, comentario }: { nota: number; titulo?: string; comentario?: string }) {
+export async function create(
+  userId: string,
+  productId: string,
+  { nota, titulo, comentario, imagens }: { nota: number; titulo?: string; comentario?: string; imagens?: string[] },
+) {
   const product = await productRepo.findById(productId);
   if (!product) throw notFound('Produto');
   const existing = await reviewRepo.findByUserAndProduct(userId, productId);
   if (existing) throw new AppError('Você já avaliou esta peça', 409, 'REVIEW_EXISTS');
-  const review = await reviewRepo.create({ userId, productId, nota, titulo, comentario });
+  const review = await reviewRepo.create({ userId, productId, nota, titulo, comentario, imagens });
   return { review, mensagem: 'Avaliação enviada para moderação' };
 }
 

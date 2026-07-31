@@ -3,9 +3,11 @@ import { forgotSchema } from '@/lib/validation/schemas';
 import { forgotPassword } from '@/lib/services/auth.service';
 import { ok } from '@/lib/http/envelope';
 import { handleRouteError } from '@/lib/http/errorHandler';
+import { assertRateLimit } from '@/lib/http/rateLimit';
 
 export async function POST(req: NextRequest) {
   try {
+    assertRateLimit(req, 'auth:forgot-password', { windowMs: 15 * 60_000, max: 3 });
     const { email } = forgotSchema.parse(await req.json());
     return ok(await forgotPassword(email));
   } catch (err) {

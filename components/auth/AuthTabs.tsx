@@ -1,12 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { api, ApiError } from '@/lib/api-client';
 
 type Tab = 'login' | 'cadastro' | 'recuperar';
+
+interface WelcomeCoupon {
+  codigo: string;
+  descricao: string | null;
+  tipoDesconto: 'PERCENT' | 'FIXED' | 'FREE_SHIPPING';
+  valor: number;
+}
 
 export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
   const [tab, setTab] = useState<Tab>(defaultTab);
@@ -15,6 +22,15 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get('next') || '/conta';
+
+  const [welcomeCoupon, setWelcomeCoupon] = useState<WelcomeCoupon | null>(null);
+
+  useEffect(() => {
+    api
+      .get<{ cupom: WelcomeCoupon | null }>('/coupons/welcome')
+      .then(({ data }) => setWelcomeCoupon(data.cupom))
+      .catch(() => {});
+  }, []);
 
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
@@ -102,7 +118,15 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
 
       {tab === 'cadastro' && (
         <form onSubmit={onCadastro} className="flex flex-col gap-4">
-          <p className="rounded-lg bg-hoverbg px-3 py-2 text-xs text-gold-text">Ganhe 10% off na primeira compra com o cupom BRILHE10</p>
+          {welcomeCoupon && (
+            <p className="rounded-lg bg-hoverbg px-3 py-2 text-xs text-gold-text">
+              {welcomeCoupon.tipoDesconto === 'FREE_SHIPPING'
+                ? `Ganhe frete grátis na primeira compra com o cupom ${welcomeCoupon.codigo}`
+                : welcomeCoupon.tipoDesconto === 'PERCENT'
+                  ? `Ganhe ${welcomeCoupon.valor}% off na primeira compra com o cupom ${welcomeCoupon.codigo}`
+                  : `Ganhe R$ ${welcomeCoupon.valor.toFixed(2)} off na primeira compra com o cupom ${welcomeCoupon.codigo}`}
+            </p>
+          )}
           <Field label="Nome completo" value={cadastroForm.nome} onChange={v => setCadastroForm(f => ({ ...f, nome: v }))} required />
           <Field label="E-mail" type="email" value={cadastroForm.email} onChange={v => setCadastroForm(f => ({ ...f, email: v }))} required />
           <Field label="CPF" value={cadastroForm.cpf} onChange={v => setCadastroForm(f => ({ ...f, cpf: v }))} />

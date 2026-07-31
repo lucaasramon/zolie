@@ -13,7 +13,22 @@ export const reviewRepo = {
         include: { user: { select: { nome: true } } },
       }),
     ]);
-    return { total, items };
+
+    if (items.length === 0) return { total, items };
+
+    const compradores = await prisma.orderItem.findMany({
+      where: {
+        productId,
+        order: { userId: { in: items.map(i => i.userId) }, status: { not: 'CANCELADO' } },
+      },
+      select: { order: { select: { userId: true } } },
+    });
+    const userIdsCompraram = new Set(compradores.map(c => c.order.userId));
+
+    return {
+      total,
+      items: items.map(i => ({ ...i, compraVerificada: userIdsCompraram.has(i.userId) })),
+    };
   },
   listPending: async ({ skip = 0, take = 20 }: { skip?: number; take?: number } = {}) => {
     const where = { aprovado: false };
@@ -30,7 +45,7 @@ export const reviewRepo = {
     return { total, items };
   },
   findById: (id: string) => prisma.productReview.findUnique({ where: { id } }),
-  create: (data: { productId: string; userId: string; nota: number; titulo?: string; comentario?: string }) =>
+  create: (data: { productId: string; userId: string; nota: number; titulo?: string; comentario?: string; imagens?: string[] }) =>
     prisma.productReview.create({ data }),
   findByUserAndProduct: (userId: string, productId: string) =>
     prisma.productReview.findUnique({ where: { productId_userId: { productId, userId } } }),

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 const NAV = [
   { href: '/conta', label: 'Meus dados' },
@@ -22,7 +23,15 @@ export default function ContaLayout({ children }: { children: React.ReactNode })
   }, [loading, user, pathname, router]);
 
   if (loading || !user) {
-    return <div className="mx-auto max-w-[1280px] px-5 py-16 text-center text-ink-tertiary">Carregando...</div>;
+    return (
+      <div className="mx-auto max-w-[1280px] px-5 py-8">
+        <Skeleton className="mb-6 h-9 w-48" />
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <Skeleton className="h-40 w-full lg:w-[220px] lg:flex-none" />
+          <Skeleton className="h-64 flex-1" />
+        </div>
+      </div>
+    );
   }
 
   return (

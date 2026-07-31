@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import { AppError } from '@/lib/utils/errors';
+import { logger } from '@/lib/logger';
 
 interface AsaasErrorBody {
   errors?: { code: string; description: string }[];
@@ -24,7 +25,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       // corpo não é JSON (ex: erro de auth/proxy) — segue com body vazio
     }
-    console.error(`[asaas] ${init.method || 'GET'} ${path} -> ${res.status}: ${rawText.slice(0, 500)}`);
+    logger.error(`Erro do gateway Asaas em ${init.method || 'GET'} ${path}`, undefined, { status: res.status, body: rawText.slice(0, 500) });
     const message = body.errors?.[0]?.description || `Erro ao comunicar com o gateway de pagamento (status ${res.status})`;
     throw new AppError(message, 502, 'ASAAS_PROVIDER_ERROR');
   }

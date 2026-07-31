@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import { env } from '@/lib/env';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL } from '@/lib/utils/format';
+import { logger } from '@/lib/logger';
 
 const resend = env.resend.apiKey ? new Resend(env.resend.apiKey) : null;
 
@@ -22,13 +23,13 @@ const COLORS = {
 
 async function send(to: string, subject: string, html: string) {
   if (!resend) {
-    console.warn(`[email] RESEND_API_KEY não configurada — e-mail não enviado (assunto: "${subject}", destinatário: ${to})`);
+    logger.warn('RESEND_API_KEY não configurada — e-mail não enviado', { subject, to });
     return;
   }
   try {
     await resend.emails.send({ from: env.resend.from, to, subject, html });
   } catch (err) {
-    console.error(`[email] Falha ao enviar "${subject}" para ${to}:`, err);
+    logger.error(`Falha ao enviar e-mail "${subject}"`, err, { to });
   }
 }
 
@@ -174,6 +175,41 @@ export async function enviarMudancaStatus(to: string, nome: string, numero: stri
     `,
   );
   await send(to, `Pedido ${numero}: ${STATUS_LABEL[status] || status} — Zoliê`, html);
+}
+
+export async function enviarVerificacaoEmail(to: string, nome: string, token: string) {
+  const link = `${env.appUrl}/verificar-email?token=${token}`;
+  const html = layout(
+    'Confirme seu e-mail na Zoliê',
+    `
+      ${heading('Confirme seu e-mail')}
+      ${paragraph(`Olá, ${nome}!`)}
+      ${paragraph('Para ativar sua conta na Zoliê, confirme seu endereço de e-mail clicando no botão abaixo.')}
+      ${button('Confirmar meu e-mail', link)}
+      ${paragraph('Se você não criou uma conta na Zoliê, pode ignorar este e-mail com segurança.')}
+      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkTertiary};">Se o botão não funcionar, copie e cole este link no navegador:<br /><a href="${link}" style="color: ${COLORS.goldText};">${link}</a></p>
+    `,
+  );
+  await send(to, 'Confirme seu e-mail — Zoliê', html);
+}
+
+export async function enviarCarrinhoAbandonado(to: string, nome: string, itens: { nomeProduto: string }[]) {
+  const listaHtml = itens
+    .slice(0, 5)
+    .map(i => `<p style="margin: 0 0 6px; font-family: Arial, sans-serif; font-size: 13px; color: ${COLORS.ink};">• ${i.nomeProduto}</p>`)
+    .join('');
+
+  const html = layout(
+    'Você esqueceu itens na sua sacola',
+    `
+      ${badge('Sua sacola te espera')}
+      ${heading(`Ainda dá tempo, ${nome.split(' ')[0]}!`)}
+      ${paragraph('Notamos que você deixou peças na sua sacola. Elas continuam disponíveis, mas o estoque é limitado.')}
+      <div style="margin: 16px 0;">${listaHtml}</div>
+      ${button('Finalizar minha compra', `${env.appUrl}/carrinho`)}
+    `,
+  );
+  await send(to, 'Você esqueceu itens na sua sacola — Zoliê', html);
 }
 
 export async function enviarConfirmacaoPagamento(to: string, nome: string, numero: string) {

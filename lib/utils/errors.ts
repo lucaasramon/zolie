@@ -13,3 +13,4 @@ export const notFound = (what = 'Recurso') => new AppError(`${what} não encontr
 export const unauthorized = (m = 'Credenciais inválidas') => new AppError(m, 401, 'UNAUTHORIZED');
 export const forbidden = (m = 'Acesso não permitido') => new AppError(m, 403, 'FORBIDDEN');
 export const conflict = (m: string) => new AppError(m, 409, 'CONFLICT');
+export const tooManyRequests = (m = 'Muitas tentativas. Tente novamente em instantes.') => new AppError(m, 429, 'TOO_MANY_REQUESTS');

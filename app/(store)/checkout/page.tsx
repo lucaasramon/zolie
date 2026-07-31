@@ -8,6 +8,8 @@ import { ZodIssue } from 'zod';
 import { brl } from '@/lib/utils/money';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { tokenizeCard } from '@/lib/asaasJs';
 
 interface Address {
   id: string;
@@ -136,17 +138,44 @@ export default function CheckoutPage() {
   }
 
   async function onConfirm() {
+    if (!user) return;
     setLoading(true);
     setErro('');
     try {
       const endereco = addresses.find(a => a.id === enderecoId);
+
+      let creditCardToken: string | undefined;
+      let cartaoFallback: typeof cartao | undefined;
+      if (formaPagamento === 'CARTAO_CREDITO' && endereco) {
+        try {
+          const { data: customerData } = await api.post<{ asaasCustomerId: string }>('/payments/asaas-customer', { enderecoId });
+          creditCardToken = await tokenizeCard({
+            customerId: customerData.asaasCustomerId,
+            cartao,
+            titular: {
+              nome: user.nome,
+              email: user.email,
+              cpf: user.cpf || '',
+              cep: endereco.cep,
+              numero: endereco.numero,
+              telefone: user.telefone || undefined,
+            },
+          });
+        } catch {
+          // Tokenização indisponível (ex: script bloqueado por adblock) — segue com o fluxo
+          // anterior, que envia os dados do cartão ao backend para repassar ao Asaas.
+          cartaoFallback = cartao;
+        }
+      }
+
       const { data } = await api.post<{ order: { numero: string }; pagamento: any }>('/orders', {
         enderecoId,
         formaPagamento,
         parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
         cep: endereco?.cep,
         envioId,
-        cartao: formaPagamento === 'CARTAO_CREDITO' ? cartao : undefined,
+        creditCardToken,
+        cartao: cartaoFallback,
       });
       setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento });
       setStep(5);
@@ -159,7 +188,15 @@ export default function CheckoutPage() {
   }
 
   if (authLoading || !user || !cart) {
-    return <div className="mx-auto max-w-[1280px] px-5 py-16 text-center text-ink-tertiary">Carregando checkout...</div>;
+    return (
+      <div className="mx-auto max-w-[1280px] px-5 py-8">
+        <Skeleton className="mb-6 h-9 w-56" />
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <Skeleton className="h-96 flex-1 rounded-xl" />
+          <Skeleton className="h-72 w-full flex-none rounded-xl lg:w-[340px]" />
+        </div>
+      </div>
+    );
   }
 
   if (step === 5 && pedidoConcluido) {

@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { useCart } from '@/components/providers/CartProvider';
 import { useToast } from '@/components/providers/ToastProvider';
+import { CartItemSkeleton, Skeleton } from '@/components/ui/Skeleton';
 
 interface CartItem {
   id: string;
@@ -101,7 +102,21 @@ export default function CarrinhoPage() {
   }
 
   if (!cart) {
-    return <div className="mx-auto max-w-[1280px] px-5 py-16 text-center text-ink-tertiary">Carregando sacola...</div>;
+    return (
+      <div className="mx-auto max-w-[1280px] px-5 py-8">
+        <Skeleton className="mb-6 h-9 w-56" />
+        <div className="flex flex-col gap-8 lg:flex-row">
+          <div className="flex flex-1 flex-col gap-4">
+            <CartItemSkeleton />
+            <CartItemSkeleton />
+            <CartItemSkeleton />
+          </div>
+          <div className="w-full flex-none lg:w-[340px]">
+            <Skeleton className="h-80 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (cart.items.length === 0) {

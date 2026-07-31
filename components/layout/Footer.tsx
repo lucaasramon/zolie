@@ -1,5 +1,8 @@
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/components/providers/AuthProvider';
 
 interface Categoria {
   nome: string;
@@ -7,6 +10,7 @@ interface Categoria {
 }
 
 export function Footer({ categorias }: { categorias: Categoria[] }) {
+  const { user } = useAuth();
   return (
     <footer className="border-t border-border-subtle bg-white">
       <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -50,7 +54,9 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
           <Link href="/login" className="text-sm text-ink-muted hover:text-gold-text">Entrar</Link>
           <Link href="/conta/pedidos" className="text-sm text-ink-muted hover:text-gold-text">Meus pedidos</Link>
           <Link href="/conta/favoritos" className="text-sm text-ink-muted hover:text-gold-text">Favoritos</Link>
-          <Link href="/admin" className="text-sm text-ink-muted hover:text-gold-text">Painel administrativo</Link>
+          {user?.role === 'ADMIN' && (
+            <Link href="/admin" className="text-sm text-ink-muted hover:text-gold-text">Painel administrativo</Link>
+          )}
           <div className="mt-2 flex flex-wrap gap-1.5">
             {['Visa', 'Mastercard', 'Elo', 'Pix', 'Boleto'].map(n => (
               <span key={n} className="rounded-full border border-border-soft px-2.5 py-1 text-[10px] text-ink-muted">

@@ -1,10 +1,18 @@
 const num = (v: string | undefined, d: number) => (v === undefined || v === '' ? d : Number(v));
 
+function required(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Variável de ambiente obrigatória ausente: ${name}`);
+  }
+  return value;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'dev-secret-nao-use-em-producao',
+    secret: required('JWT_SECRET'),
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   bcryptRounds: num(process.env.BCRYPT_SALT_ROUNDS, 10),
@@ -32,6 +40,8 @@ export const env = {
     apiKey: process.env.RESEND_API_KEY || '',
     from: process.env.EMAIL_FROM || 'Zoliê Semijoias <onboarding@resend.dev>',
   },
+
+  cronSecret: process.env.CRON_SECRET || '',
 
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
 };

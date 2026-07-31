@@ -1,8 +1,11 @@
 import * as cartService from '@/lib/services/cart.service';
 import { ok } from '@/lib/http/envelope';
-import { withAuth } from '@/lib/http/withAuth';
+import { withOptionalAuth } from '@/lib/http/withAuth';
+import { resolveCartOwner, withGuestCartCookie } from '@/lib/http/cartOwner';
 
-export const GET = withAuth(async (req, _ctx, user) => {
+export const GET = withOptionalAuth(async (req, _ctx, user) => {
+  const { owner, newSessionId } = resolveCartOwner(req, user);
   const sp = req.nextUrl.searchParams;
-  return ok(await cartService.get(user.sub, { cep: sp.get('cep') ?? undefined, cupom: sp.get('cupom') ?? undefined }));
+  const data = await cartService.get(owner, { cep: sp.get('cep') ?? undefined, cupom: sp.get('cupom') ?? undefined });
+  return withGuestCartCookie(ok(data), newSessionId);
 });

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { useToast } from '@/components/providers/ToastProvider';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 interface Address {
   id: string;
@@ -52,7 +53,14 @@ export default function MeusEnderecosPage() {
     await load();
   }
 
-  if (!addresses) return <p className="text-sm text-ink-tertiary">Carregando endereços...</p>;
+  if (!addresses) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

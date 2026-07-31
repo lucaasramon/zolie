@@ -1,9 +1,11 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma, OrderStatus } from '@prisma/client';
+import { Prisma, OrderStatus, PrismaClient } from '@prisma/client';
+
+type Db = PrismaClient | Prisma.TransactionClient;
 
 export const orderRepo = {
-  create: (order: Prisma.OrderUncheckedCreateInput, items: Prisma.OrderItemCreateManyOrderInput[]) =>
-    prisma.order.create({
+  create: (order: Prisma.OrderUncheckedCreateInput, items: Prisma.OrderItemCreateManyOrderInput[], db: Db = prisma) =>
+    db.order.create({
       data: {
         ...order,
         items: { create: items },
@@ -37,8 +39,8 @@ export const orderRepo = {
       where: { id },
       include: { items: true, events: true, endereco: true, user: { select: { nome: true, email: true, telefone: true } } },
     }),
-  updateStatus: (id: string, status: OrderStatus, descricao?: string) =>
-    prisma.order.update({
+  updateStatus: (id: string, status: OrderStatus, descricao?: string, db: Db = prisma) =>
+    db.order.update({
       where: { id },
       data: { status, events: { create: { status, descricao } } },
       include: { items: true, events: true, user: { select: { nome: true, email: true } } },

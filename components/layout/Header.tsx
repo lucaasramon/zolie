@@ -1,26 +1,65 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
+import { api } from '@/lib/api-client';
+import { brl } from '@/lib/utils/money';
 
 interface Categoria {
   nome: string;
   slug: string;
 }
 
+interface Suggestion {
+  id: string;
+  nome: string;
+  slug: string;
+  imagem: string | null;
+  precoEfetivo: number;
+}
+
 export function Header({ categorias }: { categorias: Categoria[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const { user } = useAuth();
   const { itemCount, totalFmt } = useCart();
 
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      api
+        .get<Suggestion[]>(`/products/suggestions?q=${encodeURIComponent(term)}`)
+        .then(({ data }) => setSuggestions(data))
+        .catch(() => {});
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, []);
+
   function onSearch() {
     if (!query.trim()) return;
+    setShowSuggestions(false);
     router.push(`/produtos?q=${encodeURIComponent(query.trim())}`);
   }
 
@@ -61,22 +100,48 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
             </span>
           </Link>
 
-          <div className="flex flex-1 basis-[280px] items-center overflow-hidden rounded-full bg-bg-alt shadow-xs transition-shadow focus-within:shadow-sm">
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && onSearch()}
-              placeholder="Buscar colares, brincos, anéis..."
-              aria-label="Buscar produtos"
-              className="flex-1 border-none bg-transparent px-[18px] py-[13px] text-ink outline-none"
-            />
-            <button
-              type="button"
-              onClick={onSearch}
-              className="whitespace-nowrap rounded-full bg-gold px-5 py-[13px] text-[11px] font-medium uppercase tracking-[0.12em] text-ink transition-colors hover:bg-gold-hover"
-            >
-              Buscar
-            </button>
+          <div ref={searchBoxRef} className="relative flex flex-1 basis-[280px] items-center">
+            <div className="flex w-full items-center overflow-hidden rounded-full bg-bg-alt shadow-xs transition-shadow focus-within:shadow-sm">
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={e => e.key === 'Enter' && onSearch()}
+                placeholder="Buscar colares, brincos, anéis..."
+                aria-label="Buscar produtos"
+                className="flex-1 border-none bg-transparent px-[18px] py-[13px] text-ink outline-none"
+              />
+              <button
+                type="button"
+                onClick={onSearch}
+                className="whitespace-nowrap rounded-full bg-gold px-5 py-[13px] text-[11px] font-medium uppercase tracking-[0.12em] text-ink transition-colors hover:bg-gold-hover"
+              >
+                Buscar
+              </button>
+            </div>
+
+            {showSuggestions && suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-2 flex flex-col overflow-hidden rounded-xl bg-white py-1.5 shadow-lg">
+                {suggestions.map(s => (
+                  <Link
+                    key={s.id}
+                    href={`/produtos/${s.slug}`}
+                    onClick={() => setShowSuggestions(false)}
+                    className="flex items-center gap-3 px-4 py-2 transition-colors hover:bg-hoverbg"
+                  >
+                    {s.imagem ? (
+                      <div className="relative h-10 w-10 flex-none overflow-hidden rounded-md">
+                        <Image src={s.imagem} alt="" fill sizes="40px" className="object-cover" />
+                      </div>
+                    ) : (
+                      <div className="img-placeholder h-10 w-10 flex-none rounded-md" />
+                    )}
+                    <span className="flex-1 truncate text-sm text-ink">{s.nome}</span>
+                    <span className="flex-none text-xs text-ink-tertiary">{brl(s.precoEfetivo)}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -165,13 +230,15 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
                 {l.label}
               </Link>
             ))}
-            <Link
-              href="/admin"
-              onClick={() => setMenuOpen(false)}
-              className="mt-3.5 rounded-lg bg-bg-alt p-3 text-xs uppercase tracking-[0.08em] text-gold-text"
-            >
-              Painel administrativo
-            </Link>
+            {user?.role === 'ADMIN' && (
+              <Link
+                href="/admin"
+                onClick={() => setMenuOpen(false)}
+                className="mt-3.5 rounded-lg bg-bg-alt p-3 text-xs uppercase tracking-[0.08em] text-gold-text"
+              >
+                Painel administrativo
+              </Link>
+            )}
           </nav>
           <div onClick={() => setMenuOpen(false)} className="flex-1" />
         </div>

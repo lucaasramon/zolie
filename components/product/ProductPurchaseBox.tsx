@@ -27,7 +27,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque }: Props) {
   const { showToast } = useToast();
 
   async function addToCart(buyNow = false) {
-    if (!user) {
+    if (buyNow && !user) {
       router.push('/login?next=/checkout');
       return;
     }

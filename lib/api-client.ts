@@ -13,19 +13,11 @@ export class ApiError extends Error {
   }
 }
 
-function getToken(): string | null {
-  if (typeof document === 'undefined') return null;
-  const match = document.cookie.match(/(?:^|; )zolie_token=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : null;
-}
-
 async function request<T>(path: string, options: RequestInit = {}): Promise<{ data: T; meta?: unknown }> {
-  const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const res = await fetch(`/api/v1${path}`, { ...options, headers, credentials: 'include' });
   const json = await res.json().catch(() => ({}));
@@ -37,14 +29,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<{ da
 }
 
 async function upload<T>(path: string, file: File): Promise<{ data: T; meta?: unknown }> {
-  const token = getToken();
-  const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
   const formData = new FormData();
   formData.append('file', file);
 
-  const res = await fetch(`/api/v1${path}`, { method: 'POST', headers, body: formData, credentials: 'include' });
+  const res = await fetch(`/api/v1${path}`, { method: 'POST', body: formData, credentials: 'include' });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = json?.error || {};

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 enum Material {
@@ -57,6 +58,7 @@ model User {
   reviews       ProductReview[]
   wishlist      WishlistItem[]
   resetTokens   PasswordResetToken[]
+  verificationTokens EmailVerificationToken[]
 
   @@map("users")
 }
@@ -72,6 +74,19 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
+}
+
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
 }
 
 model Address {
@@ -161,6 +176,7 @@ model ProductReview {
   nota       Int
   titulo     String?
   comentario String?
+  imagens    String[]
   aprovado   Boolean  @default(false)
   createdAt  DateTime @default(now()) @map("created_at")
 
@@ -173,12 +189,14 @@ model ProductReview {
 }
 
 model Cart {
-  id        String     @id @default(uuid())
-  userId    String     @unique @map("user_id")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  id                   String     @id @default(uuid())
+  userId               String?    @unique @map("user_id")
+  sessionId            String?    @unique @map("session_id")
+  abandonedEmailSentAt DateTime?  @map("abandoned_email_sent_at")
+  createdAt            DateTime   @default(now()) @map("created_at")
+  updatedAt            DateTime   @updatedAt @map("updated_at")
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
 
   @@map("carts")
