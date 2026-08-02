@@ -6,11 +6,11 @@
     },
     {
       "path": "/api/v1/cron/expire-orders",
-      "schedule": "0 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/v1/cron/sync-tracking",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 12 * * *"
     }
   ]
 }
