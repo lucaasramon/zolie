@@ -71,5 +71,9 @@ export const env = {
 
   cronSecret: process.env.CRON_SECRET || '',
 
+  // Chave para o bot de atendimento (ex: n8n) consultar produtos/categorias via
+  // /api/v1/assistant/*. Separada do CRON_SECRET: escopo e motivo de rotação diferentes.
+  assistantApiKey: process.env.ASSISTANT_API_KEY || '',
+
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
 };
