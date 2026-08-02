@@ -5,6 +5,7 @@ import { env } from '@/lib/env';
 import { AppError, unauthorized, conflict, notFound } from '@/lib/utils/errors';
 import { signToken } from '@/lib/auth/jwt';
 import { enviarRecuperacaoSenha, enviarVerificacaoEmail } from '@/lib/services/email.service';
+import { dominioAceitaEmail, ehDescartavel, sugestaoDeDominio } from '@/lib/utils/email';
 
 export function publicUser(u: any) {
   return { id: u.id, nome: u.nome, email: u.email, telefone: u.telefone, cpf: u.cpf, role: u.role, emailVerified: u.emailVerified, createdAt: u.createdAt };
@@ -12,6 +13,18 @@ export function publicUser(u: any) {
 
 export async function register({ nome, email, senha, telefone, cpf }: { nome: string; email: string; senha: string; telefone?: string; cpf?: string }) {
   if (await userRepo.findByEmail(email)) throw conflict('Este e-mail já tem conta na Zoliê');
+  if (ehDescartavel(email)) {
+    throw new AppError('Use um e-mail permanente — endereços temporários não são aceitos', 422, 'EMAIL_DISPOSABLE');
+  }
+  const sugestao = sugestaoDeDominio(email);
+  if (sugestao) {
+    throw new AppError(`Você quis dizer @${sugestao}? Confira o endereço de e-mail.`, 422, 'EMAIL_TYPO_SUSPECTED');
+  }
+  if (!(await dominioAceitaEmail(email))) {
+    throw new AppError('Não encontramos esse domínio de e-mail. Confira se está escrito corretamente.', 422, 'EMAIL_DOMAIN_INVALID');
+  }
+  if (cpf && (await userRepo.findByCpf(cpf))) throw conflict('Este CPF já tem conta na Zoliê');
+
   const senhaHash = await bcrypt.hash(senha, env.bcryptRounds);
   const user = await userRepo.create({ nome, email, senhaHash, telefone, cpf });
 
@@ -84,6 +97,10 @@ export async function resetPassword({ token, novaSenha }: { token: string; novaS
 }
 
 export async function updateProfile(userId: string, data: { nome?: string; telefone?: string; cpf?: string }) {
+  if (data.cpf) {
+    const dono = await userRepo.findByCpf(data.cpf);
+    if (dono && dono.id !== userId) throw conflict('Este CPF já tem conta na Zoliê');
+  }
   const user = await userRepo.update(userId, data);
   if (!user) throw notFound('Usuário');
   return publicUser(user);

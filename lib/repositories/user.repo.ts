@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 export const userRepo = {
   findByEmail: (email: string) => prisma.user.findUnique({ where: { email: email.toLowerCase() } }),
   findById: (id: string) => prisma.user.findUnique({ where: { id } }),
+  findByCpf: (cpf: string) => prisma.user.findUnique({ where: { cpf } }),
   create: (data: { nome: string; email: string; senhaHash: string; telefone?: string; cpf?: string }) =>
     prisma.user.create({ data: { ...data, email: data.email.toLowerCase() } }),
   update: (id: string, data: Partial<{ nome: string; telefone: string; cpf: string; senhaHash: string; asaasCustomerId: string }>) =>

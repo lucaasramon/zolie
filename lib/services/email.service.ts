@@ -162,15 +162,40 @@ export async function enviarConfirmacaoPedido(to: string, nome: string, numero: 
   await send(to, `Pedido ${numero} confirmado — Zoliê`, html);
 }
 
-export async function enviarMudancaStatus(to: string, nome: string, numero: string, status: string, descricao?: string | null) {
+interface RastreioInfo {
+  codigoRastreio?: string | null;
+  transportadora?: string | null;
+}
+
+function blocoRastreio({ codigoRastreio, transportadora }: RastreioInfo) {
+  if (!codigoRastreio) return '';
+  return `
+    <div style="margin: 20px 0; padding: 18px; border: 1px solid ${COLORS.border}; border-radius: 12px; background-color: ${COLORS.hoverbg};">
+      <p style="margin: 0 0 6px; font-family: Arial, sans-serif; font-size: 11px; font-weight: bold; letter-spacing: 0.06em; text-transform: uppercase; color: ${COLORS.goldText};">Código de rastreio</p>
+      <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 18px; font-weight: bold; letter-spacing: 0.04em; color: ${COLORS.ink};">${codigoRastreio}</p>
+      ${transportadora ? `<p style="margin: 6px 0 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkMuted};">Transportadora: ${transportadora}</p>` : ''}
+    </div>
+  `;
+}
+
+export async function enviarMudancaStatus(
+  to: string,
+  nome: string,
+  numero: string,
+  status: string,
+  descricao?: string | null,
+  rastreio?: RastreioInfo,
+) {
+  const enviado = status === 'ENVIADO';
   const html = layout(
     `Pedido ${numero}: ${STATUS_LABEL[status] || status}`,
     `
       ${badge('Atualização do pedido')}
-      ${heading(`Seu pedido ${numero} teve uma atualização`)}
+      ${heading(enviado ? `Seu pedido ${numero} saiu para entrega!` : `Seu pedido ${numero} teve uma atualização`)}
       ${paragraph(`Olá, ${nome.split(' ')[0]}! O status do seu pedido mudou para:`)}
       <p style="margin: 0 0 16px;">${badge(STATUS_LABEL[status] || status, status === 'ENTREGUE' ? 'success' : 'gold')}</p>
       ${descricao ? paragraph(descricao) : ''}
+      ${enviado ? blocoRastreio(rastreio || {}) : ''}
       ${button('Ver detalhes do pedido', `${env.appUrl}/conta/pedidos`)}
     `,
   );
@@ -210,6 +235,49 @@ export async function enviarCarrinhoAbandonado(to: string, nome: string, itens: 
     `,
   );
   await send(to, 'Você esqueceu itens na sua sacola — Zoliê', html);
+}
+
+export async function enviarPedidoExpirado(to: string, nome: string, numero: string) {
+  const html = layout(
+    `Pedido ${numero} cancelado por falta de pagamento`,
+    `
+      ${badge('Pedido cancelado')}
+      ${heading('Seu pedido foi cancelado')}
+      ${paragraph(`Olá, ${nome.split(' ')[0]}! Não identificamos o pagamento do pedido <strong style="color:${COLORS.ink};">${numero}</strong> dentro do prazo, então ele foi cancelado automaticamente e as peças voltaram para o estoque.`)}
+      ${paragraph('Se ainda quiser as peças, é só fazer um novo pedido — mas corra, o estoque é limitado.')}
+      ${button('Voltar às compras', `${env.appUrl}/produtos`)}
+      ${paragraph('Se você chegou a pagar, responda este e-mail que verificamos para você.')}
+    `,
+  );
+  await send(to, `Pedido ${numero} cancelado — Zoliê`, html);
+}
+
+export async function enviarPedidoCancelado(
+  to: string,
+  nome: string,
+  numero: string,
+  motivo?: string | null,
+  estornado = false,
+) {
+  const html = layout(
+    `Pedido ${numero} cancelado`,
+    `
+      ${badge('Pedido cancelado')}
+      ${heading('Seu pedido foi cancelado')}
+      ${paragraph(`Olá, ${nome.split(' ')[0]}! O pedido <strong style="color:${COLORS.ink};">${numero}</strong> foi cancelado.`)}
+      ${motivo ? paragraph(`Motivo: ${motivo}`) : ''}
+      ${
+        estornado
+          ? paragraph(
+              'O estorno já foi solicitado. O prazo para o valor aparecer depende do meio de pagamento: no Pix costuma ser rápido, e no cartão de crédito pode levar até duas faturas.',
+            )
+          : paragraph('Nenhum valor foi cobrado por este pedido.')
+      }
+      ${button('Voltar às compras', `${env.appUrl}/produtos`)}
+      ${paragraph('Ficou com alguma dúvida? É só responder este e-mail.')}
+    `,
+  );
+  await send(to, `Pedido ${numero} cancelado — Zoliê`, html);
 }
 
 export async function enviarConfirmacaoPagamento(to: string, nome: string, numero: string) {

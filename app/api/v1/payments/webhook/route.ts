@@ -41,9 +41,19 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
 
   // order é garantidamente não-nulo aqui: as duas ações acima já cobrem order === null
   if (decision.action === 'confirm_payment') {
-    await orderService.updateStatus(order!.id, 'PROCESSANDO', `Pagamento confirmado via Asaas (${payload.event})`, 'PAGAMENTO_CONFIRMADO');
+    await orderService.updateStatus(order!.id, 'PROCESSANDO', {
+      descricao: `Pagamento confirmado via Asaas (${payload.event})`,
+      motivo: 'PAGAMENTO_CONFIRMADO',
+    });
   } else if (decision.action === 'cancel_order') {
-    await orderService.updateStatus(order!.id, 'CANCELADO', `Pagamento cancelado/estornado via Asaas (${payload.event})`);
+    // Passa pelo fluxo completo de cancelamento (repõe estoque, devolve cupom).
+    // Antes isto só trocava o status, deixando o estoque permanentemente errado.
+    // Sem estornar: o estorno é justamente o que originou este evento.
+    await orderService.cancelar(order!.id, {
+      porAdmin: true,
+      motivo: `Pagamento cancelado/estornado via Asaas (${payload.event})`,
+      estornar: false,
+    });
   }
 
   await orderRepo.updateAsaasStatus(order!.id, payload.payment.status);

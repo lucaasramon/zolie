@@ -101,6 +101,9 @@ model Address {
   cidade      String
   estado      String   @db.Char(2)
   principal   Boolean  @default(false)
+  // Soft delete: `Order` referencia o endereço, então apagá-lo de verdade
+  // quebraria o histórico fiscal do pedido.
+  deletedAt   DateTime? @map("deleted_at")
   createdAt   DateTime @default(now()) @map("created_at")
 
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -152,12 +155,36 @@ model Product {
   cartItems        CartItem[]
   orderItems       OrderItem[]
   wishlist         WishlistItem[]
+  variants         ProductVariant[]
 
   @@index([categoriaId])
   @@index([material])
   @@index([destaque])
   @@index([lancamento])
   @@map("products")
+}
+
+// Estoque por combinação de tamanho + acabamento. `Product.estoque` continua
+// existindo como total agregado (usado no catálogo e nos relatórios); a verdade
+// por variação vive aqui e é o que o checkout consome.
+model ProductVariant {
+  id         String   @id @default(uuid())
+  productId  String   @map("product_id")
+  tamanho    String?
+  acabamento String?
+  estoque    Int      @default(0)
+  // Sobrepõe o peso do produto quando a variação pesa diferente.
+  pesoGramas Decimal? @db.Decimal(6, 2) @map("peso_gramas")
+  sku        String?  @unique
+  ativo      Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, tamanho, acabamento])
+  @@index([productId])
+  @@map("product_variants")
 }
 
 model ProductImage {
@@ -234,6 +261,18 @@ model Order {
   codigoRastreio String?       @map("codigo_rastreio")
   asaasPaymentId String?       @unique @map("asaas_payment_id")
   asaasStatus    String?       @map("asaas_status")
+  // Etiqueta do Melhor Envio: o id só existe depois do checkout (etiqueta paga).
+  // `etiquetaUrl` é o PDF para impressão; o rastreio chega depois, via job.
+  // `envioServicoId` guarda a modalidade escolhida na cotação (PAC, Sedex...),
+  // necessária para comprar a etiqueta da mesma forma que foi cobrada do cliente.
+  envioServicoId String?       @map("envio_servico_id")
+  melhorEnvioId  String?       @unique @map("melhor_envio_id")
+  etiquetaUrl    String?       @map("etiqueta_url")
+  // Nota fiscal: emitida fora do sistema, referenciada aqui para o cliente
+  // conseguir baixar pela página do pedido.
+  notaFiscalUrl   String?      @map("nota_fiscal_url")
+  notaFiscalChave String?      @map("nota_fiscal_chave")
+  notaFiscalNumero String?     @map("nota_fiscal_numero")
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 

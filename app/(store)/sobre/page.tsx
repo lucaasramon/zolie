@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
+
+export const metadata: Metadata = {
+  title: 'Sobre a Zoliê',
+  description: 'Semijoias em prata 925 legítima e banho de ouro 18k reforçado, com qualidade e preço acessível.',
+  alternates: { canonical: '/sobre' },
+};
 
 export default function SobrePage() {
   return (

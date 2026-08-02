@@ -41,4 +41,13 @@ export const asaasClient = {
   getPayment: (paymentId: string) => request<Record<string, any>>(`/payments/${paymentId}`),
   getPixQrCode: (paymentId: string) =>
     request<{ encodedImage: string; payload: string; expirationDate: string }>(`/payments/${paymentId}/pixQrCode`),
+  /** Estorna uma cobrança já paga — devolve o dinheiro ao cliente. */
+  refundPayment: (paymentId: string, description?: string) =>
+    request<Record<string, any>>(`/payments/${paymentId}/refund`, {
+      method: 'POST',
+      body: JSON.stringify(description ? { description } : {}),
+    }),
+  /** Remove uma cobrança ainda não paga, impedindo que continue pagável. */
+  deletePayment: (paymentId: string) =>
+    request<{ deleted: boolean; id: string }>(`/payments/${paymentId}`, { method: 'DELETE' }),
 };

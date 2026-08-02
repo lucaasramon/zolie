@@ -5,7 +5,8 @@ import { ok, noContent } from '@/lib/http/envelope';
 import { withAuth } from '@/lib/http/withAuth';
 
 async function owned(id: string, userId: string) {
-  const a = await addressRepo.findById(id);
+  // `findAtivoById`: endereço já removido não pode ser editado nem apagado de novo.
+  const a = await addressRepo.findAtivoById(id);
   if (!a) throw notFound('Endereço');
   if (a.userId !== userId) throw forbidden();
   return a;

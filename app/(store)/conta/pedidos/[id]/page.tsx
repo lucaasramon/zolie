@@ -16,6 +16,8 @@ interface OrderDetail {
   total: number;
   transportadora: string | null;
   codigoRastreio: string | null;
+  notaFiscalUrl: string | null;
+  notaFiscalNumero: string | null;
   formaPagamento: string;
   items: { id: string; nomeProduto: string; tamanho: string | null; acabamento: string | null; quantidade: number; precoUnitario: number; subtotal: number }[];
   events: { id: string; status: string; descricao: string | null; createdAt: string }[];
@@ -36,10 +38,28 @@ export default function DetalhePedidoPage() {
   const [pagamento, setPagamento] = useState<Pagamento | null>(null);
   const [carregandoPagamento, setCarregandoPagamento] = useState(false);
   const [erroPagamento, setErroPagamento] = useState('');
+  const [confirmandoCancelamento, setConfirmandoCancelamento] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [erroCancelamento, setErroCancelamento] = useState('');
 
   useEffect(() => {
     api.get<OrderDetail>(`/orders/${id}`).then(({ data }) => setOrder(data));
   }, [id]);
+
+  async function onCancelar() {
+    setCancelando(true);
+    setErroCancelamento('');
+    try {
+      await api.post(`/orders/${id}/cancel`, {});
+      const { data } = await api.get<OrderDetail>(`/orders/${id}`);
+      setOrder(data);
+      setConfirmandoCancelamento(false);
+    } catch (err) {
+      setErroCancelamento(err instanceof ApiError ? err.message : 'Não foi possível cancelar o pedido');
+    } finally {
+      setCancelando(false);
+    }
+  }
 
   async function onContinuarPagamento() {
     setCarregandoPagamento(true);
@@ -116,7 +136,65 @@ export default function DetalhePedidoPage() {
               )}
             </>
           )}
+
+          <div className="border-t border-border-subtle pt-3">
+            {!confirmandoCancelamento ? (
+              <button
+                type="button"
+                onClick={() => setConfirmandoCancelamento(true)}
+                className="text-xs text-ink-tertiary underline hover:text-danger"
+              >
+                Cancelar este pedido
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <p className="text-xs text-ink-muted">
+                  Tem certeza? As peças voltam para o estoque e o pedido não poderá ser retomado.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={onCancelar}
+                    disabled={cancelando}
+                    className="rounded-full border border-danger px-4 py-2 text-xs uppercase tracking-wider text-danger transition-colors hover:bg-danger hover:text-white disabled:opacity-50"
+                  >
+                    {cancelando ? 'Cancelando...' : 'Sim, cancelar'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmandoCancelamento(false)}
+                    disabled={cancelando}
+                    className="rounded-full border border-border-soft px-4 py-2 text-xs uppercase tracking-wider text-ink-muted"
+                  >
+                    Voltar
+                  </button>
+                </div>
+                {erroCancelamento && <p className="text-xs text-danger">{erroCancelamento}</p>}
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      {order.codigoRastreio && (
+        <div className="flex flex-col gap-1 rounded-lg border border-gold-soft bg-hoverbg p-4">
+          <span className="text-xs uppercase tracking-wider text-gold-text">Código de rastreio</span>
+          <span className="font-mono text-lg font-medium tracking-wide text-ink">{order.codigoRastreio}</span>
+          {order.transportadora && (
+            <span className="text-xs text-ink-tertiary">Transportadora: {order.transportadora}</span>
+          )}
+        </div>
+      )}
+
+      {order.notaFiscalUrl && (
+        <a
+          href={order.notaFiscalUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="self-start text-sm text-gold-text underline hover:text-gold-text-hover"
+        >
+          Baixar nota fiscal{order.notaFiscalNumero ? ` nº ${order.notaFiscalNumero}` : ''}
+        </a>
       )}
 
       <div className="flex flex-col gap-3">

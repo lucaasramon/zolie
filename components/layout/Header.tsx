@@ -76,24 +76,16 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
 
   return (
     <>
-      <div className="bg-ink text-[12px] font-light text-[#F2EEE7]">
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-[26px] gap-y-2 px-5 py-[9px]">
-          <span>Frete grátis acima de R$ 199,00</span>
-          <span className="opacity-35">·</span>
-          <span>Até 12x sem juros</span>
-          <span className="opacity-35">·</span>
-          <span>Ganhe 10% de desconto no Pix</span>
-          <span className="opacity-35">·</span>
-          <span>Garantia de 1 ano no banho</span>
-        </div>
-      </div>
-
       <header className="sticky top-0 z-40 bg-white shadow-sm">
         <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-[22px] gap-y-3.5 px-5 py-4">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-ink">
-              <Image src="/images/zolie-logo-transparent.png" alt="Zoliê Semijoias" width={36} height={36} className="object-contain" />
-            </span>
+            <Image
+              src="/images/zolie.png"
+              alt="Zoliê Semijoias"
+              width={38}
+              height={48}
+              className="h-12 w-auto flex-none object-contain"
+            />
             <span className="flex flex-col items-start gap-px">
               <span className="font-serif text-[30px] leading-none tracking-[0.14em] text-ink">ZOLIÊ</span>
               <span className="text-[8px] font-light uppercase leading-none tracking-[0.34em] text-gold-text">semijoias</span>

@@ -1,16 +1,26 @@
 import { z } from 'zod';
+import { cpfValido, normalizarCpf } from '@/lib/utils/cpf';
 
 const senha = z.string().min(8, 'A senha precisa de ao menos 8 caracteres');
 
+// Aceita CPF com ou sem máscara, valida os dígitos verificadores e guarda só os 11 dígitos.
+const cpf = z
+  .string()
+  .transform(normalizarCpf)
+  .refine(cpfValido, 'CPF inválido');
+
+// trim/lowercase antes do .email(): validar primeiro rejeitaria espaços acidentais nas pontas.
+const email = z.string().trim().toLowerCase().pipe(z.string().email());
+
 export const registerSchema = z.object({
   nome: z.string().min(3),
-  email: z.string().email(),
+  email,
   senha,
   telefone: z.string().min(10).optional(),
-  cpf: z.string().min(11).optional(),
+  cpf: cpf.optional(),
 });
 
-export const loginSchema = z.object({ email: z.string().email(), senha: z.string().min(1) });
+export const loginSchema = z.object({ email, senha: z.string().min(1) });
 
 export const addressSchema = z.object({
   apelido: z.string().optional(),
@@ -91,19 +101,55 @@ export const couponSchema = z.object({
   validade: z.coerce.date().nullable().optional(),
 });
 
-export const forgotSchema = z.object({ email: z.string().email() });
+export const forgotSchema = z.object({ email });
 export const resetSchema = z.object({ token: z.string().min(1), novaSenha: senha });
+// String vazia vinda do formulário do admin vira null: "limpar o campo" precisa
+// ser distinguível de "não mexer no campo" (undefined) na hora de persistir.
+const rastreioField = z
+  .string()
+  .trim()
+  .max(60)
+  .transform(v => v || null)
+  .nullable()
+  .optional();
+
 export const statusSchema = z.object({
   status: z.enum(['AGUARDANDO_PAGAMENTO', 'PROCESSANDO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE', 'CANCELADO']),
   descricao: z.string().optional(),
+  codigoRastreio: rastreioField,
+  transportadora: rastreioField,
 });
+export const notaFiscalSchema = z.object({
+  notaFiscalUrl: z.string().url('URL inválida').max(500).nullable().optional(),
+  // Chave da NF-e: 44 dígitos. Aceita com máscara e guarda só os números.
+  notaFiscalChave: z
+    .string()
+    .trim()
+    .transform(v => v.replace(/\D/g, ''))
+    .refine(v => v === '' || v.length === 44, 'A chave da NF-e precisa ter 44 dígitos')
+    .transform(v => v || null)
+    .nullable()
+    .optional(),
+  notaFiscalNumero: z.string().trim().max(20).transform(v => v || null).nullable().optional(),
+});
+
+export const cancelSchema = z.object({
+  motivo: z.string().trim().max(200).optional(),
+});
+
+export const adminCancelSchema = cancelSchema.extend({
+  // Default `false`: devolver dinheiro é uma escolha explícita do admin, nunca
+  // consequência de um campo esquecido no payload.
+  estornar: z.boolean().default(false),
+});
+
 export const cepSchema = z.object({ cep: z.string().min(8) });
 export const couponCodeSchema = z.object({ codigo: z.string().min(3), subtotal: z.number().min(0).optional() });
 export const quantitySchema = z.object({ quantidade: z.number().int().min(1).max(20) });
 export const profileSchema = z.object({
   nome: z.string().min(3).optional(),
   telefone: z.string().min(10).optional(),
-  cpf: z.string().min(11).optional(),
+  cpf: cpf.optional(),
 });
 
 // Novos schemas — não existiam no backend original (gap de validação corrigido)

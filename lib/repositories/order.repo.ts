@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma, OrderStatus, PrismaClient } from '@prisma/client';
+import { Prisma, OrderStatus, PaymentMethod, PrismaClient } from '@prisma/client';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -39,19 +39,80 @@ export const orderRepo = {
       where: { id },
       include: { items: true, events: true, endereco: true, user: { select: { nome: true, email: true, telefone: true } } },
     }),
-  updateStatus: (id: string, status: OrderStatus, descricao?: string, db: Db = prisma) =>
+  updateStatus: (
+    id: string,
+    status: OrderStatus,
+    descricao?: string,
+    db: Db = prisma,
+    rastreio?: { codigoRastreio?: string | null; transportadora?: string | null },
+  ) =>
     db.order.update({
       where: { id },
-      data: { status, events: { create: { status, descricao } } },
+      // Só entram no update os campos de rastreio realmente enviados: `undefined`
+      // preserva o valor atual, `null` limpa.
+      data: {
+        status,
+        ...(rastreio?.codigoRastreio !== undefined && { codigoRastreio: rastreio.codigoRastreio }),
+        ...(rastreio?.transportadora !== undefined && { transportadora: rastreio.transportadora }),
+        events: { create: { status, descricao } },
+      },
       include: { items: true, events: true, user: { select: { nome: true, email: true } } },
     }),
   setAsaasPayment: (id: string, asaasPaymentId: string, asaasStatus: string) =>
     prisma.order.update({ where: { id }, data: { asaasPaymentId, asaasStatus } }),
+  setNotaFiscal: (
+    id: string,
+    dados: { notaFiscalUrl?: string | null; notaFiscalChave?: string | null; notaFiscalNumero?: string | null },
+  ) =>
+    prisma.order.update({
+      where: { id },
+      // `undefined` preserva o valor atual; `null` limpa.
+      data: {
+        ...(dados.notaFiscalUrl !== undefined && { notaFiscalUrl: dados.notaFiscalUrl }),
+        ...(dados.notaFiscalChave !== undefined && { notaFiscalChave: dados.notaFiscalChave }),
+        ...(dados.notaFiscalNumero !== undefined && { notaFiscalNumero: dados.notaFiscalNumero }),
+      },
+    }),
+  setMelhorEnvioId: (id: string, melhorEnvioId: string) =>
+    prisma.order.update({ where: { id }, data: { melhorEnvioId } }),
+  setEtiquetaUrl: (id: string, etiquetaUrl: string) =>
+    prisma.order.update({ where: { id }, data: { etiquetaUrl } }),
+  setRastreio: (id: string, codigoRastreio: string, transportadora?: string | null) =>
+    prisma.order.update({
+      where: { id },
+      data: { codigoRastreio, ...(transportadora && { transportadora }) },
+    }),
+  /** Pedidos com etiqueta comprada mas rastreio ainda não emitido pelo Melhor Envio. */
+  findAguardandoRastreio: () =>
+    prisma.order.findMany({
+      where: { melhorEnvioId: { not: null }, codigoRastreio: null, status: { not: 'CANCELADO' } },
+      select: { id: true, melhorEnvioId: true },
+    }),
   findByAsaasPaymentId: (asaasPaymentId: string) =>
     prisma.order.findUnique({ where: { asaasPaymentId } }),
   updateAsaasStatus: (id: string, asaasStatus: string) =>
     prisma.order.update({ where: { id }, data: { asaasStatus } }),
-  nextNumber: async () => 'ZL-' + String(2495 + (await prisma.order.count())),
+  /**
+   * Número do pedido via sequence do Postgres. O `COUNT(*)` anterior fazia dois
+   * checkouts simultâneos gerarem o mesmo número, e o `@unique` derrubava a
+   * segunda compra — falha que só aparecia sob carga.
+   */
+  nextNumber: async (db: Db = prisma) => {
+    const [{ numero }] = await db.$queryRaw<{ numero: bigint }[]>`SELECT nextval('order_number_seq') AS numero`;
+    return `ZL-${numero}`;
+  },
+  /**
+   * Pedidos ainda aguardando pagamento cujo prazo já venceu. O limite é por forma
+   * de pagamento porque o `dueDate` enviado ao Asaas também é (ver payment.service).
+   */
+  findExpired: (limites: { formaPagamento: PaymentMethod; antesDe: Date }[]) =>
+    prisma.order.findMany({
+      where: {
+        status: 'AGUARDANDO_PAGAMENTO',
+        OR: limites.map(l => ({ formaPagamento: l.formaPagamento, createdAt: { lt: l.antesDe } })),
+      },
+      include: { items: true, user: { select: { nome: true, email: true } } },
+    }),
   salesSummary: async () => {
     const agg = await prisma.order.aggregate({
       where: { status: { not: 'CANCELADO' } },

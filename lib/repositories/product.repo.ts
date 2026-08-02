@@ -67,6 +67,8 @@ export const productRepo = {
     return Boolean(found && found.id !== ignoreId);
   },
   findManyByIds: (ids: string[]) => prisma.product.findMany({ where: { id: { in: ids } }, include: { categoria: true } }),
+  /** Slugs ativos — usado por `generateStaticParams` e pelo sitemap. */
+  listSlugsAtivos: () => prisma.product.findMany({ where: { ativo: true }, select: { slug: true } }),
   create: (data: any) => prisma.product.create({ data }),
   update: (id: string, data: any) => prisma.product.update({ where: { id }, data }),
   remove: (id: string) => prisma.product.update({ where: { id }, data: { ativo: false } }).then(() => true),

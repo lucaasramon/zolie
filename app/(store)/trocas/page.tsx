@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
+
+export const metadata: Metadata = {
+  title: 'Trocas e devoluções',
+  description: 'Até 30 dias para solicitar troca ou devolução, conforme o Código de Defesa do Consumidor.',
+  alternates: { canonical: '/trocas' },
+};
 
 export default function TrocasPage() {
   return (

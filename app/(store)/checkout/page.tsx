@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api-client';
@@ -10,6 +10,8 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { tokenizeCard } from '@/lib/asaasJs';
+import { cpfValido, formatarCpf, normalizarCpf } from '@/lib/utils/cpf';
+import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 
 interface Address {
   id: string;
@@ -60,6 +62,7 @@ export default function CheckoutPage() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
+  const [freteEstimado, setFreteEstimado] = useState(false);
   const [envioId, setEnvioId] = useState('pac');
   const [formaPagamento, setFormaPagamento] = useState<'CARTAO_CREDITO' | 'PIX' | 'BOLETO'>('CARTAO_CREDITO');
   const [parcelas, setParcelas] = useState(1);
@@ -68,6 +71,8 @@ export default function CheckoutPage() {
   const [pedidoConcluido, setPedidoConcluido] = useState<{ numero: string; pagamento: any } | null>(null);
   const [cpfInput, setCpfInput] = useState('');
   const [salvandoCpf, setSalvandoCpf] = useState(false);
+  const [reenviandoEmail, setReenviandoEmail] = useState(false);
+  const [emailReenviado, setEmailReenviado] = useState(false);
   const [cartao, setCartao] = useState({ numero: '', nomeImpresso: '', validadeMes: '', validadeAno: '', cvv: '' });
 
   useEffect(() => {
@@ -94,6 +99,24 @@ export default function CheckoutPage() {
     }
   }, [user, loadCart, loadAddresses]);
 
+  // `begin_checkout` uma única vez por sessão de checkout. O ref é necessário
+  // porque `cart` é recarregado a cada mudança de frete/endereço, e sem a guarda
+  // o evento inflaria a contagem de inícios de checkout.
+  const beginCheckoutEnviado = useRef(false);
+  useEffect(() => {
+    if (beginCheckoutEnviado.current || !cart?.items.length || pedidoConcluido) return;
+    beginCheckoutEnviado.current = true;
+    trackBeginCheckout(
+      cart.items.map(i => ({
+        id: i.id,
+        nome: i.nome,
+        preco: i.precoUnitario,
+        quantidade: i.quantidade,
+        variante: [i.tamanho, i.acabamento].filter(Boolean).join(' / ') || null,
+      })),
+    );
+  }, [cart, pedidoConcluido]);
+
   async function onCreateAddress(e: React.FormEvent) {
     e.preventDefault();
     try {
@@ -109,15 +132,32 @@ export default function CheckoutPage() {
 
   async function onSaveCpf() {
     if (!cpfInput.trim()) return;
+    if (!cpfValido(cpfInput)) {
+      setErro('CPF inválido. Confira os números digitados.');
+      return;
+    }
     setSalvandoCpf(true);
     setErro('');
     try {
-      await api.put('/auth/me', { cpf: cpfInput.replace(/\D/g, '') });
+      await api.put('/auth/me', { cpf: normalizarCpf(cpfInput) });
       await refreshUser();
     } catch (err) {
       setErro(describeError(err, 'Não foi possível salvar o CPF'));
     } finally {
       setSalvandoCpf(false);
+    }
+  }
+
+  async function onResendVerification() {
+    setReenviandoEmail(true);
+    setErro('');
+    try {
+      await api.post('/auth/resend-verification', {});
+      setEmailReenviado(true);
+    } catch (err) {
+      setErro(describeError(err, 'Não foi possível reenviar o e-mail de confirmação'));
+    } finally {
+      setReenviandoEmail(false);
     }
   }
 
@@ -129,8 +169,13 @@ export default function CheckoutPage() {
     }
     setErro('');
     try {
-      const { data } = await api.post<{ opcoes: ShippingOption[] }>('/shipping/quote', { cep: endereco.cep, subtotal: cart?.resumo.subtotal });
+      const { data } = await api.post<{ opcoes: ShippingOption[]; estimado?: boolean }>('/shipping/quote', { cep: endereco.cep, subtotal: cart?.resumo.subtotal });
       setShippingOptions(data.opcoes);
+      setFreteEstimado(Boolean(data.estimado));
+      // Os ids reais vêm do Melhor Envio (numéricos) ou da contingência, então o
+      // valor inicial nunca corresponde a uma opção: seleciona a primeira para o
+      // radio não ficar vazio.
+      setEnvioId(atual => (data.opcoes.some(o => o.id === atual) ? atual : data.opcoes[0]?.id || ''));
       setStep(3);
     } catch (err) {
       setErro(describeError(err, 'Não foi possível calcular o frete'));
@@ -177,6 +222,24 @@ export default function CheckoutPage() {
         creditCardToken,
         cartao: cartaoFallback,
       });
+      // O carrinho é limpo logo abaixo, então os itens são capturados aqui.
+      // Disparado na criação do pedido, não na confirmação do pagamento: Pix e
+      // boleto confirmam só depois, via webhook (ver ressalva no CHECKLIST-GAPS).
+      if (cart) {
+        trackPurchase({
+          numero: data.order.numero,
+          total: formaPagamento === 'PIX' ? cart.resumo.totalPix : cart.resumo.total,
+          frete: cart.resumo.frete,
+          itens: cart.items.map(i => ({
+            id: i.id,
+            nome: i.nome,
+            preco: i.precoUnitario,
+            quantidade: i.quantidade,
+            variante: [i.tamanho, i.acabamento].filter(Boolean).join(' / ') || null,
+          })),
+        });
+      }
+
       setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento });
       setStep(5);
       await refreshCart();
@@ -265,23 +328,45 @@ export default function CheckoutPage() {
               <p className="text-sm text-ink-muted">Olá, {user.nome}! Confirme seus dados para continuar.</p>
               <div className="text-sm text-ink-muted">
                 <div>E-mail: {user.email}</div>
-                {user.cpf && <div>CPF: {user.cpf}</div>}
+                {user.cpf && <div>CPF: {formatarCpf(user.cpf)}</div>}
                 {user.telefone && <div>Celular: {user.telefone}</div>}
               </div>
+              {!user.emailVerified && (
+                <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
+                  <span className="text-xs text-ink-muted">
+                    Confirme seu e-mail para finalizar a compra. Enviamos um link para <strong>{user.email}</strong> — verifique
+                    também a caixa de spam.
+                  </span>
+                  {emailReenviado ? (
+                    <span className="text-xs text-gold-text">E-mail de confirmação reenviado.</span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={onResendVerification}
+                      disabled={reenviandoEmail}
+                      className="self-start rounded-full border border-border-soft px-3 py-2 text-xs font-medium uppercase text-ink-muted hover:border-gold-text disabled:opacity-50"
+                    >
+                      {reenviandoEmail ? 'Enviando...' : 'Reenviar e-mail'}
+                    </button>
+                  )}
+                </div>
+              )}
               {!user.cpf && (
                 <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
                   <span className="text-xs text-ink-muted">Precisamos do seu CPF para processar o pagamento.</span>
                   <div className="flex gap-2">
                     <input
                       value={cpfInput}
-                      onChange={e => setCpfInput(e.target.value)}
+                      onChange={e => setCpfInput(formatarCpf(e.target.value))}
+                      inputMode="numeric"
+                      maxLength={14}
                       placeholder="000.000.000-00"
                       className="flex-1 rounded-md border border-border-subtle px-3 py-2 text-sm outline-none transition-colors focus:border-gold"
                     />
                     <button
                       type="button"
                       onClick={onSaveCpf}
-                      disabled={salvandoCpf}
+                      disabled={salvandoCpf || !cpfValido(cpfInput)}
                       className="rounded-full border border-border-soft px-3 py-2 text-xs font-medium uppercase text-ink-muted hover:border-gold-text disabled:opacity-50"
                     >
                       {salvandoCpf ? 'Salvando...' : 'Salvar'}
@@ -292,7 +377,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                disabled={!user.cpf}
+                disabled={!user.cpf || !user.emailVerified}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
@@ -355,6 +440,12 @@ export default function CheckoutPage() {
                   <span className="font-medium text-ink">{o.valor === 0 ? 'Grátis' : brl(o.valor)}</span>
                 </label>
               ))}
+              {freteEstimado && (
+                <p className="text-xs text-ink-tertiary">
+                  Não foi possível consultar a transportadora agora, então este é um valor estimado.
+                  Confirmamos o frete real antes do envio e avisamos se houver qualquer diferença.
+                </p>
+              )}
 
               <h2 className="mt-2 font-sans text-xl font-semibold text-ink">Pagamento</h2>
               <div className="flex gap-2">

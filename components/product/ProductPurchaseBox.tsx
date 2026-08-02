@@ -7,14 +7,19 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
+import { trackAddToCart } from '@/lib/analytics';
 
 interface Props {
   productId: string;
   tamanhos: string[];
   estoque: number;
+  /** Dados usados só para os eventos de analytics. */
+  nome?: string;
+  preco?: number;
+  categoria?: string | null;
 }
 
-export function ProductPurchaseBox({ productId, tamanhos, estoque }: Props) {
+export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, categoria }: Props) {
   const [tamanho, setTamanho] = useState(tamanhos[0] || '');
   const [acabamento, setAcabamento] = useState('Polido');
   const [quantidade, setQuantidade] = useState(1);
@@ -35,6 +40,19 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque }: Props) {
     try {
       await api.post('/cart/items', { productId, quantidade, tamanho: tamanho || null, acabamento });
       await refresh();
+
+      // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
+      if (nome && preco != null) {
+        trackAddToCart({
+          id: productId,
+          nome,
+          preco,
+          quantidade,
+          categoria,
+          variante: [tamanho, acabamento].filter(Boolean).join(' / ') || null,
+        });
+      }
+
       if (buyNow) {
         router.push('/checkout');
       } else {

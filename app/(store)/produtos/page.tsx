@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { list as listProducts } from '@/lib/services/product.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
@@ -5,6 +6,35 @@ import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductFiltersSidebar } from '@/components/product/ProductFiltersSidebar';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const sp = await searchParams;
+
+  // Só a listagem "limpa" e as de categoria são indexáveis. Combinações de filtro
+  // e ordenação geram infinitas URLs de conteúdo praticamente igual — indexá-las
+  // dilui a relevância e desperdiça crawl budget.
+  const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'sort', 'page'];
+  const temFiltroSecundario = filtrosSecundarios.some(f => sp[f]);
+
+  if (sp.categoria) {
+    const categoria = await categoryRepo.findBySlug(sp.categoria);
+    if (categoria) {
+      return {
+        title: categoria.nome,
+        description: `${categoria.nome} em prata 925 e banho de ouro 18k. Peças da Zoliê Semijoias com envio para todo o Brasil.`,
+        alternates: { canonical: `/produtos?categoria=${categoria.slug}` },
+        ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
+      };
+    }
+  }
+
+  return {
+    title: 'Todas as peças',
+    description: 'Colares, brincos, anéis, pulseiras e conjuntos em prata 925 e banho de ouro 18k.',
+    alternates: { canonical: '/produtos' },
+    ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
+  };
+}
 
 const SORT_OPTIONS = [
   { value: 'relevancia', label: 'Relevância' },

@@ -1,6 +1,10 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { produtoJsonLd, breadcrumbJsonLd, jsonLdScript, urlAbsoluta } from '@/lib/utils/jsonLd';
+import { ViewItemTracker } from '@/components/analytics/ViewItemTracker';
 import { bySlug } from '@/lib/services/product.service';
+import { productRepo } from '@/lib/repositories/product.repo';
 import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
@@ -11,10 +15,60 @@ import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
 import { brl } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
 
-export const dynamic = 'force-dynamic';
+// Revalidação por tempo em vez de `force-dynamic`: a página passa a ser cacheável
+// (melhor para indexação e Core Web Vitals) sem servir preço/estoque defasados.
+export const revalidate = 300;
 
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+/**
+ * Pré-renderiza os produtos ativos no build. Sem isso a rota é sempre resolvida
+ * sob demanda. Produtos criados depois continuam funcionando: `dynamicParams`
+ * (padrão true) os renderiza na primeira visita e passa a servi-los do cache.
+ */
+export async function generateStaticParams() {
+  try {
+    const produtos = await productRepo.listSlugsAtivos();
+    return produtos.map(p => ({ slug: p.slug }));
+  } catch {
+    // Banco indisponível no build não pode quebrar o deploy — as páginas passam
+    // a ser geradas sob demanda.
+    return [];
+  }
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+
+  let produto;
+  try {
+    produto = await bySlug(slug);
+  } catch {
+    return { title: 'Produto não encontrado' };
+  }
+
+  const material = MATERIAL_LABEL[produto.material] || produto.material;
+  const descricao =
+    `${produto.nome} em ${material}. ${produto.descricao}`.slice(0, 155).trim() + '…';
+  const imagem = urlAbsoluta(produto.imagens?.[0]);
+
+  return {
+    title: produto.nome,
+    description: descricao,
+    alternates: { canonical: `/produtos/${produto.slug}` },
+    openGraph: {
+      type: 'website',
+      title: `${produto.nome} — Zoliê Semijoias`,
+      description: descricao,
+      url: `/produtos/${produto.slug}`,
+      ...(imagem && { images: [{ url: imagem, alt: produto.nome }] }),
+    },
+    // Produto esgotado sai do índice para não gastar crawl budget nem levar o
+    // usuário a uma página onde ele não pode comprar. Volta sozinho ao repor estoque.
+    ...(produto.disponivel ? {} : { robots: { index: false, follow: true } }),
+  };
 }
 
 export default async function ProdutoPage({ params }: Props) {
@@ -30,8 +84,33 @@ export default async function ProdutoPage({ params }: Props) {
 
   const { items: reviews } = await listReviews(produto.id, { skip: 0, take: 5 });
 
+  const trilha = [
+    { nome: 'Início', url: '/' },
+    ...(produto.categoria
+      ? [{ nome: produto.categoria.nome, url: `/produtos?categoria=${produto.categoria.slug}` }]
+      : []),
+    { nome: produto.nome, url: `/produtos/${produto.slug}` },
+  ];
+
   return (
     <div className="mx-auto max-w-[1280px] px-5 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(produtoJsonLd(produto)) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd(trilha)) }}
+      />
+      <ViewItemTracker
+        item={{
+          id: produto.id,
+          nome: produto.nome,
+          preco: produto.precoEfetivo,
+          categoria: produto.categoria?.nome,
+        }}
+      />
+
       <div className="mb-4 text-xs text-ink-tertiary">
         <Link href="/" className="hover:text-gold-text">Início</Link> /{' '}
         <Link href={`/produtos?categoria=${produto.categoria?.slug}`} className="hover:text-gold-text">{produto.categoria?.nome}</Link> /{' '}
@@ -77,7 +156,14 @@ export default async function ProdutoPage({ params }: Props) {
             </div>
           )}
 
-          <ProductPurchaseBox productId={produto.id} tamanhos={produto.tamanhos || []} estoque={produto.estoque} />
+          <ProductPurchaseBox
+            productId={produto.id}
+            tamanhos={produto.tamanhos || []}
+            estoque={produto.estoque}
+            nome={produto.nome}
+            preco={produto.precoEfetivo}
+            categoria={produto.categoria?.nome}
+          />
         </div>
       </div>
 

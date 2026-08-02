@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { api, ApiError } from '@/lib/api-client';
+import { cpfValido, formatarCpf, normalizarCpf } from '@/lib/utils/cpf';
 
 type Tab = 'login' | 'cadastro' | 'recuperar';
 
@@ -56,9 +57,24 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
   async function onCadastro(e: React.FormEvent) {
     e.preventDefault();
     setErro('');
+
+    const cpf = normalizarCpf(cadastroForm.cpf);
+    if (cpf && !cpfValido(cpf)) {
+      setErro('CPF inválido. Confira os números digitados.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(cadastroForm);
+      // CPF e telefone são opcionais: envia apenas quando preenchidos (string vazia é rejeitada pelo schema).
+      await register({
+        nome: cadastroForm.nome,
+        email: cadastroForm.email,
+        senha: cadastroForm.senha,
+        telefone: cadastroForm.telefone || undefined,
+        cpf: cpf || undefined,
+      });
+      showToast('Conta criada! Confirme seu e-mail para poder finalizar compras.');
       router.push(next);
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível criar a conta');
@@ -129,7 +145,13 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           )}
           <Field label="Nome completo" value={cadastroForm.nome} onChange={v => setCadastroForm(f => ({ ...f, nome: v }))} required />
           <Field label="E-mail" type="email" value={cadastroForm.email} onChange={v => setCadastroForm(f => ({ ...f, email: v }))} required />
-          <Field label="CPF" value={cadastroForm.cpf} onChange={v => setCadastroForm(f => ({ ...f, cpf: v }))} />
+          <Field
+            label="CPF (opcional)"
+            value={cadastroForm.cpf}
+            onChange={v => setCadastroForm(f => ({ ...f, cpf: formatarCpf(v) }))}
+            inputMode="numeric"
+            maxLength={14}
+          />
           <Field label="Celular / WhatsApp" value={cadastroForm.telefone} onChange={v => setCadastroForm(f => ({ ...f, telefone: v }))} />
           <Field label="Senha" type="password" value={cadastroForm.senha} onChange={v => setCadastroForm(f => ({ ...f, senha: v }))} required />
           <button type="submit" disabled={loading} className="rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
@@ -159,12 +181,16 @@ function Field({
   onChange,
   type = 'text',
   required = false,
+  inputMode,
+  maxLength,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   type?: string;
   required?: boolean;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode'];
+  maxLength?: number;
 }) {
   return (
     <label className="flex flex-col gap-1.5 text-sm">
@@ -174,6 +200,8 @@ function Field({
         value={value}
         onChange={e => onChange(e.target.value)}
         required={required}
+        inputMode={inputMode}
+        maxLength={maxLength}
         className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold"
       />
     </label>

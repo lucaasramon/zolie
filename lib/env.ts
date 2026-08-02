@@ -28,6 +28,22 @@ export const env = {
     token: process.env.MELHOR_ENVIO_TOKEN || '',
     baseUrl: process.env.MELHOR_ENVIO_BASE_URL || 'https://sandbox.melhorenvio.com.br',
     cepOrigem: process.env.CEP_ORIGEM_LOJA || '61887810',
+    // Compra de etiqueta debita saldo real da carteira em produção, então fica
+    // atrás de um flag e só liga quando o time decide.
+    labelsEnabled: process.env.MELHOR_ENVIO_LABELS_ENABLED === 'true',
+    // Dados do remetente exigidos pelo endpoint de carrinho (não são usados na cotação).
+    remetente: {
+      nome: process.env.LOJA_REMETENTE_NOME || '',
+      email: process.env.LOJA_REMETENTE_EMAIL || '',
+      documento: (process.env.LOJA_REMETENTE_DOCUMENTO || '').replace(/\D/g, ''),
+      telefone: (process.env.LOJA_REMETENTE_TELEFONE || '').replace(/\D/g, ''),
+      endereco: process.env.LOJA_REMETENTE_ENDERECO || '',
+      numero: process.env.LOJA_REMETENTE_NUMERO || '',
+      complemento: process.env.LOJA_REMETENTE_COMPLEMENTO || '',
+      bairro: process.env.LOJA_REMETENTE_BAIRRO || '',
+      cidade: process.env.LOJA_REMETENTE_CIDADE || '',
+      estado: process.env.LOJA_REMETENTE_ESTADO || '',
+    },
   },
 
   asaas: {

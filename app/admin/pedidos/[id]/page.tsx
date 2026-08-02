@@ -3,6 +3,9 @@ import { orderRepo } from '@/lib/repositories/order.repo';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { OrderStatusSelect } from '@/components/admin/OrderStatusSelect';
+import { LabelPanel } from '@/components/admin/LabelPanel';
+import { CancelOrderButton } from '@/components/admin/CancelOrderButton';
+import { InvoicePanel } from '@/components/admin/InvoicePanel';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -67,9 +70,21 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-3 rounded-xl bg-white p-4 shadow-xs">
           <h3 className="font-sans text-lg font-semibold text-ink">Atualizar status</h3>
-          <OrderStatusSelect orderId={order.id} status={order.status} />
-          {order.codigoRastreio && <p className="text-xs text-ink-tertiary">Rastreio: {order.codigoRastreio}</p>}
+          <OrderStatusSelect
+            orderId={order.id}
+            status={order.status}
+            codigoRastreio={order.codigoRastreio}
+            transportadora={order.transportadora}
+          />
         </div>
+
+        <LabelPanel
+          orderId={order.id}
+          status={order.status}
+          melhorEnvioId={order.melhorEnvioId}
+          etiquetaUrl={order.etiquetaUrl}
+          codigoRastreio={order.codigoRastreio}
+        />
 
         <div className="flex flex-col gap-2 rounded-xl bg-white p-4 text-sm shadow-xs">
           <h3 className="font-sans text-lg font-semibold text-ink">Cliente e entrega</h3>
@@ -85,6 +100,19 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
             Pagamento: {order.formaPagamento} {order.parcelas > 1 ? `em ${order.parcelas}x` : ''}
           </div>
         </div>
+
+        <InvoicePanel
+          orderId={order.id}
+          notaFiscalUrl={order.notaFiscalUrl}
+          notaFiscalChave={order.notaFiscalChave}
+          notaFiscalNumero={order.notaFiscalNumero}
+        />
+
+        <CancelOrderButton
+          orderId={order.id}
+          status={order.status}
+          pago={order.status !== 'AGUARDANDO_PAGAMENTO'}
+        />
       </div>
     </div>
   );

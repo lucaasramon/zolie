@@ -1,10 +1,20 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { organizationJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
 import { list as listProducts } from '@/lib/services/product.service';
 import { list as listBanners } from '@/lib/services/banner.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
 import { ZolieCard, DecoratedProduct } from '@/components/product/ZolieCard';
 
 export const dynamic = 'force-dynamic';
+
+export const metadata: Metadata = {
+  // A home usa o title padrão (sem o sufixo do template) por ser a raiz da marca.
+  title: 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k',
+  description:
+    'Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil e 10% de desconto no Pix.',
+  alternates: { canonical: '/' },
+};
 
 const DIFERENCIAIS = [
   { titulo: 'Frete grátis', texto: 'Acima de R$ 199 em todo o Brasil.' },
@@ -33,6 +43,10 @@ export default async function HomePage() {
 
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd()) }}
+      />
       {banner && (
         <section className="relative overflow-hidden bg-[linear-gradient(115deg,#2E2A24_0%,#5A4B33_46%,#C0A03C_100%)] animate-zfade">
           <div className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(125deg,rgba(255,255,255,0.05)_0_2px,transparent_2px_12px)]" />

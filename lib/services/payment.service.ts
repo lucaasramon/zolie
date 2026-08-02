@@ -130,3 +130,33 @@ export async function consultarCobranca({ asaasPaymentId, formaPagamento, parcel
   const payment = await asaasClient.getPayment(asaasPaymentId);
   return normalizarPagamento(payment, formaPagamento, Number(payment.value ?? payment.totalValue ?? 0), parcelas);
 }
+
+/** Status do Asaas em que o dinheiro já entrou e portanto precisa ser estornado. */
+const STATUS_PAGOS = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH']);
+
+/** Status em que a cobrança já não é mais pagável — nada a fazer no gateway. */
+const STATUS_ENCERRADOS = new Set(['REFUNDED', 'REFUND_REQUESTED', 'CHARGEBACK_REQUESTED', 'DELETED']);
+
+export type ResultadoEstorno = 'ESTORNADO' | 'COBRANCA_REMOVIDA' | 'NADA_A_FAZER';
+
+/**
+ * Encerra a cobrança de um pedido no Asaas da forma correta para o estado dela:
+ * paga → estorno (devolve o dinheiro); não paga → remoção (impede pagamento futuro).
+ *
+ * Consulta o status real no gateway em vez de confiar no `asaasStatus` gravado
+ * localmente, que pode estar defasado se um webhook se perdeu.
+ */
+export async function encerrarCobranca(asaasPaymentId: string, motivo?: string): Promise<ResultadoEstorno> {
+  const payment = await asaasClient.getPayment(asaasPaymentId);
+  const status = String(payment.status || '');
+
+  if (STATUS_ENCERRADOS.has(status)) return 'NADA_A_FAZER';
+
+  if (STATUS_PAGOS.has(status)) {
+    await asaasClient.refundPayment(asaasPaymentId, motivo);
+    return 'ESTORNADO';
+  }
+
+  await asaasClient.deletePayment(asaasPaymentId);
+  return 'COBRANCA_REMOVIDA';
+}

@@ -5,6 +5,6 @@ import { withAdmin } from '@/lib/http/withAuth';
 
 export const PATCH = withAdmin(async (req, ctx) => {
   const { id } = await ctx.params;
-  const { status, descricao } = statusSchema.parse(await req.json());
-  return ok(await orderService.updateStatus(id, status, descricao));
+  const { status, descricao, codigoRastreio, transportadora } = statusSchema.parse(await req.json());
+  return ok(await orderService.updateStatus(id, status, { descricao, codigoRastreio, transportadora }));
 });

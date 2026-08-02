@@ -1,4 +1,11 @@
+import type { Metadata } from 'next';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
+
+export const metadata: Metadata = {
+  title: 'Política de privacidade',
+  description: 'Como a Zoliê coleta, usa e protege seus dados pessoais, seguindo as diretrizes da LGPD.',
+  alternates: { canonical: '/privacidade' },
+};
 
 export default function PrivacidadePage() {
   return (
