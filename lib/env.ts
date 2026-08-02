@@ -57,6 +57,18 @@ export const env = {
     from: process.env.EMAIL_FROM || 'Zoliê Semijoias <onboarding@resend.dev>',
   },
 
+  // Dados institucionais exibidos no site. Exigidos pelo art. 2º do Decreto
+  // 7.962/2013 (e-commerce): identificação, CNPJ e endereço físico visíveis.
+  loja: {
+    razaoSocial: process.env.LOJA_RAZAO_SOCIAL || '',
+    cnpj: process.env.LOJA_CNPJ || '',
+    endereco: process.env.LOJA_ENDERECO || '',
+    whatsapp: (process.env.LOJA_WHATSAPP || '').replace(/\D/g, ''),
+    // Para onde vão as mensagens do formulário de contato.
+    emailContato: process.env.LOJA_EMAIL_CONTATO || '',
+    instagram: process.env.LOJA_INSTAGRAM || '',
+  },
+
   cronSecret: process.env.CRON_SECRET || '',
 
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',

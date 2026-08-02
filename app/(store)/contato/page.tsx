@@ -3,15 +3,34 @@
 import { useState } from 'react';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
 import { useToast } from '@/components/providers/ToastProvider';
+import { api, ApiError } from '@/lib/api-client';
+
+const FORM_VAZIO = { nome: '', email: '', pedido: '', assunto: 'Dúvida sobre pedido', mensagem: '' };
 
 export default function ContatoPage() {
   const { showToast } = useToast();
-  const [form, setForm] = useState({ nome: '', email: '', pedido: '', assunto: 'Dúvida sobre pedido', mensagem: '' });
+  const [form, setForm] = useState(FORM_VAZIO);
+  const [enviando, setEnviando] = useState(false);
 
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    showToast('Mensagem enviada! Responderemos em breve.');
-    setForm({ nome: '', email: '', pedido: '', assunto: 'Dúvida sobre pedido', mensagem: '' });
+    setEnviando(true);
+    try {
+      await api.post('/contact', {
+        nome: form.nome,
+        email: form.email,
+        assunto: form.assunto,
+        mensagem: form.mensagem,
+        pedido: form.pedido || null,
+      });
+      showToast('Mensagem enviada! Responderemos em até 1 dia útil.');
+      setForm(FORM_VAZIO);
+    } catch (err) {
+      // Antes o toast de sucesso aparecia sem nada ter sido enviado.
+      showToast(err instanceof ApiError ? err.message : 'Não foi possível enviar sua mensagem. Tente novamente.');
+    } finally {
+      setEnviando(false);
+    }
   }
 
   return (
@@ -40,8 +59,12 @@ export default function ContatoPage() {
             className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold"
           />
         </label>
-        <button type="submit" className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
-          Enviar mensagem
+        <button
+          type="submit"
+          disabled={enviando}
+          className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+        >
+          {enviando ? 'Enviando...' : 'Enviar mensagem'}
         </button>
       </form>
     </InstitutionalPage>

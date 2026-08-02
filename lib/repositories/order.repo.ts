@@ -37,7 +37,16 @@ export const orderRepo = {
   findById: (id: string) =>
     prisma.order.findUnique({
       where: { id },
-      include: { items: true, events: true, endereco: true, user: { select: { nome: true, email: true, telefone: true } } },
+      include: {
+        items: true,
+        events: true,
+        endereco: true,
+        user: { select: { nome: true, email: true, telefone: true } },
+        returnRequests: {
+          select: { id: true, tipo: true, status: true, createdAt: true },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
     }),
   updateStatus: (
     id: string,

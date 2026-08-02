@@ -6,6 +6,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ReturnRequestForm } from '@/components/account/ReturnRequestForm';
 
 interface OrderDetail {
   numero: string;
@@ -18,6 +19,7 @@ interface OrderDetail {
   codigoRastreio: string | null;
   notaFiscalUrl: string | null;
   notaFiscalNumero: string | null;
+  returnRequests?: { id: string; tipo: string; status: string }[];
   formaPagamento: string;
   items: { id: string; nomeProduto: string; tamanho: string | null; acabamento: string | null; quantidade: number; precoUnitario: number; subtotal: number }[];
   events: { id: string; status: string; descricao: string | null; createdAt: string }[];
@@ -220,6 +222,13 @@ export default function DetalhePedidoPage() {
           <span>Total</span><span>{brl(order.total)}</span>
         </div>
       </div>
+
+      {order.status === 'ENTREGUE' && (
+        <ReturnRequestForm
+          orderId={id}
+          solicitacaoAberta={order.returnRequests?.[0] ?? null}
+        />
+      )}
 
       <div>
         <h3 className="mb-2 font-sans text-lg font-semibold text-ink">Histórico</h3>

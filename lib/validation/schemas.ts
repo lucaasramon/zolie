@@ -119,6 +119,35 @@ export const statusSchema = z.object({
   codigoRastreio: rastreioField,
   transportadora: rastreioField,
 });
+export const contactSchema = z.object({
+  nome: z.string().trim().min(2, 'Informe seu nome').max(120),
+  email,
+  assunto: z.string().trim().min(2).max(120),
+  mensagem: z.string().trim().min(10, 'Escreva um pouco mais sobre o que você precisa').max(2000),
+  pedido: z.string().trim().max(30).optional().nullable(),
+});
+
+export const returnRequestSchema = z.object({
+  tipo: z.enum(['TROCA', 'DEVOLUCAO']),
+  motivo: z.string().trim().min(3).max(120),
+  descricao: z.string().trim().max(1000).optional(),
+  imagens: z.array(z.string()).max(4).optional(),
+  // Itens do pedido incluídos na solicitação; vazio = pedido inteiro.
+  itens: z
+    .array(z.object({ orderItemId: z.string().min(1), quantidade: z.number().int().min(1).max(20) }))
+    .optional(),
+});
+
+export const returnDecisionSchema = z.object({
+  status: z.enum(['APROVADA', 'RECUSADA', 'RECEBIDA', 'CONCLUIDA']),
+  respostaAdmin: z.string().trim().max(1000).optional(),
+  codigoReversa: z.string().trim().max(60).optional(),
+});
+
+export const variantStockSchema = z.object({
+  estoque: z.number().int().min(0).max(100000),
+});
+
 export const notaFiscalSchema = z.object({
   notaFiscalUrl: z.string().url('URL inválida').max(500).nullable().optional(),
   // Chave da NF-e: 44 dígitos. Aceita com máscara e guarda só os números.

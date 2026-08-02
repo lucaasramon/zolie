@@ -240,7 +240,19 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
           <div className="grid grid-cols-2 gap-4">
             <Field label="Preço cheio*" type="number" value={String(form.preco)} onChange={v => setForm(f => ({ ...f, preco: v }))} />
             <Field label="Preço promocional" type="number" value={String(form.precoPromocional || '')} onChange={v => setForm(f => ({ ...f, precoPromocional: v }))} />
-            <Field label="Estoque*" type="number" value={String(form.estoque)} onChange={v => setForm(f => ({ ...f, estoque: Number(v) }))} />
+            {isEdit ? (
+              <label className="flex flex-col gap-1.5 text-sm">
+                <span className="text-ink-muted">Estoque</span>
+                <div className="rounded-md border border-border-subtle bg-bg-alt px-3.5 py-2.5 text-ink-tertiary">
+                  {form.estoque} no total
+                </div>
+                <span className="text-xs text-ink-tertiary">
+                  Editável por variação em <a href="/admin/estoque" className="text-gold-text underline">Estoque</a>
+                </span>
+              </label>
+            ) : (
+              <Field label="Estoque inicial*" type="number" value={String(form.estoque)} onChange={v => setForm(f => ({ ...f, estoque: Number(v) }))} />
+            )}
             <Field label="Peso (g)" type="number" value={String(form.pesoGramas || '')} onChange={v => setForm(f => ({ ...f, pesoGramas: v }))} />
           </div>
           <Field label="Tamanhos disponíveis (separados por vírgula)" value={tamanhosInput} onChange={setTamanhosInput} />

@@ -59,6 +59,7 @@ model User {
   wishlist      WishlistItem[]
   resetTokens   PasswordResetToken[]
   verificationTokens EmailVerificationToken[]
+  returnRequests ReturnRequest[]
 
   @@map("users")
 }
@@ -280,6 +281,7 @@ model Order {
   endereco       Address       @relation(fields: [enderecoId], references: [id])
   items          OrderItem[]
   events         OrderEvent[]
+  returnRequests ReturnRequest[]
 
   @@index([userId])
   @@index([status])
@@ -299,6 +301,7 @@ model OrderItem {
 
   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product       Product @relation(fields: [productId], references: [id])
+  returnItems   ReturnItem[]
 
   @@index([orderId])
   @@map("order_items")
@@ -345,6 +348,75 @@ model WishlistItem {
 
   @@unique([userId, productId])
   @@map("wishlist_items")
+}
+
+// Mensagens do formulário de contato. Guardadas além do e-mail para nada se
+// perder se o envio falhar, e para o admin conseguir consultar o histórico.
+model ContactMessage {
+  id        String    @id @default(uuid())
+  nome      String
+  email     String
+  assunto   String
+  mensagem  String
+  pedido    String?
+  respondida Boolean  @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([respondida, createdAt])
+  @@map("contact_messages")
+}
+
+enum ReturnStatus {
+  SOLICITADA
+  APROVADA
+  RECUSADA
+  RECEBIDA
+  CONCLUIDA
+}
+
+enum ReturnType {
+  TROCA
+  DEVOLUCAO
+}
+
+// Solicitação de troca/devolução de pedido já entregue (CDC art. 49 e política
+// de 30 dias da loja). Cancelamento de pedido não entregue é outro fluxo,
+// tratado em order.service.cancelar().
+model ReturnRequest {
+  id           String       @id @default(uuid())
+  orderId      String       @map("order_id")
+  userId       String       @map("user_id")
+  tipo         ReturnType
+  status       ReturnStatus @default(SOLICITADA)
+  motivo       String
+  descricao    String?
+  imagens      String[]
+  // Preenchido pelo admin ao aprovar/recusar — vai no e-mail ao cliente.
+  respostaAdmin String?     @map("resposta_admin")
+  codigoReversa String?     @map("codigo_reversa")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items        ReturnItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("return_requests")
+}
+
+model ReturnItem {
+  id         String   @id @default(uuid())
+  returnId   String   @map("return_id")
+  orderItemId String  @map("order_item_id")
+  quantidade Int      @default(1)
+
+  request    ReturnRequest @relation(fields: [returnId], references: [id], onDelete: Cascade)
+  orderItem  OrderItem     @relation(fields: [orderItemId], references: [id])
+
+  @@index([returnId])
+  @@map("return_items")
 }
 
 model Banner {

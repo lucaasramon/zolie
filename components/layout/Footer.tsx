@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '@/components/providers/AuthProvider';
+import { LOJA, linhaIdentificacao, linkWhatsApp, formatarTelefone } from '@/lib/loja';
 
 interface Categoria {
   nome: string;
@@ -11,6 +12,7 @@ interface Categoria {
 
 export function Footer({ categorias }: { categorias: Categoria[] }) {
   const { user } = useAuth();
+  const whatsapp = linkWhatsApp('Olá! Vim pelo site da Zoliê.');
   return (
     <footer className="border-t border-border-subtle bg-white">
       <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4">
@@ -68,7 +70,19 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
       </div>
 
       <div className="border-t border-border-subtle px-5 py-4 text-center text-[11px] text-ink-tertiary">
-        Zoliê Semijoias · CNPJ 00.000.000/0001-00 · Protótipo de demonstração · dados fictícios
+        <div>{linhaIdentificacao()}</div>
+        <div className="mt-1 flex flex-wrap justify-center gap-x-3 gap-y-1">
+          {LOJA.email && (
+            <a href={`mailto:${LOJA.email}`} className="hover:text-gold-text">{LOJA.email}</a>
+          )}
+          {whatsapp && (
+            <a href={whatsapp} target="_blank" rel="noreferrer" className="hover:text-gold-text">
+              WhatsApp {formatarTelefone(LOJA.whatsapp)}
+            </a>
+          )}
+          <Link href="/termos" className="hover:text-gold-text">Termos de uso</Link>
+          <Link href="/privacidade" className="hover:text-gold-text">Privacidade</Link>
+        </div>
       </div>
     </footer>
   );

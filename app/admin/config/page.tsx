@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import { brl } from '@/lib/utils/money';
+import { formatarCnpj, formatarTelefone } from '@/lib/loja';
 
 export default function AdminConfigPage() {
   return (
@@ -10,17 +11,21 @@ export default function AdminConfigPage() {
         <Row label="Frete grátis a partir de" value={brl(env.business.freeShippingThreshold)} />
         <Row label="Desconto no Pix" value={`${env.business.pixDiscountPercent}%`} />
         <Row label="Máximo de parcelas" value={`${env.business.maxInstallments}x`} />
-        <Row label="Alerta de estoque baixo" value="8 unidades" />
+        <Row label="Alerta de estoque baixo" value="3 unidades por variação" />
       </div>
 
       <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-xs">
         <h2 className="font-sans text-lg font-semibold text-ink">Dados da loja</h2>
-        <p className="text-xs text-ink-tertiary">Dados institucionais exibidos no rodapé e páginas legais do site.</p>
-        <Row label="Razão social" value="Zoliê Semijoias LTDA" />
-        <Row label="CNPJ" value="00.000.000/0001-00" />
-        <Row label="WhatsApp" value="(11) 90000-0000" />
-        <Row label="E-mail de atendimento" value="atendimento@zolie.com.br" />
-        <Row label="Instagram" value="@zoliesemijoias" />
+        <p className="text-xs text-ink-tertiary">
+          Exibidos no rodapé e nas páginas legais. Definidos por variáveis de ambiente
+          (<code>LOJA_*</code> e <code>NEXT_PUBLIC_LOJA_*</code>).
+        </p>
+        <Row label="Razão social" value={env.loja.razaoSocial} />
+        <Row label="CNPJ" value={env.loja.cnpj ? formatarCnpj(env.loja.cnpj) : ''} />
+        <Row label="Endereço" value={env.loja.endereco} />
+        <Row label="WhatsApp" value={env.loja.whatsapp ? formatarTelefone(env.loja.whatsapp) : ''} />
+        <Row label="E-mail de atendimento" value={env.loja.emailContato} />
+        <Row label="Instagram" value={env.loja.instagram} />
       </div>
     </div>
   );
@@ -28,9 +33,15 @@ export default function AdminConfigPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between border-t border-border-subtle pt-2 text-sm first:border-0 first:pt-0">
-      <span className="text-ink-muted">{label}</span>
-      <span className="font-medium text-ink">{value}</span>
+    <div className="flex items-center justify-between gap-4 border-t border-border-subtle pt-2 text-sm first:border-0 first:pt-0">
+      <span className="flex-none text-ink-muted">{label}</span>
+      {value ? (
+        <span className="text-right font-medium text-ink">{value}</span>
+      ) : (
+        // Campo vazio precisa aparecer como pendência: exibir placeholder daria a
+        // impressão de que o dado legal já está publicado no site.
+        <span className="text-right text-xs text-danger">não configurado</span>
+      )}
     </div>
   );
 }

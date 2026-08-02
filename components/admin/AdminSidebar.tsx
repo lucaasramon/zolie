@@ -3,16 +3,23 @@ import Image from 'next/image';
 import { AdminSidebarNav } from '@/components/admin/AdminSidebarNav';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { reviewRepo } from '@/lib/repositories/review.repo';
-import { productRepo } from '@/lib/repositories/product.repo';
+import { prisma } from '@/lib/prisma';
+
+const LIMITE_ESTOQUE_BAIXO = 3;
 
 export async function AdminSidebar() {
-  const [aguardando, { total: reviewsPendentes }, { items: produtos }] = await Promise.all([
-    orderRepo.listAll({ status: 'AGUARDANDO_PAGAMENTO', take: 1 }),
-    reviewRepo.listPending({ take: 1 }),
-    productRepo.search({}, 'relevancia', { skip: 0, take: 1000 }),
-  ]);
-  const semEstoque = produtos.filter(p => p.estoque === 0).length;
-  const estoqueBaixo = produtos.filter(p => p.estoque > 0 && p.estoque <= 8).length;
+  // O alerta é por variação, não por produto: um produto com 20 peças pode estar
+  // sem nenhuma no tamanho mais vendido.
+  const [aguardando, { total: reviewsPendentes }, variacoesEmFalta, mensagensPendentes, trocasPendentes] =
+    await Promise.all([
+      orderRepo.listAll({ status: 'AGUARDANDO_PAGAMENTO', take: 1 }),
+      reviewRepo.listPending({ take: 1 }),
+      prisma.productVariant.count({
+        where: { ativo: true, estoque: { lte: LIMITE_ESTOQUE_BAIXO }, product: { ativo: true } },
+      }),
+      prisma.contactMessage.count({ where: { respondida: false } }),
+      prisma.returnRequest.count({ where: { status: 'SOLICITADA' } }),
+    ]);
 
   const groups = [
     {
@@ -20,6 +27,8 @@ export async function AdminSidebar() {
       items: [
         { href: '/admin/dashboard', label: 'Visão geral' },
         { href: '/admin/pedidos', label: 'Pedidos', badge: aguardando.total || undefined },
+        { href: '/admin/trocas', label: 'Trocas e devoluções', badge: trocasPendentes || undefined },
+        { href: '/admin/mensagens', label: 'Mensagens', badge: mensagensPendentes || undefined },
         { href: '/admin/clientes', label: 'Clientes' },
       ],
     },
@@ -28,7 +37,7 @@ export async function AdminSidebar() {
       items: [
         { href: '/admin/produtos', label: 'Anúncios' },
         { href: '/admin/categorias', label: 'Categorias' },
-        { href: '/admin/estoque', label: 'Estoque', badge: semEstoque + estoqueBaixo || undefined },
+        { href: '/admin/estoque', label: 'Estoque', badge: variacoesEmFalta || undefined },
       ],
     },
     {

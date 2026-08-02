@@ -47,6 +47,43 @@ export const variantRepo = {
     prisma.productVariant.update({ where: { id }, data: { estoque } }),
 
   /**
+   * Ajusta o estoque de uma variação e ressincroniza `Product.estoque` com a soma
+   * das variações, numa transação só.
+   *
+   * É o único caminho de edição de estoque do admin: escrever direto em
+   * `Product.estoque` deixaria o total divergente das variações, e o checkout —
+   * que valida os dois — travaria a venda no menor valor.
+   */
+  setEstoqueESincronizar: async (variantId: string, estoque: number) =>
+    prisma.$transaction(async tx => {
+      const variante = await tx.productVariant.update({
+        where: { id: variantId },
+        data: { estoque: Math.max(0, estoque) },
+      });
+
+      const agg = await tx.productVariant.aggregate({
+        where: { productId: variante.productId, ativo: true },
+        _sum: { estoque: true },
+      });
+      const total = agg._sum.estoque ?? 0;
+
+      await tx.product.update({ where: { id: variante.productId }, data: { estoque: total } });
+
+      return { variante, totalProduto: total };
+    }),
+
+  /** Ressincroniza `Product.estoque` de um produto sem alterar variações. */
+  sincronizarTotal: async (productId: string, db: Db = prisma) => {
+    const agg = await db.productVariant.aggregate({
+      where: { productId, ativo: true },
+      _sum: { estoque: true },
+    });
+    const total = agg._sum.estoque ?? 0;
+    await db.product.update({ where: { id: productId }, data: { estoque: total } });
+    return total;
+  },
+
+  /**
    * Decrementa o estoque da variação. Devolve `null` quando o produto ainda não
    * tem variações cadastradas — nesse caso o controle segue apenas por
    * `Product.estoque`, e o chamador trata a ausência como "sem restrição".

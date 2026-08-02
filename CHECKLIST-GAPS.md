@@ -234,10 +234,20 @@ do levantamento original. Os itens abaixo **não estavam** no checklist inicial.
 
 ## 🔴 Regressão introduzida pelo item 10
 
-### 11. O admin edita `Product.estoque` sem tocar nas variações
-- [ ] Fazer [StockRow.tsx:14](components/admin/StockRow.tsx#L14) e o `ProductForm` operarem sobre `ProductVariant`
-- [ ] Recalcular `Product.estoque` a partir da soma das variantes ao salvar (`variantRepo.totalEstoque` já existe)
-- [ ] Tela de edição de estoque por variação (era a ressalva já registrada no item 10)
+### 11. O admin edita `Product.estoque` sem tocar nas variações — ✅ concluído
+- [x] Fazer [StockRow.tsx:14](components/admin/StockRow.tsx#L14) e o `ProductForm` operarem sobre `ProductVariant`
+- [x] Recalcular `Product.estoque` a partir da soma das variantes ao salvar (`variantRepo.totalEstoque` já existe)
+- [x] Tela de edição de estoque por variação (era a ressalva já registrada no item 10)
+
+**Como ficou:**
+- [app/admin/estoque](app/admin/estoque/page.tsx) lista cada variação (tamanho · acabamento) com seu próprio controle. O total do produto aparece como leitura.
+- `PATCH /api/v1/admin/variants/[id]` ajusta a variação e **recalcula `Product.estoque` como soma das variações na mesma transação** — os dois não podem mais divergir.
+- `productService.update` passou a **descartar** `estoque` do payload: a única porta de escrita é a rota de variação.
+- `ProductForm` mostra o estoque como leitura na edição (com link para a tela de Estoque) e só aceita "estoque inicial" na criação.
+- Produto novo ganha variações automaticamente a partir dos tamanhos × acabamentos, com o estoque inicial **dividido** entre elas.
+- O badge do menu passou a contar **variações** em falta, não produtos — um produto com 20 peças pode estar zerado no tamanho mais vendido.
+
+**Verificado no banco:** ajustei uma variação de 10 → 35 e `Product.estoque` foi de 34 → 59, batendo com a soma. Estado restaurado depois do teste.
 
 **O problema:** o item 10 fez o checkout validar **variante e produto**, mas
 [app/admin/estoque/page.tsx](app/admin/estoque/page.tsx) e o `ProductForm` continuam
@@ -254,52 +264,99 @@ existente quebrou**.
 
 ## 🟠 Nunca esteve no checklist
 
-### 12. O formulário de contato não envia nada
-- [ ] Criar rota que envie o formulário por e-mail (o `email.service` com Resend já existe)
-- [ ] Validar e aplicar rate limit, como nas demais rotas públicas
+### 12. O formulário de contato não envia nada — ✅ concluído
+- [x] Criar rota que envie o formulário por e-mail (o `email.service` com Resend já existe)
+- [x] Validar e aplicar rate limit, como nas demais rotas públicas
 
-[app/(store)/contato/page.tsx:11](app/(store)/contato/page.tsx#L11) só chama
-`showToast('Mensagem enviada!')` e limpa o formulário. **Nenhuma requisição é feita.**
-O cliente acredita que falou com você e a mensagem não existe em lugar nenhum — e a
-página `/trocas` manda justamente usar esse canal para solicitar devolução.
+**Como ficou:**
+- `POST /api/v1/contact` grava em `ContactMessage` **e depois** envia o e-mail. Gravar
+  primeiro garante que a mensagem não se perde se o Resend falhar.
+- O e-mail à loja usa `replyTo` do cliente — responder na caixa de entrada já vai direto a ele.
+- O cliente recebe confirmação automática (best-effort: falha não derruba o envio).
+- Nova tela [admin/mensagens](app/admin/mensagens/page.tsx) com marcação de respondida e badge no menu.
+- Rate limit de 5 envios / 10 min por IP.
+- **Escape de HTML** adicionado ao `email.service`: agora entra conteúdo de usuário nos e-mails,
+  e sem escape um formulário poderia injetar markup no corpo da mensagem.
 
-### 13. Dados institucionais falsos em produção
-- [ ] Substituir CNPJ, WhatsApp, e-mail e endereço reais em [app/admin/config/page.tsx:19](app/admin/config/page.tsx#L19)
-- [ ] Corrigir o rodapé: [Footer.tsx:71](components/layout/Footer.tsx#L71) exibe
+### 13. Dados institucionais falsos em produção — ✅ concluído
+- [x] Substituir CNPJ, WhatsApp, e-mail e endereço reais em [app/admin/config/page.tsx:19](app/admin/config/page.tsx#L19)
+- [x] Corrigir o rodapé: [Footer.tsx:71](components/layout/Footer.tsx#L71) exibe
       "CNPJ 00.000.000/0001-00 · Protótipo de demonstração · dados fictícios"
 
-O CNPJ real (67.187.717/0001-65) já está no `.env` para o Melhor Envio, mas o site
-mostra um placeholder. Exibir CNPJ e razão social corretos é exigência do
-[art. 2º do Decreto 7.962/2013](https://www.planalto.gov.br/ccivil_03/_ato2011-2014/2013/decreto/d7962.htm)
-(e-commerce), não item de polimento.
+**Como ficou:**
+- Novo [lib/loja.ts](lib/loja.ts) centraliza os dados, com formatação de CNPJ e telefone.
+- Tudo vem de variáveis de ambiente (`LOJA_*` no servidor, `NEXT_PUBLIC_LOJA_*` no cliente) —
+  nenhum dado institucional hardcoded.
+- **Campo vazio é omitido do rodapé**, não substituído por placeholder: CNPJ falso é pior
+  que CNPJ ausente. No admin/config, campo vazio aparece como "não configurado" em vermelho.
+- Rodapé ganhou WhatsApp clicável, e-mail e links para `/termos` e `/privacidade`.
 
-### 14. Não existe página de Termos de Uso
-- [ ] Criar `/termos` com regras de compra, prazos e política de trocas consolidada
+### 14. Não existe página de Termos de Uso — ✅ concluído
+- [x] Criar `/termos` com regras de compra, prazos e política de trocas consolidada
 
-Existe `/privacidade` e `/trocas`, mas não os termos de uso/venda.
+10 seções cobrindo identificação, preços, pagamento, entrega, trocas, garantia, cupons,
+dados pessoais e foro. Incluída no sitemap e linkada no rodapé.
 
-### 15. Trocas e devoluções continuam sem fluxo
-- [ ] Modelar solicitação de troca/devolução (o item 2 cobriu **cancelamento**, que é outra coisa)
+### 15. Trocas e devoluções continuam sem fluxo — ✅ concluído (sem logística reversa)
+- [x] Modelar solicitação de troca/devolução (o item 2 cobriu **cancelamento**, que é outra coisa)
 - [ ] Logística reversa — o Melhor Envio tem `reverse`, hoje fixado em `false` em
-      [label.service.ts](lib/services/melhorEnvio/label.service.ts)
+      [label.service.ts](lib/services/melhorEnvio/label.service.ts) — **não feito por decisão de escopo**
 
-`/trocas` promete 30 dias pelo CDC e manda "acessar Meus pedidos e seguir as instruções".
-Não há instrução nenhuma lá: o cliente só consegue **cancelar** pedido não pago. Pedido
-já entregue não tem caminho.
+**Como ficou:**
+- Modelos `ReturnRequest` / `ReturnItem` com status `SOLICITADA → APROVADA → RECEBIDA → CONCLUIDA`
+  (ou `RECUSADA`).
+- O cliente abre a solicitação na página do pedido, **só quando o status é `ENTREGUE`** —
+  pedido a caminho continua no fluxo de cancelamento do item 2.
+- **Prazo de 30 dias validado no servidor**, contado a partir do evento de entrega no
+  histórico do pedido, não da data da compra.
+- Uma solicitação em aberto por pedido, para não duplicar atendimento do mesmo caso.
+- Nova tela [admin/trocas](app/admin/trocas/page.tsx) para aprovar/recusar com mensagem ao
+  cliente, e e-mails automáticos nas duas pontas.
+- `/trocas` reescrita com o passo a passo real — antes mandava "seguir as instruções" que
+  não existiam.
 
 ---
 
-## Resumo desta análise
+## Resumo desta análise — ✅ itens 11 a 15 concluídos
 
-O que foi feito nos itens 1–10 está sólido e verificado. O que apareceu agora:
+| # | Gravidade | Item | Status |
+|---|-----------|------|--------|
+| 11 | 🔴 | Admin não repõe mais estoque (regressão do item 10) | ✅ |
+| 12 | 🟠 | Formulário de contato não envia nada | ✅ |
+| 13 | 🟠 | CNPJ/dados falsos no site (exigência legal) | ✅ |
+| 15 | 🟠 | Trocas prometidas sem fluxo real | ✅ (sem logística reversa) |
+| 14 | 🟡 | Falta Termos de Uso | ✅ |
 
-| # | Gravidade | Item |
-|---|-----------|------|
-| 11 | 🔴 | Admin não repõe mais estoque (regressão do item 10) |
-| 12 | 🟠 | Formulário de contato não envia nada |
-| 13 | 🟠 | CNPJ/dados falsos no site (exigência legal) |
-| 15 | 🟠 | Trocas prometidas sem fluxo real |
-| 14 | 🟡 | Falta Termos de Uso |
+117 testes, typecheck e build limpos. Migration `20260802180000_contact_and_returns`
+aplicada no Supabase e verificada.
 
 **Boa notícia:** os 36 produtos têm `pesoGramas` preenchido, então o cálculo de frete
 do item 6 usa peso real em 100% do catálogo.
+
+---
+
+# O que continua pendente
+
+Nada aqui bloqueia a operação, mas vale saber:
+
+## Requer configuração sua (código pronto)
+- **`MELHOR_ENVIO_LABELS_ENABLED=true`** — compra de etiqueta segue desligada (item 1b)
+- **`NEXT_PUBLIC_APP_URL`** com o domínio real — hoje `localhost`, e por isso o
+  `robots.txt` bloqueia buscadores e o sitemap sai com URLs erradas (item 4)
+- **`NEXT_PUBLIC_GA_ID` / `NEXT_PUBLIC_META_PIXEL_ID`** — analytics inerte sem eles (item 5)
+- **`LOJA_*` e `NEXT_PUBLIC_LOJA_*`** no `.env` — os valores estão no `.env.example`,
+  falta copiar para o `.env` (item 13)
+- **`CRON_SECRET`** — sem ela os crons de expiração e rastreio respondem 401 (item 3)
+
+## Não implementado, por decisão de escopo
+- **Logística reversa automática** — a etiqueta de retorno é gerada no painel do
+  Melhor Envio (item 15)
+- **`purchase` server-side** — hoje o evento dispara na criação do pedido, então a
+  receita no GA4 inclui Pix/boleto que podem nunca ser pagos (item 5)
+- **Aviso de reposição de estoque** ao cliente — exige modelo de inscrição + job (item 10)
+
+## Nunca testado contra API real
+- **Asaas `refund` / `delete`** — validados só com mock (item 2)
+- **Melhor Envio cart/checkout/generate** — nenhuma chamada real feita (item 1b)
+
+Ambos valem um teste em sandbox antes de confiar em produção.

@@ -21,13 +21,25 @@ const COLORS = {
   successBg: '#F5F7EE',
 };
 
-async function send(to: string, subject: string, html: string) {
+/**
+ * Escapa conteúdo enviado por usuário antes de interpolar no HTML do e-mail.
+ * Sem isso, o texto de um formulário poderia injetar markup no corpo da mensagem.
+ */
+function escapar(texto: string): string {
+  return String(texto ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+async function send(to: string, subject: string, html: string, replyTo?: string) {
   if (!resend) {
     logger.warn('RESEND_API_KEY não configurada — e-mail não enviado', { subject, to });
     return;
   }
   try {
-    await resend.emails.send({ from: env.resend.from, to, subject, html });
+    await resend.emails.send({ from: env.resend.from, to, subject, html, ...(replyTo && { replyTo }) });
   } catch (err) {
     logger.error(`Falha ao enviar e-mail "${subject}"`, err, { to });
   }
@@ -235,6 +247,95 @@ export async function enviarCarrinhoAbandonado(to: string, nome: string, itens: 
     `,
   );
   await send(to, 'Você esqueceu itens na sua sacola — Zoliê', html);
+}
+
+interface MensagemContato {
+  nome: string;
+  email: string;
+  assunto: string;
+  mensagem: string;
+  pedido?: string | null;
+}
+
+/** Encaminha o formulário de contato para a caixa de atendimento da loja. */
+export async function enviarMensagemContato({ nome, email: remetente, assunto, mensagem, pedido }: MensagemContato) {
+  const destino = env.loja.emailContato;
+  if (!destino) {
+    logger.warn('LOJA_EMAIL_CONTATO não configurada — mensagem de contato salva mas não encaminhada', { assunto });
+    return;
+  }
+
+  const html = layout(
+    `Contato: ${assunto}`,
+    `
+      ${badge('Nova mensagem')}
+      ${heading(assunto)}
+      ${paragraph(`<strong>De:</strong> ${escapar(nome)} (${escapar(remetente)})`)}
+      ${pedido ? paragraph(`<strong>Pedido:</strong> ${escapar(pedido)}`) : ''}
+      ${divider()}
+      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: ${COLORS.ink}; white-space: pre-wrap;">${escapar(mensagem)}</p>
+    `,
+  );
+
+  // `replyTo` deixa o atendimento responder direto ao cliente.
+  await send(destino, `[Contato] ${assunto} — ${nome}`, html, remetente);
+}
+
+export async function enviarConfirmacaoContato(to: string, nome: string) {
+  const html = layout(
+    'Recebemos sua mensagem',
+    `
+      ${badge('Mensagem recebida')}
+      ${heading('Recebemos sua mensagem!')}
+      ${paragraph(`Olá, ${escapar(nome.split(' ')[0])}! Sua mensagem chegou até nós e vamos responder em até 1 dia útil.`)}
+      ${paragraph('Se for urgente, você também pode falar com a gente pelo WhatsApp.')}
+    `,
+  );
+  await send(to, 'Recebemos sua mensagem — Zoliê', html);
+}
+
+const TIPO_LABEL: Record<string, string> = { TROCA: 'troca', DEVOLUCAO: 'devolução' };
+
+export async function enviarSolicitacaoTrocaRecebida(to: string, nome: string, numero: string, tipo: string) {
+  const label = TIPO_LABEL[tipo] || 'solicitação';
+  const html = layout(
+    `Recebemos seu pedido de ${label}`,
+    `
+      ${badge('Solicitação recebida')}
+      ${heading(`Recebemos seu pedido de ${label}`)}
+      ${paragraph(`Olá, ${escapar(nome.split(' ')[0])}! Sua solicitação de ${label} do pedido <strong style="color:${COLORS.ink};">${escapar(numero)}</strong> foi registrada.`)}
+      ${paragraph('Vamos analisar e responder em até 2 dias úteis. Você pode acompanhar o andamento em "Meus pedidos".')}
+      ${button('Acompanhar solicitação', `${env.appUrl}/conta/pedidos`)}
+    `,
+  );
+  await send(to, `Solicitação de ${label} — pedido ${numero}`, html);
+}
+
+export async function enviarRespostaTroca(
+  to: string,
+  nome: string,
+  numero: string,
+  tipo: string,
+  aprovada: boolean,
+  resposta?: string | null,
+) {
+  const label = TIPO_LABEL[tipo] || 'solicitação';
+  const html = layout(
+    `Sua ${label} foi ${aprovada ? 'aprovada' : 'analisada'}`,
+    `
+      ${badge(aprovada ? 'Aprovada' : 'Não aprovada', aprovada ? 'success' : 'gold')}
+      ${heading(`Sua ${label} foi ${aprovada ? 'aprovada' : 'analisada'}`)}
+      ${paragraph(`Olá, ${escapar(nome.split(' ')[0])}! Analisamos seu pedido de ${label} referente ao pedido <strong style="color:${COLORS.ink};">${escapar(numero)}</strong>.`)}
+      ${resposta ? paragraph(escapar(resposta)) : ''}
+      ${
+        aprovada
+          ? paragraph('Em breve enviaremos as instruções para o envio da peça de volta. Guarde a embalagem original, se possível.')
+          : paragraph('Se tiver dúvidas sobre esta decisão, é só responder este e-mail que a gente conversa.')
+      }
+      ${button('Ver meus pedidos', `${env.appUrl}/conta/pedidos`)}
+    `,
+  );
+  await send(to, `${aprovada ? 'Aprovada' : 'Resposta'}: ${label} do pedido ${numero} — Zoliê`, html);
 }
 
 export async function enviarPedidoExpirado(to: string, nome: string, numero: string) {

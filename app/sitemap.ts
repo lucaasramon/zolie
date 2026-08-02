@@ -14,6 +14,7 @@ const ROTAS_ESTATICAS: { caminho: string; prioridade: number; frequencia: Metada
   { caminho: '/contato', prioridade: 0.5, frequencia: 'monthly' },
   { caminho: '/faq', prioridade: 0.4, frequencia: 'monthly' },
   { caminho: '/trocas', prioridade: 0.4, frequencia: 'monthly' },
+  { caminho: '/termos', prioridade: 0.3, frequencia: 'yearly' },
   { caminho: '/privacidade', prioridade: 0.3, frequencia: 'yearly' },
 ];
 
