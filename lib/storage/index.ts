@@ -3,7 +3,9 @@ export interface StorageProvider {
 }
 
 import { localStorageProvider } from './local';
+import { vercelBlobStorageProvider } from './vercel-blob';
 
-// Troque por um provider de S3/R2 implementando a mesma interface
-// (ex: STORAGE_PROVIDER=s3 -> retorna s3StorageProvider) sem alterar quem consome `storage`.
-export const storage: StorageProvider = localStorageProvider;
+// Local só funciona em dev (filesystem read-only na Vercel em produção).
+export const storage: StorageProvider = process.env.BLOB_READ_WRITE_TOKEN
+  ? vercelBlobStorageProvider
+  : localStorageProvider;
