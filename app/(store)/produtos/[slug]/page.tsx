@@ -111,39 +111,48 @@ export default async function ProdutoPage({ params }: Props) {
         }}
       />
 
-      <div className="mb-4 text-xs text-ink-tertiary">
-        <Link href="/" className="hover:text-gold-text">Início</Link> /{' '}
-        <Link href={`/produtos?categoria=${produto.categoria?.slug}`} className="hover:text-gold-text">{produto.categoria?.nome}</Link> /{' '}
-        {produto.nome}
+      <div className="mb-5 flex items-center gap-1.5 text-xs text-ink-tertiary">
+        <Link href="/" className="transition-colors hover:text-gold-text">Início</Link>
+        <span className="text-border-soft">/</span>
+        <Link href={`/produtos?categoria=${produto.categoria?.slug}`} className="transition-colors hover:text-gold-text">
+          {produto.categoria?.nome}
+        </Link>
+        <span className="text-border-soft">/</span>
+        <span className="text-ink-muted">{produto.nome}</span>
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
         <ProductGallery imagens={produto.imagens || []} nome={produto.nome} slug={produto.slug} />
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-5">
           <div>
-            <span className="text-xs uppercase tracking-wider text-ink-tertiary">
+            <span className="text-xs font-medium uppercase tracking-wider text-gold-text">
               {MATERIAL_LABEL[produto.material] || produto.material}
             </span>
-            <h1 className="mt-1 font-sans text-3xl font-semibold text-ink lg:text-4xl">{produto.nome}</h1>
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
+            <h1 className="mt-1.5 font-serif text-3xl leading-tight text-ink lg:text-[40px]">{produto.nome}</h1>
+            <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+              <span className="flex items-center gap-1 text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
               <span className="text-sm text-ink-tertiary">({produto.totalAvaliacoes} avaliações)</span>
-              <span className={`text-xs ${produto.disponivel ? 'text-success' : 'text-danger'}`}>
+              <span
+                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${
+                  produto.disponivel ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${produto.disponivel ? 'bg-success' : 'bg-danger'}`} />
                 {produto.disponivel ? 'Em estoque' : 'Esgotado'}
               </span>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1 border-y border-border-subtle py-4">
+          <div className="flex flex-col gap-1 rounded-2xl bg-bg-alt px-5 py-4">
             {produto.temDesconto && (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-ink-tertiary line-through">{brl(produto.preco)}</span>
-                <span className="rounded-full bg-gold px-2 py-0.5 text-[11px] font-medium text-ink">-{produto.percentualDesconto}%</span>
+                <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink">-{produto.percentualDesconto}%</span>
               </div>
             )}
-            <span className="text-[34px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
-            <span className="text-sm text-gold-text">{brl(produto.precoPix)} no Pix</span>
+            <span className="text-[36px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
+            <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
             <span className="text-sm text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
           </div>
 
@@ -151,7 +160,7 @@ export default async function ProdutoPage({ params }: Props) {
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-medium uppercase tracking-wide text-danger">Corre! Restam {produto.estoque} peças</span>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-danger-soft">
-                <div className="h-full bg-danger" style={{ width: `${Math.min(100, (produto.estoque / 8) * 100)}%` }} />
+                <div className="h-full rounded-full bg-danger transition-all" style={{ width: `${Math.min(100, (produto.estoque / 8) * 100)}%` }} />
               </div>
             </div>
           )}
@@ -167,57 +176,59 @@ export default async function ProdutoPage({ params }: Props) {
         </div>
       </div>
 
-      <div className="mt-14 grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <div>
-          <h2 className="mb-3 font-sans text-xl font-semibold text-ink">Sobre esta peça</h2>
+      <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-2xl bg-white p-6 shadow-xs">
+          <h2 className="mb-3 font-serif text-2xl text-ink">Sobre esta peça</h2>
           <p className="text-sm leading-relaxed text-ink-muted">{produto.descricao}</p>
-          <dl className="mt-4 grid grid-cols-2 gap-y-2 text-sm">
+          <dl className="mt-5 grid grid-cols-2 gap-y-3 border-t border-border-subtle pt-4 text-sm">
             <dt className="text-ink-tertiary">Material</dt>
-            <dd className="text-ink">{MATERIAL_LABEL[produto.material] || produto.material}</dd>
+            <dd className="text-right font-medium text-ink">{MATERIAL_LABEL[produto.material] || produto.material}</dd>
             <dt className="text-ink-tertiary">Pedra</dt>
-            <dd className="text-ink">{produto.pedra || 'Sem pedra'}</dd>
+            <dd className="text-right font-medium text-ink">{produto.pedra || 'Sem pedra'}</dd>
             <dt className="text-ink-tertiary">Peso</dt>
-            <dd className="text-ink">{produto.pesoGramas ? `${Number(produto.pesoGramas).toFixed(1)}g` : '—'}</dd>
+            <dd className="text-right font-medium text-ink">{produto.pesoGramas ? `${Number(produto.pesoGramas).toFixed(1)}g` : '—'}</dd>
             <dt className="text-ink-tertiary">Garantia</dt>
-            <dd className="text-ink">1 ano</dd>
+            <dd className="text-right font-medium text-ink">1 ano</dd>
             <dt className="text-ink-tertiary">Código</dt>
-            <dd className="text-ink">{produto.slug}</dd>
+            <dd className="text-right font-medium text-ink">{produto.slug}</dd>
           </dl>
         </div>
         {produto.cuidados && (
-          <div className="rounded-xl bg-hoverbg p-5">
-            <h2 className="mb-2 font-sans text-xl font-semibold text-ink">Cuidados com a peça</h2>
+          <div className="rounded-2xl bg-bg-alt p-6">
+            <h2 className="mb-2 font-serif text-2xl text-ink">Cuidados com a peça</h2>
             <p className="text-sm leading-relaxed text-ink-muted">{produto.cuidados}</p>
           </div>
         )}
       </div>
 
       <div className="mt-14">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-sans text-xl font-semibold text-ink">Avaliações</h2>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-serif text-2xl text-ink">Avaliações</h2>
           <ReviewForm productId={produto.id} />
         </div>
         {reviews.length === 0 ? (
-          <p className="text-sm text-ink-tertiary">Ainda não há avaliações para esta peça.</p>
+          <div className="rounded-2xl border border-dashed border-border-soft py-12 text-center">
+            <p className="text-sm text-ink-tertiary">Ainda não há avaliações para esta peça.</p>
+          </div>
         ) : (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
             {reviews.map((r: any) => (
-              <div key={r.id} className="rounded-lg shadow-xs p-4">
+              <div key={r.id} className="rounded-xl bg-white p-4 shadow-xs transition-shadow hover:shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gold-text">{stars(r.nota)}</span>
                   <span className="text-sm font-medium text-ink">{r.user?.nome || 'Cliente Zoliê'}</span>
                   {r.compraVerificada && (
-                    <span className="rounded-full bg-hoverbg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gold-text">
+                    <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
                       Compra verificada
                     </span>
                   )}
                 </div>
-                {r.titulo && <p className="mt-1 text-sm font-medium text-ink">{r.titulo}</p>}
+                {r.titulo && <p className="mt-1.5 text-sm font-medium text-ink">{r.titulo}</p>}
                 {r.comentario && <p className="mt-1 text-sm text-ink-muted">{r.comentario}</p>}
                 {r.imagens?.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
+                  <div className="mt-2.5 flex flex-wrap gap-2">
                     {r.imagens.map((url: string) => (
-                      <div key={url} className="relative h-16 w-16 overflow-hidden rounded-md">
+                      <div key={url} className="relative h-16 w-16 overflow-hidden rounded-lg">
                         <Image src={url} alt="" fill sizes="64px" className="object-cover" />
                       </div>
                     ))}
@@ -231,7 +242,7 @@ export default async function ProdutoPage({ params }: Props) {
 
       {produto.relacionados.length > 0 && (
         <div className="mt-14">
-          <h2 className="mb-4 font-sans text-xl font-semibold text-ink">Combina com esta peça</h2>
+          <h2 className="mb-4 font-serif text-2xl text-ink">Combina com esta peça</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
             {produto.relacionados.map((p: any) => (
               <ZolieCard key={p.id} product={p} />

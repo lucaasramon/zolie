@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
@@ -32,6 +33,13 @@ interface ZolieCardProps {
 }
 
 export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCardProps) {
+  const [justWished, setJustWished] = useState(false);
+
+  function handleToggleWish() {
+    setJustWished(true);
+    onToggleWish?.(p.id);
+  }
+
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
       <div className="absolute left-[10px] top-[10px] z-[2] flex flex-col items-start gap-[5px]">
@@ -49,11 +57,15 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
 
       <button
         type="button"
-        onClick={() => onToggleWish?.(p.id)}
+        onClick={handleToggleWish}
         aria-label="Adicionar aos favoritos"
         className="absolute right-2 top-2 z-[2] grid h-[34px] w-[34px] place-items-center rounded-full bg-white/92 text-base leading-none text-gold-text transition-colors hover:bg-hoverbg"
       >
-        {wished ? <span>♥</span> : <span className="text-ink-tertiary">♡</span>}
+        {wished ? (
+          <span className={justWished ? 'animate-zpop inline-block' : 'inline-block'}>♥</span>
+        ) : (
+          <span className="text-ink-tertiary">♡</span>
+        )}
       </button>
 
       <Link
@@ -61,7 +73,13 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
         className={p.imagens?.[0] ? 'relative block aspect-square overflow-hidden' : 'img-placeholder grid aspect-square place-items-center p-3'}
       >
         {p.imagens?.[0] ? (
-          <Image src={p.imagens[0]} alt={p.nome} fill sizes="(max-width: 768px) 50vw, 300px" className="object-cover" />
+          <Image
+            src={p.imagens[0]}
+            alt={p.nome}
+            fill
+            sizes="(max-width: 768px) 50vw, 300px"
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          />
         ) : (
           <span className="text-center font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-ink-tertiary">
             foto do produto
@@ -100,7 +118,7 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
         )}
         <Link
           href={`/produtos/${p.slug}`}
-          className="mt-auto rounded-full bg-bg-alt py-[11px] text-center text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text transition-colors hover:bg-gold hover:text-ink"
+          className="mt-auto rounded-full bg-bg-alt py-[11px] text-center text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text transition-all hover:bg-gold hover:text-ink active:scale-95"
         >
           Comprar
         </Link>

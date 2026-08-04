@@ -76,9 +76,9 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
       {tamanhos.length > 0 && tamanhos[0] !== 'Único' && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2.5">
           <span className="text-xs font-medium uppercase tracking-wider text-ink">Tamanho</span>
           <div className="flex flex-wrap gap-2">
             {tamanhos.map(t => (
@@ -86,8 +86,10 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
                 key={t}
                 type="button"
                 onClick={() => setTamanho(t)}
-                className={`rounded-full border px-3.5 py-2 text-sm ${
-                  tamanho === t ? 'border-gold bg-gold text-ink' : 'border-border-soft text-ink-muted hover:border-gold-text'
+                className={`rounded-full border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
+                  tamanho === t
+                    ? 'border-gold bg-gold text-ink shadow-xs'
+                    : 'border-border-soft text-ink-muted hover:border-gold-text hover:text-gold-text'
                 }`}
               >
                 {t}
@@ -97,7 +99,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
         </div>
       )}
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5">
         <span className="text-xs font-medium uppercase tracking-wider text-ink">Acabamento</span>
         <div className="flex gap-2">
           {['Polido', 'Fosco'].map(a => (
@@ -105,8 +107,10 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
               key={a}
               type="button"
               onClick={() => setAcabamento(a)}
-              className={`rounded-full border px-3.5 py-2 text-sm ${
-                acabamento === a ? 'border-gold bg-gold text-ink' : 'border-border-soft text-ink-muted hover:border-gold-text'
+              className={`rounded-full border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
+                acabamento === a
+                  ? 'border-gold bg-gold text-ink shadow-xs'
+                  : 'border-border-soft text-ink-muted hover:border-gold-text hover:text-gold-text'
               }`}
             >
               {a}
@@ -117,19 +121,31 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
 
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium uppercase tracking-wider text-ink">Quantidade</span>
-        <div className="flex items-center rounded-full border border-border-soft">
-          <button type="button" onClick={() => setQuantidade(q => Math.max(1, q - 1))} className="px-3 py-1.5 text-ink-muted">−</button>
-          <span className="w-8 text-center text-sm">{quantidade}</span>
-          <button type="button" onClick={() => setQuantidade(q => Math.min(estoque, q + 1))} className="px-3 py-1.5 text-ink-muted">+</button>
+        <div className="flex items-center rounded-full border border-border-soft bg-bg-alt">
+          <button
+            type="button"
+            onClick={() => setQuantidade(q => Math.max(1, q - 1))}
+            className="grid h-9 w-9 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90"
+          >
+            −
+          </button>
+          <span className="w-8 text-center text-sm font-medium text-ink">{quantidade}</span>
+          <button
+            type="button"
+            onClick={() => setQuantidade(q => Math.min(estoque, q + 1))}
+            className="grid h-9 w-9 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90"
+          >
+            +
+          </button>
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-2.5 sm:flex-row">
         <button
           type="button"
           disabled={loading || estoque === 0}
           onClick={() => addToCart(false)}
-          className="flex-1 rounded-full border border-gold-soft bg-white py-3.5 text-xs font-medium uppercase tracking-wider text-gold-text shadow-xs transition-colors hover:bg-gold hover:text-ink disabled:opacity-50"
+          className="flex-1 rounded-full border border-gold-soft bg-white py-3.5 text-xs font-medium uppercase tracking-wider text-gold-text shadow-xs transition-all hover:bg-gold hover:text-ink active:scale-95 disabled:opacity-50 disabled:active:scale-100"
         >
           Adicionar à sacola
         </button>
@@ -137,27 +153,39 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
           type="button"
           disabled={loading || estoque === 0}
           onClick={() => addToCart(true)}
-          className="flex-1 rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+          className="flex-1 rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink shadow-sm transition-all hover:bg-gold-hover hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95 disabled:opacity-50 disabled:active:scale-100"
         >
           Comprar agora
         </button>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-border-subtle pt-4">
-        <span className="text-xs font-medium uppercase tracking-wider text-ink">Calcular frete</span>
+      <div className="flex flex-col gap-2.5 border-t border-border-subtle pt-5">
+        <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-ink">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-gold-text" aria-hidden="true">
+            <path d="M3 7h11v10H3z" />
+            <path d="M14 10h4l3 3v4h-7z" />
+            <circle cx="7" cy="19" r="1.6" />
+            <circle cx="17.5" cy="19" r="1.6" />
+          </svg>
+          Calcular frete
+        </span>
         <div className="flex gap-2">
           <input
             value={cep}
             onChange={e => setCep(e.target.value)}
             placeholder="00000-000"
-            className="flex-1 rounded-md border border-border-subtle px-3 py-2 text-sm outline-none transition-colors focus:border-gold"
+            className="flex-1 rounded-full border border-border-subtle bg-bg-alt px-4 py-2.5 text-sm outline-none transition-all focus:border-gold-soft focus:bg-white"
           />
-          <button type="button" onClick={calcularFrete} className="rounded-full border border-border-soft px-4 py-2 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+          <button
+            type="button"
+            onClick={calcularFrete}
+            className="rounded-full border border-border-soft px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-ink-muted transition-colors hover:border-gold-text hover:text-gold-text active:scale-95"
+          >
             Calcular
           </button>
         </div>
         {frete && (
-          <div className="flex flex-col gap-1 text-sm text-ink-muted">
+          <div className="flex flex-col gap-1.5 rounded-lg bg-bg-alt p-3 text-sm text-ink-muted animate-zfade">
             {frete.opcoes.map(o => (
               <div key={o.nome} className="flex justify-between">
                 <span>{o.nome} · até {o.prazoDias} dias úteis</span>
