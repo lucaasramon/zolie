@@ -5,6 +5,7 @@ import { list as listProducts } from '@/lib/services/product.service';
 import { list as listBanners } from '@/lib/services/banner.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
 import { ZolieCard, DecoratedProduct } from '@/components/product/ZolieCard';
+import { CategoryIcon } from '@/components/product/CategoryIcon';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,14 +80,15 @@ export default async function HomePage() {
 
       <section className="mx-auto max-w-[1280px] px-5 pt-9">
         <h2 className="mb-4 font-sans text-2xl font-semibold text-ink">Escolha por categoria</h2>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
           {categorias.map(c => (
             <Link
               key={c.id}
               href={`/produtos?categoria=${c.slug}`}
-              className="img-placeholder flex aspect-square flex-col items-center justify-center gap-2 overflow-hidden rounded-lg bg-white p-2 text-center shadow-xs transition-all hover:-translate-y-1 hover:shadow-lg"
+              className="flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white px-2 py-4 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
             >
-              <span className="font-sans text-base font-medium text-ink">{c.nome}</span>
+              <CategoryIcon slug={c.slug} className="h-6 w-6 text-gold-text" />
+              <span className="font-sans text-xs font-medium text-ink">{c.nome}</span>
             </Link>
           ))}
         </div>
