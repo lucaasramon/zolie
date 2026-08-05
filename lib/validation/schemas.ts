@@ -190,6 +190,22 @@ export const categorySchema = z.object({
   ativa: z.boolean().optional(),
 });
 
+export const supplySchema = z.object({
+  nome: z.string().min(2),
+  valorPago: z.number().positive(),
+  quantidadeLote: z.number().int().positive(),
+  categoria: z.enum(['EMBALAGEM', 'BRINDE']).optional(),
+  ativo: z.boolean().optional(),
+});
+
+export const pricingSchema = z.object({
+  custoSemijoia: z.number().min(0).nullable().optional(),
+  // null = usar a soma calculada dos insumos marcados em supplyIds.
+  custoEmbalagem: z.number().min(0).nullable().optional(),
+  margemDesejada: z.number().min(0).max(99).nullable().optional(),
+  supplyIds: z.array(z.string()).optional(),
+});
+
 export const bannerSchema = z.object({
   titulo: z.string().min(3),
   subtitulo: z.string().optional(),

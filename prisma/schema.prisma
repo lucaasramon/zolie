@@ -148,6 +148,13 @@ model Product {
   ativo            Boolean         @default(true)
   notaMedia        Decimal         @default(0) @db.Decimal(2, 1) @map("nota_media")
   totalAvaliacoes  Int             @default(0) @map("total_avaliacoes")
+  // Custo da semijoia usado na tela de precificação (/admin/precificacao). Não afeta o
+  // preço de venda (`preco`) automaticamente — é aplicado explicitamente pelo admin.
+  custoSemijoia    Decimal?        @db.Decimal(10, 2) @map("custo_semijoia")
+  // Override manual do custo de embalagem; null = usar o valor somado dos `productSupplies`.
+  custoEmbalagem   Decimal?        @db.Decimal(10, 2) @map("custo_embalagem")
+  // Última margem (%) usada na calculadora, para reabrir a tela com o mesmo valor.
+  margemDesejada   Decimal?        @db.Decimal(5, 2) @map("margem_desejada")
   createdAt        DateTime        @default(now()) @map("created_at")
   updatedAt        DateTime        @updatedAt @map("updated_at")
 
@@ -157,12 +164,54 @@ model Product {
   orderItems       OrderItem[]
   wishlist         WishlistItem[]
   variants         ProductVariant[]
+  productSupplies  ProductSupply[]
 
   @@index([categoriaId])
   @@index([material])
   @@index([destaque])
   @@index([lancamento])
   @@map("products")
+}
+
+enum SupplyCategoria {
+  EMBALAGEM
+  BRINDE
+}
+
+// Insumo comprado em lote (sacola, caixinha, tag...) usado no rateio de custo dos
+// produtos na tela de precificação. custoUnitario = valorPago / quantidadeLote,
+// calculado em supply.service.ts (não fica gravado, evita desatualizar).
+model Supply {
+  id             String          @id @default(uuid())
+  nome           String
+  valorPago      Decimal         @db.Decimal(10, 2) @map("valor_pago")
+  quantidadeLote Int             @map("quantidade_lote")
+  categoria      SupplyCategoria @default(EMBALAGEM)
+  // Insumo que não será mais reposto (ex.: ferramenta comprada uma vez), mas cujo
+  // custo já rateado em produtos existentes deve continuar visível — por isso soft
+  // delete em vez de exclusão real.
+  ativo          Boolean         @default(true)
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  productSupplies ProductSupply[]
+
+  @@map("supplies")
+}
+
+// Quais insumos de embalagem entram no rateio de custo de cada produto (ex.: a
+// flanela só é usada nos produtos de prata).
+model ProductSupply {
+  id        String  @id @default(uuid())
+  productId String  @map("product_id")
+  supplyId  String  @map("supply_id")
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  supply    Supply  @relation(fields: [supplyId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, supplyId])
+  @@index([productId])
+  @@map("product_supplies")
 }
 
 // Estoque por combinação de tamanho + acabamento. `Product.estoque` continua

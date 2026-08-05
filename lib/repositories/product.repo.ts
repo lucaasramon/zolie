@@ -69,6 +69,23 @@ export const productRepo = {
   findManyByIds: (ids: string[]) => prisma.product.findMany({ where: { id: { in: ids } }, include: { categoria: true } }),
   /** Slugs ativos — usado por `generateStaticParams` e pelo sitemap. */
   listSlugsAtivos: () => prisma.product.findMany({ where: { ativo: true }, select: { slug: true } }),
+  /** Campos mínimos para a tela de precificação — evita carregar relações pesadas do catálogo. */
+  listForPricing: () =>
+    prisma.product.findMany({
+      where: { ativo: true },
+      select: {
+        id: true,
+        nome: true,
+        imagens: true,
+        material: true,
+        preco: true,
+        custoSemijoia: true,
+        custoEmbalagem: true,
+        margemDesejada: true,
+        productSupplies: { select: { supplyId: true } },
+      },
+      orderBy: { nome: 'asc' },
+    }),
   create: (data: any) => prisma.product.create({ data }),
   update: (id: string, data: any) => prisma.product.update({ where: { id }, data }),
   remove: (id: string) => prisma.product.update({ where: { id }, data: { ativo: false } }).then(() => true),

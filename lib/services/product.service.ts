@@ -132,3 +132,31 @@ export const update = async (id: string, data: any) => {
   return decorate(atualizado ?? p);
 };
 export const remove = (id: string) => productRepo.remove(id);
+
+export async function savePricing(
+  id: string,
+  data: { custoSemijoia?: number | null; custoEmbalagem?: number | null; margemDesejada?: number | null; supplyIds?: string[] },
+) {
+  const { supplyIds, ...campos } = data;
+
+  const produto = await prisma.$transaction(async tx => {
+    const atualizado = await tx.product
+      .update({ where: { id }, data: campos })
+      .catch(() => null);
+    if (!atualizado) return null;
+
+    if (supplyIds) {
+      await tx.productSupply.deleteMany({ where: { productId: id } });
+      if (supplyIds.length > 0) {
+        await tx.productSupply.createMany({
+          data: supplyIds.map(supplyId => ({ productId: id, supplyId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+    return atualizado;
+  });
+
+  if (!produto) throw notFound('Produto');
+  return decorate(produto);
+}

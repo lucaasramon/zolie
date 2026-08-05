@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAdminMobileNav } from '@/components/admin/AdminMobileNav';
 
 interface NavItem {
   href: string;
@@ -11,6 +12,7 @@ interface NavItem {
 
 export function AdminSidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
+  const { setOpen } = useAdminMobileNav();
 
   return (
     <>
@@ -20,6 +22,7 @@ export function AdminSidebarNav({ items }: { items: NavItem[] }) {
           <Link
             key={item.href}
             href={item.href}
+            onClick={() => setOpen(false)}
             className={`flex items-center justify-between rounded-lg px-2.5 py-2 text-sm transition-colors ${
               active ? 'bg-adminbg-active text-gold' : 'text-[#E3DBCC] hover:bg-adminbg-active hover:text-white'
             }`}
