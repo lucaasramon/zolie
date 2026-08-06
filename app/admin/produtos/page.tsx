@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { list } from '@/lib/services/product.service';
+import { listAdmin } from '@/lib/services/product.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
 import { brl } from '@/lib/utils/money';
 import { MATERIAL_LABEL } from '@/lib/utils/format';
@@ -21,7 +21,7 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
   if (sp.categoria) filters.categoria = sp.categoria;
   if (sp.status === 'estoque_baixo') filters.notaMin = undefined;
 
-  const { items } = await list(filters, 'relevancia', { skip: 0, take: 200 });
+  const { items } = await listAdmin(filters, 'relevancia', { skip: 0, take: 200 });
 
   const filtered = items.filter(p => {
     if (sp.status === 'ativos') return p.ativo;
@@ -62,9 +62,11 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
           <thead className="bg-hoverbg text-left text-xs uppercase tracking-wider text-ink-tertiary">
             <tr>
               <th className="px-4 py-3">Anúncio</th>
+              <th className="px-4 py-3">SKU</th>
               <th className="px-4 py-3">Categoria</th>
               <th className="px-4 py-3">Material</th>
               <th className="px-4 py-3">Preço</th>
+              <th className="px-4 py-3">Custo</th>
               <th className="px-4 py-3">Estoque</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Ações</th>
@@ -76,11 +78,11 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     {p.imagens?.[0] ? (
-                      <div className="relative h-10 w-10 flex-none overflow-hidden rounded-sm">
-                        <Image src={p.imagens[0]} alt={p.nome} fill sizes="40px" className="object-cover" />
+                      <div className="relative h-24 w-24 flex-none overflow-hidden rounded-sm">
+                        <Image src={p.imagens[0]} alt={p.nome} fill sizes="96px" className="object-cover" />
                       </div>
                     ) : (
-                      <div className="img-placeholder h-10 w-10 flex-none rounded-sm" />
+                      <div className="img-placeholder h-24 w-24 flex-none rounded-sm" />
                     )}
                     <div>
                       <div className="font-medium text-ink">{p.nome}</div>
@@ -88,11 +90,15 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
                     </div>
                   </div>
                 </td>
+                <td className="px-4 py-3 text-ink-muted">{p.sku || '—'}</td>
                 <td className="px-4 py-3 text-ink-muted">{p.categoria?.nome}</td>
                 <td className="px-4 py-3 text-ink-muted">{MATERIAL_LABEL[p.material]}</td>
                 <td className="px-4 py-3">
                   {p.temDesconto && <div className="text-xs text-ink-tertiary line-through">{brl(p.preco)}</div>}
                   <div className="font-medium text-ink">{brl(p.precoEfetivo)}</div>
+                </td>
+                <td className="px-4 py-3 text-ink-muted">
+                  {p.precoCusto != null ? brl(p.precoCusto) : '—'}
                 </td>
                 <td className={`px-4 py-3 font-medium ${p.estoque === 0 ? 'text-danger' : p.estoqueBaixo ? 'text-gold-text' : 'text-ink'}`}>
                   {p.estoque}

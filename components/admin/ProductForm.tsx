@@ -14,10 +14,12 @@ interface Categoria {
 interface InitialData {
   id?: string;
   nome: string;
+  sku?: string | null;
   descricao: string;
   cuidados?: string | null;
   preco: number | string;
   precoPromocional?: number | string | null;
+  precoCusto?: number | string | null;
   material: 'PRATA_925' | 'BANHADO_OURO';
   categoriaId: string;
   estoque: number;
@@ -32,10 +34,12 @@ interface InitialData {
 
 const EMPTY: InitialData = {
   nome: '',
+  sku: '',
   descricao: '',
   cuidados: '',
   preco: '',
   precoPromocional: '',
+  precoCusto: '',
   material: 'PRATA_925',
   categoriaId: '',
   estoque: 0,
@@ -125,10 +129,12 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
     setLoading(true);
     const payload = {
       nome: form.nome,
+      sku: form.sku || null,
       descricao: form.descricao,
       cuidados: form.cuidados || undefined,
       preco,
       precoPromocional: precoPromocional || null,
+      precoCusto: form.precoCusto ? Number(form.precoCusto) : null,
       material: form.material,
       categoriaId: form.categoriaId,
       estoque: Number(form.estoque) || 0,
@@ -162,7 +168,10 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
         {erro && <p className="text-sm text-danger">{erro}</p>}
 
         <Section title="Informações do anúncio">
-          <Field label="Nome*" value={form.nome} onChange={v => setForm(f => ({ ...f, nome: v }))} />
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Nome*" value={form.nome} onChange={v => setForm(f => ({ ...f, nome: v }))} />
+            <Field label="SKU" value={form.sku || ''} onChange={v => setForm(f => ({ ...f, sku: v }))} />
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5 text-sm">
               <span className="text-ink-muted">Categoria*</span>
@@ -240,6 +249,7 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
           <div className="grid grid-cols-2 gap-4">
             <Field label="Preço cheio*" type="number" value={String(form.preco)} onChange={v => setForm(f => ({ ...f, preco: v }))} />
             <Field label="Preço promocional" type="number" value={String(form.precoPromocional || '')} onChange={v => setForm(f => ({ ...f, precoPromocional: v }))} />
+            <Field label="Preço de custo (visível só no admin)" type="number" value={String(form.precoCusto || '')} onChange={v => setForm(f => ({ ...f, precoCusto: v }))} />
             {isEdit ? (
               <label className="flex flex-col gap-1.5 text-sm">
                 <span className="text-ink-muted">Estoque</span>

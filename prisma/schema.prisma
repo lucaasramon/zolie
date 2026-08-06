@@ -132,6 +132,7 @@ model Product {
   id               String          @id @default(uuid())
   nome             String
   slug             String          @unique
+  sku              String?         @unique
   descricao        String
   cuidados         String?
   preco            Decimal         @db.Decimal(10, 2)
@@ -148,6 +149,9 @@ model Product {
   ativo            Boolean         @default(true)
   notaMedia        Decimal         @default(0) @db.Decimal(2, 1) @map("nota_media")
   totalAvaliacoes  Int             @default(0) @map("total_avaliacoes")
+  // Preço de custo simples do produto, informado direto no cadastro (distinto da
+  // composição de custo da tela /admin/precificacao). Nunca exposto na API pública.
+  precoCusto       Decimal?        @db.Decimal(10, 2) @map("preco_custo")
   // Custo da semijoia usado na tela de precificação (/admin/precificacao). Não afeta o
   // preço de venda (`preco`) automaticamente — é aplicado explicitamente pelo admin.
   custoSemijoia    Decimal?        @db.Decimal(10, 2) @map("custo_semijoia")

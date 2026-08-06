@@ -68,7 +68,9 @@ export const orderSchema = z
 
 export const productSchema = z.object({
   nome: z.string().min(3),
+  sku: z.string().trim().max(50).nullable().optional().transform(v => (v ? v : null)),
   descricao: z.string().min(10),
+  precoCusto: z.number().positive().nullable().optional(),
   preco: z.number().positive(),
   precoPromocional: z.number().positive().nullable().optional(),
   material: z.enum(['PRATA_925', 'BANHADO_OURO']),

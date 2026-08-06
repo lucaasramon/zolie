@@ -20,6 +20,8 @@ export default async function EditarProdutoPage({ params }: Props) {
       initialData={{
         id: produto.id,
         nome: produto.nome,
+        sku: produto.sku,
+        precoCusto: produto.precoCusto ? Number(produto.precoCusto) : null,
         descricao: produto.descricao,
         cuidados: produto.cuidados,
         preco: Number(produto.preco),
@@ -30,6 +32,7 @@ export default async function EditarProdutoPage({ params }: Props) {
         pesoGramas: produto.pesoGramas ? Number(produto.pesoGramas) : null,
         pedra: produto.pedra,
         tamanhos: produto.tamanhos,
+        imagens: produto.imagens,
         destaque: produto.destaque,
         lancamento: produto.lancamento,
         ativo: produto.ativo,

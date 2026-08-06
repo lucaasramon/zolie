@@ -6,10 +6,16 @@ import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
 import { slugify } from '@/lib/utils/slug';
 
+// Campos de custo/margem — informação interna de negócio, nunca exposta pela
+// API pública. `decorate` os descarta; `decorateAdmin` os inclui para as telas /admin/*.
+const CAMPOS_CUSTO = ['precoCusto', 'custoSemijoia', 'custoEmbalagem', 'margemDesejada'] as const;
+
 export function decorate(p: any) {
   const preco = precoEfetivo(p);
+  const semCustos = { ...p };
+  for (const campo of CAMPOS_CUSTO) delete semCustos[campo];
   return {
-    ...p,
+    ...semCustos,
     // Campos Decimal/Date do Prisma não são serializáveis pela fronteira Server->Client
     // Component do React — convertidos aqui para number/string/ISO planos.
     preco: Number(p.preco),
@@ -35,9 +41,26 @@ export function decorate(p: any) {
   };
 }
 
+/** Igual a `decorate`, mas mantém os campos de custo/margem — uso restrito a telas /admin/*. */
+export function decorateAdmin(p: any) {
+  return {
+    ...decorate(p),
+    precoCusto: p.precoCusto != null ? Number(p.precoCusto) : null,
+    custoSemijoia: p.custoSemijoia != null ? Number(p.custoSemijoia) : null,
+    custoEmbalagem: p.custoEmbalagem != null ? Number(p.custoEmbalagem) : null,
+    margemDesejada: p.margemDesejada != null ? Number(p.margemDesejada) : null,
+  };
+}
+
 export async function list(filters: ProductFilters, sort: string, pagination: { skip?: number; take?: number }) {
   const { total, items } = await productRepo.search(filters, sort, pagination);
   return { total, items: items.map(decorate) };
+}
+
+/** Igual a `list`, mas com custos visíveis — uso restrito à listagem em /admin/produtos. */
+export async function listAdmin(filters: ProductFilters, sort: string, pagination: { skip?: number; take?: number }) {
+  const { total, items } = await productRepo.search(filters, sort, pagination);
+  return { total, items: items.map(decorateAdmin) };
 }
 
 export async function bySlug(slug: string) {
