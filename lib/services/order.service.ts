@@ -1,4 +1,4 @@
-import { cartRepo } from '@/lib/repositories/cart.repo';
+import { cartRepo, CartOwner } from '@/lib/repositories/cart.repo';
 import { addressRepo } from '@/lib/repositories/address.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { variantRepo } from '@/lib/repositories/variant.repo';
@@ -25,8 +25,22 @@ interface CartaoInput {
   cvv: string;
 }
 
+interface GuestInput {
+  nome: string;
+  email: string;
+  telefone?: string;
+  cpf: string;
+  cep: string;
+  rua: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
 interface CreateOrderInput {
-  enderecoId: string;
+  enderecoId?: string;
   formaPagamento: 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
   parcelas?: number;
   cep?: string;
@@ -35,24 +49,71 @@ interface CreateOrderInput {
   creditCardToken?: string;
   cartao?: CartaoInput;
   remoteIp: string;
+  guest?: GuestInput;
 }
 
-export async function create(userId: string, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp }: CreateOrderInput) {
-  const user = await userRepo.findById(userId);
-  if (!user) throw notFound('Usuário');
-  if (!user.emailVerified) {
-    throw new AppError('Confirme seu e-mail antes de finalizar a compra', 422, 'EMAIL_NOT_VERIFIED');
-  }
-  if (!user.cpf) throw new AppError('Cadastre seu CPF antes de finalizar a compra', 422, 'CPF_REQUIRED');
+interface ContatoResolvido {
+  nome: string;
+  email: string;
+  cpf: string;
+  telefone?: string | null;
+}
 
-  const cart = await cartRepo.getByOwner({ userId });
+interface EnderecoResolvido {
+  enderecoId: string | null;
+  cep: string;
+  rua: string;
+  numero: string;
+  complemento?: string | null;
+  bairro: string;
+  cidade: string;
+  estado: string;
+}
+
+/**
+ * Resolve contato e endereço de entrega de forma agnóstica a login: autenticado
+ * usa os dados da conta/endereço salvo, convidado usa os dados informados
+ * inline no checkout. O resto de `create()` trabalha só com o resultado daqui,
+ * sem precisar saber se é convidado ou não.
+ */
+async function resolveContatoEEndereco(
+  userId: string | null,
+  { enderecoId, guest }: Pick<CreateOrderInput, 'enderecoId' | 'guest'>,
+): Promise<{ contato: ContatoResolvido; endereco: EnderecoResolvido }> {
+  if (userId) {
+    const user = await userRepo.findById(userId);
+    if (!user) throw notFound('Usuário');
+    if (!user.emailVerified) {
+      throw new AppError('Confirme seu e-mail antes de finalizar a compra', 422, 'EMAIL_NOT_VERIFIED');
+    }
+    if (!user.cpf) throw new AppError('Cadastre seu CPF antes de finalizar a compra', 422, 'CPF_REQUIRED');
+    if (!enderecoId) throw new AppError('Selecione um endereço de entrega', 422, 'ENDERECO_REQUIRED');
+
+    // Endereço removido não pode receber pedido novo, mesmo que o id ainda exista.
+    const endereco = await addressRepo.findAtivoById(enderecoId);
+    if (!endereco) throw notFound('Endereço');
+    if (endereco.userId !== userId) throw forbidden();
+
+    return {
+      contato: { nome: user.nome, email: user.email, cpf: user.cpf, telefone: user.telefone },
+      endereco: { enderecoId, cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, complemento: endereco.complemento, bairro: endereco.bairro, cidade: endereco.cidade, estado: endereco.estado },
+    };
+  }
+
+  if (!guest) throw new AppError('Informe seus dados para finalizar a compra', 422, 'GUEST_DATA_REQUIRED');
+
+  return {
+    contato: { nome: guest.nome, email: guest.email, cpf: guest.cpf, telefone: guest.telefone },
+    endereco: { enderecoId: null, cep: guest.cep, rua: guest.rua, numero: guest.numero, complemento: guest.complemento, bairro: guest.bairro, cidade: guest.cidade, estado: guest.estado },
+  };
+}
+
+export async function create(userId: string | null, cartOwner: CartOwner, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp, guest }: CreateOrderInput) {
+  const { contato, endereco } = await resolveContatoEEndereco(userId, { enderecoId, guest });
+
+  const cart = await cartRepo.getByOwner(cartOwner);
   const items = cart.items.filter(i => i.product);
   if (!items.length) throw new AppError('Sua sacola está vazia', 422, 'EMPTY_CART');
-
-  // Endereço removido não pode receber pedido novo, mesmo que o id ainda exista.
-  const endereco = await addressRepo.findAtivoById(enderecoId);
-  if (!endereco) throw notFound('Endereço');
-  if (endereco.userId !== userId) throw forbidden();
 
   for (const i of items) {
     if (i.product.estoque < i.quantidade) {
@@ -92,7 +153,7 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
       {
         numero,
         userId,
-        enderecoId,
+        enderecoId: endereco.enderecoId,
         status: 'AGUARDANDO_PAGAMENTO',
         formaPagamento,
         parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
@@ -106,6 +167,17 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
         // Melhor Envio: gravá-lo faria a compra de etiqueta enviar um id inválido.
         envioServicoId: opcao.id === 'contingencia' ? null : opcao.id,
         codigoRastreio: null,
+        guestNome: userId ? null : contato.nome,
+        guestEmail: userId ? null : contato.email,
+        guestTelefone: userId ? null : contato.telefone,
+        guestCpf: userId ? null : contato.cpf,
+        guestCep: userId ? null : endereco.cep,
+        guestRua: userId ? null : endereco.rua,
+        guestNumero: userId ? null : endereco.numero,
+        guestComplemento: userId ? null : endereco.complemento,
+        guestBairro: userId ? null : endereco.bairro,
+        guestCidade: userId ? null : endereco.cidade,
+        guestEstado: userId ? null : endereco.estado,
       },
       items.map(i => ({
         productId: i.productId,
@@ -140,7 +212,7 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
 
     if (cupomId) await couponRepo.incrementUse(cupomId, tx);
 
-    await cartRepo.clear({ userId }, tx);
+    await cartRepo.clear(cartOwner, tx);
     return created;
   });
 
@@ -155,7 +227,7 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
       creditCardToken,
       cartao,
       remoteIp,
-      user: { id: user.id, nome: user.nome, email: user.email, cpf: user.cpf, telefone: user.telefone },
+      user: { id: userId, nome: contato.nome, email: contato.email, cpf: contato.cpf, telefone: contato.telefone },
       endereco: { cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, bairro: endereco.bairro, complemento: endereco.complemento },
     });
   } catch (err) {
@@ -169,7 +241,7 @@ export async function create(userId: string, { enderecoId, formaPagamento, parce
 
   await orderRepo.setAsaasPayment(order.id, pagamento.asaasPaymentId as string, pagamento.asaasStatus as string);
 
-  await email.enviarConfirmacaoPedido(user.email, user.nome, order.numero, order.items, order.total);
+  await email.enviarConfirmacaoPedido(contato.email, contato.nome, order.numero, order.items, order.total);
 
   return { order: { ...order, asaasPaymentId: pagamento.asaasPaymentId, asaasStatus: pagamento.asaasStatus }, pagamento };
 }
@@ -291,10 +363,12 @@ export async function cancelar(id: string, { porAdmin = false, userId, motivo, e
     }
   });
 
-  if (order.user) {
+  const emailCancelamento = order.user?.email ?? order.guestEmail;
+  const nomeCancelamento = order.user?.nome ?? order.guestNome;
+  if (emailCancelamento) {
     await email.enviarPedidoCancelado(
-      order.user.email,
-      order.user.nome,
+      emailCancelamento,
+      nomeCancelamento || '',
       order.numero,
       motivo,
       resultadoCobranca === 'ESTORNADO',
@@ -333,11 +407,13 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
   const order = await orderRepo.updateStatus(id, status, descricao, undefined, { codigoRastreio, transportadora });
   if (!order) throw notFound('Pedido');
 
-  if (order.user) {
+  const emailStatus = order.user?.email ?? order.guestEmail;
+  const nomeStatus = order.user?.nome ?? order.guestNome ?? '';
+  if (emailStatus) {
     if (motivo === 'PAGAMENTO_CONFIRMADO') {
-      await email.enviarConfirmacaoPagamento(order.user.email, order.user.nome, order.numero);
+      await email.enviarConfirmacaoPagamento(emailStatus, nomeStatus, order.numero);
     } else {
-      await email.enviarMudancaStatus(order.user.email, order.user.nome, order.numero, status, descricao, {
+      await email.enviarMudancaStatus(emailStatus, nomeStatus, order.numero, status, descricao, {
         codigoRastreio: order.codigoRastreio,
         transportadora: order.transportadora,
       });

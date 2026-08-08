@@ -14,7 +14,7 @@ interface CriarCobrancaOpts {
   order: { id: string; total: unknown; numero: string };
   formaPagamento: 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
   parcelas?: number;
-  user: { id: string; nome: string; email: string; cpf: string; telefone?: string | null };
+  user: { id: string | null; nome: string; email: string; cpf: string; telefone?: string | null };
   endereco: { cep: string; rua: string; numero: string; bairro: string; complemento?: string | null };
   /** Token gerado no client via Asaas.js — preferencial, evita que o PAN/CVV trafeguem pelo backend. */
   creditCardToken?: string;

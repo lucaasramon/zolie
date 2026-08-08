@@ -49,9 +49,25 @@ const cardSchema = z.object({
   cvv: z.string().regex(/^\d{3,4}$/, 'CVV inválido'),
 });
 
+// Checkout de convidado: contato + endereço informados inline, sem conta.
+export const guestCheckoutSchema = z.object({
+  nome: z.string().trim().min(3),
+  email,
+  telefone: z.string().trim().min(10).optional(),
+  cpf,
+  cep: z.string().regex(/^\d{5}-?\d{3}$/),
+  rua: z.string().min(3),
+  numero: z.string().min(1),
+  complemento: z.string().optional(),
+  bairro: z.string().min(2),
+  cidade: z.string().min(2),
+  estado: z.string().length(2),
+});
+
 export const orderSchema = z
   .object({
-    enderecoId: z.string().min(1),
+    enderecoId: z.string().min(1).optional(),
+    guest: guestCheckoutSchema.optional(),
     formaPagamento: z.enum(['CARTAO_CREDITO', 'PIX', 'BOLETO']),
     parcelas: z.number().int().min(1).max(18).optional(),
     cep: z.string().optional(),
@@ -61,8 +77,22 @@ export const orderSchema = z
     cartao: cardSchema.optional(),
   })
   .superRefine((data, ctx) => {
+    if (!data.enderecoId && !data.guest) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enderecoId'], message: 'Selecione um endereço ou informe os dados de convidado' });
+    }
     if (data.formaPagamento === 'CARTAO_CREDITO' && !data.creditCardToken && !data.cartao) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['cartao'], message: 'Dados do cartão são obrigatórios para pagamento com cartão de crédito' });
+    }
+  });
+
+export const asaasCustomerSchema = z
+  .object({
+    enderecoId: z.string().min(1).optional(),
+    guest: guestCheckoutSchema.optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.enderecoId && !data.guest) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enderecoId'], message: 'Selecione um endereço ou informe os dados de convidado' });
     }
   });
 

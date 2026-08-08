@@ -22,7 +22,12 @@ export async function validar(codigo: string, { subtotal, userId = null, frete =
       'COUPON_MIN_ORDER',
     );
   }
-  if (cupom.primeiraCompra && userId) {
+  if (cupom.primeiraCompra) {
+    // Sem conta não há como verificar se é a primeira compra: em vez de liberar
+    // o cupom sem checagem, exige login (evita reuso ilimitado por convidado).
+    if (!userId) {
+      throw new AppError('Este cupom é exclusivo para clientes com conta. Crie uma conta gratuita para usá-lo.', 422, 'COUPON_REQUIRES_ACCOUNT');
+    }
     const pedidos = await userRepo.countOrders(userId);
     if (pedidos > 0) throw new AppError('Cupom exclusivo para a primeira compra', 422, 'COUPON_FIRST_ORDER_ONLY');
   }

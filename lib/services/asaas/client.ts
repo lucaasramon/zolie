@@ -36,6 +36,11 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export const asaasClient = {
   createCustomer: (data: Record<string, unknown>) =>
     request<{ id: string }>('/customers', { method: 'POST', body: JSON.stringify(data) }),
+  /** Busca um customer já cadastrado pelo CPF — usado para não duplicar customers de convidados a cada compra. */
+  findCustomerByCpf: async (cpfCnpj: string) => {
+    const { data } = await request<{ data: { id: string }[] }>(`/customers?cpfCnpj=${cpfCnpj}`);
+    return data[0] ?? null;
+  },
   createPayment: (data: Record<string, unknown>) =>
     request<Record<string, any>>('/payments', { method: 'POST', body: JSON.stringify(data) }),
   getPayment: (paymentId: string) => request<Record<string, any>>(`/payments/${paymentId}`),

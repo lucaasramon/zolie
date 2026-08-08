@@ -87,14 +87,18 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
         />
 
         <div className="flex flex-col gap-2 rounded-xl bg-white p-4 text-sm shadow-xs">
-          <h3 className="font-sans text-lg font-semibold text-ink">Cliente e entrega</h3>
+          <h3 className="font-sans text-lg font-semibold text-ink">
+            Cliente e entrega
+            {!order.user && <span className="ml-1.5 rounded-full bg-hoverbg px-1.5 py-0.5 text-[10px] uppercase text-ink-tertiary">Convidado</span>}
+          </h3>
           <div className="text-ink-muted">
-            <div>{order.user?.nome}</div>
-            <div>{order.user?.email}</div>
-            {order.user?.telefone && <div>{order.user.telefone}</div>}
+            <div>{order.user?.nome ?? order.guestNome}</div>
+            <div>{order.user?.email ?? order.guestEmail}</div>
+            {(order.user?.telefone ?? order.guestTelefone) && <div>{order.user?.telefone ?? order.guestTelefone}</div>}
+            {(order.user?.cpf ?? order.guestCpf) && <div>CPF: {order.user?.cpf ?? order.guestCpf}</div>}
           </div>
           <div className="border-t border-border-subtle pt-2 text-ink-muted">
-            {order.endereco?.rua}, {order.endereco?.numero} · {order.endereco?.bairro} · {order.endereco?.cidade}/{order.endereco?.estado} · {order.endereco?.cep}
+            {order.endereco?.rua ?? order.guestRua}, {order.endereco?.numero ?? order.guestNumero} · {order.endereco?.bairro ?? order.guestBairro} · {order.endereco?.cidade ?? order.guestCidade}/{order.endereco?.estado ?? order.guestEstado} · {order.endereco?.cep ?? order.guestCep}
           </div>
           <div className="border-t border-border-subtle pt-2 text-ink-muted">
             Pagamento: {order.formaPagamento} {order.parcelas > 1 ? `em ${order.parcelas}x` : ''}

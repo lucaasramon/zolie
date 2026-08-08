@@ -41,7 +41,7 @@ export const orderRepo = {
         items: true,
         events: true,
         endereco: true,
-        user: { select: { nome: true, email: true, telefone: true } },
+        user: { select: { nome: true, email: true, telefone: true, cpf: true } },
         returnRequests: {
           select: { id: true, tipo: true, status: true, createdAt: true },
           orderBy: { createdAt: 'desc' },

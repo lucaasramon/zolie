@@ -69,6 +69,11 @@ describe('coupon.service.validar', () => {
     expect(r.desconto).toBe(10);
   });
 
+  it('rejeita cupom de primeira compra para convidado (sem conta)', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, primeiraCompra: true } as any);
+    await expect(validar('BRILHE10', { subtotal: 100, userId: null })).rejects.toThrow('exclusivo para clientes com conta');
+  });
+
   it('calcula desconto percentual sobre o subtotal', async () => {
     vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, tipoDesconto: 'PERCENT', valor: 15 } as any);
     const r = await validar('BRILHE10', { subtotal: 200 });

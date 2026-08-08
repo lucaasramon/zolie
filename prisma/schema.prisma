@@ -301,8 +301,8 @@ model CartItem {
 model Order {
   id             String        @id @default(uuid())
   numero         String        @unique
-  userId         String        @map("user_id")
-  enderecoId     String        @map("endereco_id")
+  userId         String?       @map("user_id")
+  enderecoId     String?       @map("endereco_id")
   status         OrderStatus   @default(AGUARDANDO_PAGAMENTO)
   formaPagamento PaymentMethod @map("forma_pagamento")
   parcelas       Int           @default(1)
@@ -327,11 +327,26 @@ model Order {
   notaFiscalUrl   String?      @map("nota_fiscal_url")
   notaFiscalChave String?      @map("nota_fiscal_chave")
   notaFiscalNumero String?     @map("nota_fiscal_numero")
+  // Checkout de convidado (sem conta): preenchidos só quando `userId`/`enderecoId`
+  // são nulos. Um pedido é um snapshot imutável, então o contato e endereço do
+  // convidado ficam gravados aqui em vez de numa entidade `Address` reutilizável
+  // (que não faz sentido para um endereço usado uma única vez).
+  guestNome        String?     @map("guest_nome")
+  guestEmail       String?     @map("guest_email")
+  guestTelefone    String?     @map("guest_telefone")
+  guestCpf         String?     @map("guest_cpf")
+  guestCep         String?     @map("guest_cep")
+  guestRua         String?     @map("guest_rua")
+  guestNumero      String?     @map("guest_numero")
+  guestComplemento String?     @map("guest_complemento")
+  guestBairro      String?     @map("guest_bairro")
+  guestCidade      String?     @map("guest_cidade")
+  guestEstado      String?     @map("guest_estado") @db.Char(2)
   createdAt      DateTime      @default(now()) @map("created_at")
   updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  user           User          @relation(fields: [userId], references: [id])
-  endereco       Address       @relation(fields: [enderecoId], references: [id])
+  user           User?         @relation(fields: [userId], references: [id])
+  endereco       Address?      @relation(fields: [enderecoId], references: [id])
   items          OrderItem[]
   events         OrderEvent[]
   returnRequests ReturnRequest[]

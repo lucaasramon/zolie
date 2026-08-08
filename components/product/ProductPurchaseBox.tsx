@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
-import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
@@ -27,15 +26,10 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   const [frete, setFrete] = useState<{ opcoes: { nome: string; prazoDias: number; valor: number }[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
   const { refresh } = useCart();
   const { showToast } = useToast();
 
   async function addToCart(buyNow = false) {
-    if (buyNow && !user) {
-      router.push('/login?next=/checkout');
-      return;
-    }
     setLoading(true);
     try {
       await api.post('/cart/items', { productId, quantidade, tamanho: tamanho || null, acabamento });

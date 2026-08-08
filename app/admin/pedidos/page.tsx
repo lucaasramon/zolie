@@ -63,7 +63,10 @@ export default async function AdminPedidosPage({ searchParams }: Props) {
                   <div className="font-medium text-ink">{o.numero}</div>
                   <div className="text-xs text-ink-tertiary">{new Date(o.createdAt).toLocaleDateString('pt-BR')} · {o.items.length} itens</div>
                 </td>
-                <td className="px-4 py-3 text-ink-muted">{o.user?.nome}</td>
+                <td className="px-4 py-3 text-ink-muted">
+                  {o.user?.nome ?? o.guestNome ?? '-'}
+                  {!o.user && <span className="ml-1.5 rounded-full bg-hoverbg px-1.5 py-0.5 text-[10px] uppercase text-ink-tertiary">Convidado</span>}
+                </td>
                 <td className="px-4 py-3 text-ink-muted">{o.formaPagamento}</td>
                 <td className="px-4 py-3 font-medium text-ink">{brl(o.total)}</td>
                 <td className="px-4 py-3">

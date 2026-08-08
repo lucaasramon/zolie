@@ -37,9 +37,12 @@ interface ShippingOption {
   valor: number;
 }
 
+type Modo = 'escolha' | 'convidado' | 'conta';
+
 const STEPS = ['Identificação', 'Entrega', 'Pagamento', 'Confirmação'];
 
 const EMPTY_ADDRESS_FORM = { apelido: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' };
+const EMPTY_GUEST_CONTATO = { nome: '', email: '', telefone: '', cpf: '' };
 
 function describeError(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
@@ -55,12 +58,15 @@ export default function CheckoutPage() {
   const { refresh: refreshCart } = useCart();
   const router = useRouter();
 
+  const [modo, setModo] = useState<Modo>('escolha');
   const [step, setStep] = useState(1);
   const [cart, setCart] = useState<CartData | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [enderecoId, setEnderecoId] = useState('');
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [addressForm, setAddressForm] = useState(EMPTY_ADDRESS_FORM);
+  const [guestContato, setGuestContato] = useState(EMPTY_GUEST_CONTATO);
+  const [guestEndereco, setGuestEndereco] = useState(EMPTY_ADDRESS_FORM);
   const [shippingOptions, setShippingOptions] = useState<ShippingOption[]>([]);
   const [freteEstimado, setFreteEstimado] = useState(false);
   const [envioId, setEnvioId] = useState('pac');
@@ -75,9 +81,12 @@ export default function CheckoutPage() {
   const [emailReenviado, setEmailReenviado] = useState(false);
   const [cartao, setCartao] = useState({ numero: '', nomeImpresso: '', validadeMes: '', validadeAno: '', cvv: '' });
 
+  // Usuário já logado ao entrar no checkout: pula a tela de escolha.
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/login?next=/checkout');
-  }, [authLoading, user, router]);
+    if (authLoading || !user || modo !== 'escolha') return;
+    const timer = setTimeout(() => setModo('conta'), 0);
+    return () => clearTimeout(timer);
+  }, [authLoading, user, modo]);
 
   const loadCart = useCallback(async () => {
     const { data } = await api.get<CartData>('/cart');
@@ -93,11 +102,12 @@ export default function CheckoutPage() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      loadCart();
-      loadAddresses();
-    }
-  }, [user, loadCart, loadAddresses]);
+    if (modo === 'escolha') return;
+    (async () => {
+      await loadCart();
+      if (modo === 'conta') await loadAddresses();
+    })();
+  }, [modo, loadCart, loadAddresses]);
 
   // `begin_checkout` uma única vez por sessão de checkout. O ref é necessário
   // porque `cart` é recarregado a cada mudança de frete/endereço, e sem a guarda
@@ -161,15 +171,26 @@ export default function CheckoutPage() {
     }
   }
 
+  const guestContatoValido =
+    guestContato.nome.trim().length >= 3 && /\S+@\S+\.\S+/.test(guestContato.email) && cpfValido(guestContato.cpf);
+
+  const guestEnderecoValido =
+    guestEndereco.cep.trim().length >= 8 &&
+    guestEndereco.rua.trim().length >= 3 &&
+    guestEndereco.numero.trim().length >= 1 &&
+    guestEndereco.bairro.trim().length >= 2 &&
+    guestEndereco.cidade.trim().length >= 2 &&
+    guestEndereco.estado.trim().length === 2;
+
   async function onAdvanceToPayment() {
-    const endereco = addresses.find(a => a.id === enderecoId);
-    if (!endereco) {
-      setErro('Selecione ou cadastre um endereço de entrega');
+    const cep = modo === 'conta' ? addresses.find(a => a.id === enderecoId)?.cep : guestEndereco.cep;
+    if (!cep) {
+      setErro(modo === 'conta' ? 'Selecione ou cadastre um endereço de entrega' : 'Preencha o endereço de entrega');
       return;
     }
     setErro('');
     try {
-      const { data } = await api.post<{ opcoes: ShippingOption[]; estimado?: boolean }>('/shipping/quote', { cep: endereco.cep, subtotal: cart?.resumo.subtotal });
+      const { data } = await api.post<{ opcoes: ShippingOption[]; estimado?: boolean }>('/shipping/quote', { cep, subtotal: cart?.resumo.subtotal });
       setShippingOptions(data.opcoes);
       setFreteEstimado(Boolean(data.estimado));
       // Os ids reais vêm do Melhor Envio (numéricos) ou da contingência, então o
@@ -183,27 +204,40 @@ export default function CheckoutPage() {
   }
 
   async function onConfirm() {
-    if (!user) return;
     setLoading(true);
     setErro('');
     try {
-      const endereco = addresses.find(a => a.id === enderecoId);
+      const endereco = modo === 'conta' ? addresses.find(a => a.id === enderecoId) : guestEndereco;
+      if (!endereco) throw new Error('Endereço não encontrado');
+
+      const contatoTitular =
+        modo === 'conta'
+          ? { nome: user!.nome, email: user!.email, cpf: user!.cpf || '', telefone: user!.telefone || undefined }
+          : { nome: guestContato.nome, email: guestContato.email, cpf: guestContato.cpf, telefone: guestContato.telefone || undefined };
+
+      const guestPayload =
+        modo === 'convidado'
+          ? { ...guestContato, ...guestEndereco, telefone: guestContato.telefone || undefined, complemento: guestEndereco.complemento || undefined }
+          : undefined;
 
       let creditCardToken: string | undefined;
       let cartaoFallback: typeof cartao | undefined;
-      if (formaPagamento === 'CARTAO_CREDITO' && endereco) {
+      if (formaPagamento === 'CARTAO_CREDITO') {
         try {
-          const { data: customerData } = await api.post<{ asaasCustomerId: string }>('/payments/asaas-customer', { enderecoId });
+          const { data: customerData } = await api.post<{ asaasCustomerId: string }>(
+            '/payments/asaas-customer',
+            modo === 'conta' ? { enderecoId } : { guest: guestPayload },
+          );
           creditCardToken = await tokenizeCard({
             customerId: customerData.asaasCustomerId,
             cartao,
             titular: {
-              nome: user.nome,
-              email: user.email,
-              cpf: user.cpf || '',
+              nome: contatoTitular.nome,
+              email: contatoTitular.email,
+              cpf: contatoTitular.cpf,
               cep: endereco.cep,
               numero: endereco.numero,
-              telefone: user.telefone || undefined,
+              telefone: contatoTitular.telefone,
             },
           });
         } catch {
@@ -214,10 +248,10 @@ export default function CheckoutPage() {
       }
 
       const { data } = await api.post<{ order: { numero: string }; pagamento: any }>('/orders', {
-        enderecoId,
+        ...(modo === 'conta' ? { enderecoId } : { guest: guestPayload }),
         formaPagamento,
         parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
-        cep: endereco?.cep,
+        cep: endereco.cep,
         envioId,
         creditCardToken,
         cartao: cartaoFallback,
@@ -250,7 +284,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (authLoading || !user || !cart) {
+  if (authLoading || (modo !== 'escolha' && !cart)) {
     return (
       <div className="mx-auto max-w-[1280px] px-5 py-8">
         <Skeleton className="mb-6 h-9 w-56" />
@@ -262,12 +296,40 @@ export default function CheckoutPage() {
     );
   }
 
+  if (modo === 'escolha') {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-20 text-center">
+        <h1 className="font-serif text-3xl text-ink">Como você quer continuar?</h1>
+        <p className="text-sm text-ink-muted">Você pode comprar sem criar conta, informando só os dados necessários para a entrega.</p>
+        <div className="mt-4 flex w-full flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={() => setModo('convidado')}
+            className="flex-1 rounded-full bg-gold px-6 py-3.5 text-xs font-medium uppercase tracking-wider text-ink shadow-sm transition-all hover:bg-gold-hover hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 active:scale-95"
+          >
+            Continuar como convidado
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/login?next=/checkout')}
+            className="flex-1 rounded-full border border-gold-soft bg-white px-6 py-3.5 text-xs font-medium uppercase tracking-wider text-gold-text shadow-xs transition-all hover:bg-gold hover:text-ink"
+          >
+            Entrar / Criar conta
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 5 && pedidoConcluido) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-20 text-center">
         <div className="w-full rounded-xl border border-success-soft bg-success-bg p-6">
           <p className="font-sans text-2xl font-semibold text-ink">Pedido confirmado!</p>
           <p className="mt-2 text-sm text-ink-muted">Número do pedido: <strong>{pedidoConcluido.numero}</strong></p>
+          <p className="mt-1 text-xs text-ink-tertiary">
+            Enviamos a confirmação para {modo === 'conta' ? user?.email : guestContato.email}.
+          </p>
           {pedidoConcluido.pagamento?.metodo === 'PIX' && (
             <div className="mt-3 flex flex-col items-center gap-2">
               {pedidoConcluido.pagamento.qrCode && (
@@ -292,9 +354,11 @@ export default function CheckoutPage() {
           )}
         </div>
         <div className="flex gap-3">
-          <Link href="/conta/pedidos" className="rounded-full bg-gold px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
-            Ver meus pedidos
-          </Link>
+          {modo === 'conta' && (
+            <Link href="/conta/pedidos" className="rounded-full bg-gold px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
+              Ver meus pedidos
+            </Link>
+          )}
           <Link href="/produtos" className="rounded-full border border-border-soft px-5 py-2.5 text-xs uppercase text-ink-muted">
             Continuar comprando
           </Link>
@@ -303,6 +367,7 @@ export default function CheckoutPage() {
     );
   }
 
+  if (!cart) return null;
   const { resumo } = cart;
 
   return (
@@ -322,7 +387,7 @@ export default function CheckoutPage() {
 
       <div className="flex flex-col gap-8 lg:flex-row">
         <div className="flex-1">
-          {step === 1 && (
+          {step === 1 && modo === 'conta' && user && (
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
               <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
               <p className="text-sm text-ink-muted">Olá, {user.nome}! Confirme seus dados para continuar.</p>
@@ -385,7 +450,38 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 1 && modo === 'convidado' && (
+            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
+              <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
+              <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="col-span-2" />
+                <Field label="E-mail" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} required className="col-span-2" />
+                <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} />
+                <label className="flex flex-col gap-1.5 text-sm">
+                  <span className="text-ink-muted">CPF</span>
+                  <input
+                    value={guestContato.cpf}
+                    onChange={e => setGuestContato(c => ({ ...c, cpf: formatarCpf(e.target.value) }))}
+                    inputMode="numeric"
+                    maxLength={14}
+                    placeholder="000.000.000-00"
+                    className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold"
+                  />
+                </label>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep(2)}
+                disabled={!guestContatoValido}
+                className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+              >
+                Continuar
+              </button>
+            </div>
+          )}
+
+          {step === 2 && modo === 'conta' && (
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
               <h2 className="font-sans text-xl font-semibold text-ink">Entrega</h2>
               {addresses.map(a => (
@@ -422,6 +518,35 @@ export default function CheckoutPage() {
                   Voltar
                 </button>
                 <button type="button" onClick={onAdvanceToPayment} className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
+                  Continuar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && modo === 'convidado' && (
+            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
+              <h2 className="font-sans text-xl font-semibold text-ink">Entrega</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="CEP" value={guestEndereco.cep} onChange={v => setGuestEndereco(f => ({ ...f, cep: v }))} required />
+                <Field label="Número" value={guestEndereco.numero} onChange={v => setGuestEndereco(f => ({ ...f, numero: v }))} required />
+                <Field label="Rua" value={guestEndereco.rua} onChange={v => setGuestEndereco(f => ({ ...f, rua: v }))} required className="col-span-2" />
+                <Field label="Complemento" value={guestEndereco.complemento} onChange={v => setGuestEndereco(f => ({ ...f, complemento: v }))} />
+                <Field label="Bairro" value={guestEndereco.bairro} onChange={v => setGuestEndereco(f => ({ ...f, bairro: v }))} required />
+                <Field label="Cidade" value={guestEndereco.cidade} onChange={v => setGuestEndereco(f => ({ ...f, cidade: v }))} required />
+                <Field label="Estado (UF)" value={guestEndereco.estado} onChange={v => setGuestEndereco(f => ({ ...f, estado: v.toUpperCase() }))} required />
+              </div>
+
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setStep(1)} className="self-start rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+                  Voltar
+                </button>
+                <button
+                  type="button"
+                  onClick={onAdvanceToPayment}
+                  disabled={!guestEnderecoValido}
+                  className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+                >
                   Continuar
                 </button>
               </div>

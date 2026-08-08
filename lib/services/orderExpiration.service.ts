@@ -89,8 +89,10 @@ export async function expirarPedidosNaoPagos() {
       if (!cancelado) continue;
       expirados += 1;
 
-      if (pedido.user) {
-        await email.enviarPedidoExpirado(pedido.user.email, pedido.user.nome, pedido.numero);
+      const emailExpiracao = pedido.user?.email ?? pedido.guestEmail;
+      const nomeExpiracao = pedido.user?.nome ?? pedido.guestNome ?? '';
+      if (emailExpiracao) {
+        await email.enviarPedidoExpirado(emailExpiracao, nomeExpiracao, pedido.numero);
       }
     } catch (err) {
       // Um pedido problemático não pode interromper o lote inteiro.
