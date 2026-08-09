@@ -4,6 +4,32 @@ import { CATEGORIES, PRODUCTS } from '../lib/seed-data';
 
 const prisma = new PrismaClient();
 
+const ACABAMENTOS = ['Polido', 'Fosco'];
+
+/**
+ * Distribui o estoque do produto entre suas variações (tamanho x acabamento),
+ * criando-as se não existirem. Sem isso o produto fica visível e "em estoque"
+ * na vitrine, mas o checkout — que valida a variação, não só o total — rejeita
+ * toda compra com OUT_OF_STOCK_VARIANT. Espelha `criarVariacoes` em
+ * lib/services/product.service.ts (mesma regra: base + resto na primeira).
+ */
+async function sincronizarVariacoes(productId: string, tamanhos: string[], estoqueTotal: number) {
+  const listaTamanhos = tamanhos.length ? tamanhos : [null];
+  const combinacoes = listaTamanhos.flatMap(tamanho => ACABAMENTOS.map(acabamento => ({ tamanho, acabamento })));
+  const base = Math.floor(estoqueTotal / combinacoes.length);
+  const resto = estoqueTotal % combinacoes.length;
+
+  for (let i = 0; i < combinacoes.length; i++) {
+    const { tamanho, acabamento } = combinacoes[i];
+    const estoque = base + (i === 0 ? resto : 0);
+    await prisma.productVariant.upsert({
+      where: { productId_tamanho_acabamento: { productId, tamanho: tamanho as unknown as string, acabamento } },
+      update: {},
+      create: { productId, tamanho, acabamento, estoque },
+    });
+  }
+}
+
 async function main() {
   for (const c of CATEGORIES) {
     await prisma.category.upsert({
@@ -43,11 +69,13 @@ async function main() {
       totalAvaliacoes: p.totalAvaliacoes,
     };
 
-    await prisma.product.upsert({
+    const produto = await prisma.product.upsert({
       where: { slug: p.slug },
       update: dados,
       create: { slug: p.slug, ...dados },
     });
+
+    await sincronizarVariacoes(produto.id, p.tamanhos ?? [], p.estoque);
   }
 
   console.log(`${CATEGORIES.length} categorias e ${PRODUCTS.length} produtos processados`);
