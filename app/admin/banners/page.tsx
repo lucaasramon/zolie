@@ -1,10 +1,10 @@
-import { list } from '@/lib/services/banner.service';
+import { listAdmin } from '@/lib/services/banner.service';
 import { BannerManager } from '@/components/admin/BannerManager';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminBannersPage() {
-  const banners = await list();
+  const banners = await listAdmin();
   const serialized = banners.map(b => ({
     id: b.id,
     titulo: b.titulo,
@@ -12,6 +12,7 @@ export default async function AdminBannersPage() {
     tag: b.tag,
     cta: b.cta,
     link: b.link,
+    imagem: b.imagem,
     ordem: b.ordem,
     ativo: b.ativo,
   }));

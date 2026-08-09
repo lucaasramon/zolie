@@ -67,6 +67,7 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
               <th className="px-4 py-3">Material</th>
               <th className="px-4 py-3">Preço</th>
               <th className="px-4 py-3">Custo</th>
+              <th className="px-4 py-3">Markup</th>
               <th className="px-4 py-3">Estoque</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Ações</th>
@@ -99,6 +100,9 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
                 </td>
                 <td className="px-4 py-3 text-ink-muted">
                   {p.precoCusto != null ? brl(p.precoCusto) : '—'}
+                </td>
+                <td className="px-4 py-3 text-gold-text">
+                  {p.margemDesejada != null ? `${Number(p.margemDesejada.toFixed(2))}%` : '—'}
                 </td>
                 <td className={`px-4 py-3 font-medium ${p.estoque === 0 ? 'text-danger' : p.estoqueBaixo ? 'text-gold-text' : 'text-ink'}`}>
                   {p.estoque}

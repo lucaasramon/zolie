@@ -13,6 +13,7 @@ export default async function AdminPrecificacaoPage() {
     imagem: p.imagens[0] ?? null,
     material: p.material,
     preco: Number(p.preco),
+    precoCusto: p.precoCusto != null ? Number(p.precoCusto) : null,
     custoSemijoia: p.custoSemijoia != null ? Number(p.custoSemijoia) : null,
     custoEmbalagem: p.custoEmbalagem != null ? Number(p.custoEmbalagem) : null,
     margemDesejada: p.margemDesejada != null ? Number(p.margemDesejada) : null,

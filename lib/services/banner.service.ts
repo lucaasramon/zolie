@@ -3,6 +3,8 @@ import { notFound } from '@/lib/utils/errors';
 
 export const list = () => bannerRepo.list();
 
+export const listAdmin = () => bannerRepo.listAdmin();
+
 export const create = (data: any) => bannerRepo.create(data);
 
 export async function update(id: string, data: any) {

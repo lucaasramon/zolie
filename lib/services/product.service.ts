@@ -2,6 +2,7 @@ import { productRepo, ProductFilters } from '@/lib/repositories/product.repo';
 import { prisma } from '@/lib/prisma';
 import { notFound } from '@/lib/utils/errors';
 import { precoEfetivo } from '@/lib/services/pricing.service';
+import { calcularPreco } from '@/lib/pricing-calc';
 import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
 import { slugify } from '@/lib/utils/slug';
@@ -14,7 +15,7 @@ export function decorate(p: any) {
   const preco = precoEfetivo(p);
   const semCustos = { ...p };
   for (const campo of CAMPOS_CUSTO) delete semCustos[campo];
-  return {
+  const resultado = {
     ...semCustos,
     // Campos Decimal/Date do Prisma não são serializáveis pela fronteira Server->Client
     // Component do React — convertidos aqui para number/string/ISO planos.
@@ -39,6 +40,15 @@ export function decorate(p: any) {
     estoqueBaixo: p.estoque > 0 && p.estoque <= 8,
     disponivel: p.estoque > 0,
   };
+
+  // Rede de segurança: se algum campo de custo escapar da remoção acima (ex: um
+  // campo novo esquecido em CAMPOS_CUSTO), falha alto em vez de vazar silenciosamente
+  // dado de negócio sensível pela API pública.
+  for (const campo of CAMPOS_CUSTO) {
+    if (campo in resultado) throw new Error(`decorate(): campo de custo "${campo}" vazou para a saída pública`);
+  }
+
+  return resultado;
 }
 
 /** Igual a `decorate`, mas mantém os campos de custo/margem — uso restrito a telas /admin/*. */
@@ -89,6 +99,11 @@ export async function bySlug(slug: string) {
     ...decorate(p),
     relacionados: relacionados.slice(0, 6).map(decorate),
   };
+}
+
+/** Slug antigo -> slug atual, para a página de produto redirecionar em vez de 404. */
+export async function resolveRedirect(oldSlug: string) {
+  return productRepo.findRedirectTarget(oldSlug);
 }
 
 async function uniqueSlug(nome: string, ignoreId?: string): Promise<string> {
@@ -144,6 +159,16 @@ export const update = async (id: string, data: any) => {
   // valida os dois. A edição de estoque passa por /admin/variants/[id].
   const { estoque, ...semEstoque } = data;
 
+  // Slug mudando: preserva o antigo para redirect (link já compartilhado/indexado
+  // não pode virar 404). `.catch` absorve uma colisão rara de oldSlug sem travar
+  // a atualização do produto em si.
+  if (semEstoque.slug) {
+    const atual = await productRepo.findById(id);
+    if (atual && atual.slug !== semEstoque.slug) {
+      await prisma.productSlugHistory.create({ data: { productId: id, oldSlug: atual.slug } }).catch(() => {});
+    }
+  }
+
   const p = await productRepo.update(id, semEstoque);
   if (!p) throw notFound('Produto');
 
@@ -163,11 +188,6 @@ export async function savePricing(
   const { supplyIds, ...campos } = data;
 
   const produto = await prisma.$transaction(async tx => {
-    const atualizado = await tx.product
-      .update({ where: { id }, data: campos })
-      .catch(() => null);
-    if (!atualizado) return null;
-
     if (supplyIds) {
       await tx.productSupply.deleteMany({ where: { productId: id } });
       if (supplyIds.length > 0) {
@@ -177,6 +197,24 @@ export async function savePricing(
         });
       }
     }
+
+    // Embalagem manual tem prioridade; sem override, soma o custo unitário dos
+    // insumos selecionados (mesmo cálculo que a tela mostra em tempo real).
+    let custoEmbalagem = campos.custoEmbalagem ?? null;
+    if (custoEmbalagem == null && supplyIds && supplyIds.length > 0) {
+      const insumos = await tx.supply.findMany({ where: { id: { in: supplyIds } }, select: { valorPago: true, quantidadeLote: true } });
+      custoEmbalagem = round(insumos.reduce((acc, s) => acc + Number(s.valorPago) / s.quantidadeLote, 0));
+    }
+
+    const { precoSugerido } = calcularPreco({
+      custoSemijoia: campos.custoSemijoia ?? 0,
+      custoEmbalagem: custoEmbalagem ?? 0,
+      markupPercent: campos.margemDesejada ?? 0,
+    });
+
+    const atualizado = await tx.product
+      .update({ where: { id }, data: { ...campos, preco: precoSugerido } })
+      .catch(() => null);
     return atualizado;
   });
 

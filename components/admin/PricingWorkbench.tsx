@@ -25,6 +25,7 @@ interface Produto {
   imagem: string | null;
   material: 'PRATA_925' | 'BANHADO_OURO';
   preco: number;
+  precoCusto: number | null;
   custoSemijoia: number | null;
   custoEmbalagem: number | null;
   margemDesejada: number | null;
@@ -268,7 +269,9 @@ function ProductCalculator({
   const embalagens = insumos.filter(s => s.categoria === 'EMBALAGEM' && s.ativo);
   const brindes = insumos.filter(s => s.categoria === 'BRINDE' && s.ativo);
 
-  const [custoSemijoia, setCustoSemijoia] = useState(String(produto.custoSemijoia ?? ''));
+  // Sem custo de precificação salvo ainda, usa o preço de custo já cadastrado
+  // no produto como ponto de partida — evita digitar o mesmo valor duas vezes.
+  const [custoSemijoia, setCustoSemijoia] = useState(String(produto.custoSemijoia ?? produto.precoCusto ?? ''));
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set(produto.supplyIds));
   const [manual, setManual] = useState(produto.custoEmbalagem != null);
   const [custoEmbalagemManual, setCustoEmbalagemManual] = useState(String(produto.custoEmbalagem ?? ''));
@@ -276,7 +279,6 @@ function ProductCalculator({
   const [brindeId, setBrindeId] = useState('');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
-  const [aplicando, setAplicando] = useState(false);
   const router = useRouter();
 
   const custoEmbalagemCalculado = useMemo(
@@ -314,6 +316,8 @@ function ProductCalculator({
     setErro('');
     setLoading(true);
     try {
+      // O backend recalcula o preço sugerido a partir desses mesmos dados e já
+      // grava em Product.preco — não precisa de um segundo passo para aplicar.
       await api.put(`/admin/products/${produto.id}/pricing`, {
         custoSemijoia: Number(custoSemijoia) || 0,
         custoEmbalagem: manual ? Number(custoEmbalagemManual) || 0 : null,
@@ -325,19 +329,6 @@ function ProductCalculator({
       setErro(err instanceof ApiError ? err.message : 'Não foi possível salvar a precificação');
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function aplicarComoPreco() {
-    setErro('');
-    setAplicando(true);
-    try {
-      await api.put(`/products/${produto.id}`, { preco: resultado.precoSugerido });
-      router.refresh();
-    } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível atualizar o preço de venda');
-    } finally {
-      setAplicando(false);
     }
   }
 
@@ -370,6 +361,9 @@ function ProductCalculator({
 
         <Section title={`Custos — ${produto.nome}`}>
           <Field label="Custo da semijoia (R$)" type="number" value={custoSemijoia} onChange={setCustoSemijoia} />
+          {produto.custoSemijoia == null && produto.precoCusto != null && (
+            <p className="-mt-2 text-xs text-ink-tertiary">Preenchido com o preço de custo já cadastrado no produto — ajuste se necessário.</p>
+          )}
 
           <div className="flex flex-col gap-2">
             <span className="text-sm text-ink-muted">Insumos de embalagem usados nesta peça</span>
@@ -423,10 +417,7 @@ function ProductCalculator({
           </div>
           <div className="mt-4 flex flex-wrap gap-3">
             <button type="button" onClick={salvar} disabled={loading} className="rounded-full bg-gold px-4 py-2 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
-              Salvar precificação
-            </button>
-            <button type="button" onClick={aplicarComoPreco} disabled={aplicando} className="rounded-full border border-gold px-4 py-2 text-xs font-medium uppercase tracking-wider text-gold-text hover:bg-white disabled:opacity-50">
-              Aplicar como preço de venda
+              {loading ? 'Salvando...' : 'Salvar e aplicar preço de venda'}
             </button>
           </div>
         </div>

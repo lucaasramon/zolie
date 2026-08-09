@@ -234,7 +234,7 @@ export const pricingSchema = z.object({
   custoSemijoia: z.number().min(0).nullable().optional(),
   // null = usar a soma calculada dos insumos marcados em supplyIds.
   custoEmbalagem: z.number().min(0).nullable().optional(),
-  margemDesejada: z.number().min(0).max(99).nullable().optional(),
+  margemDesejada: z.number().min(0).max(999).nullable().optional(),
   supplyIds: z.array(z.string()).optional(),
 });
 

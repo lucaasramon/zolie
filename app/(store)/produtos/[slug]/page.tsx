@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { produtoJsonLd, breadcrumbJsonLd, jsonLdScript, urlAbsoluta } from '@/lib/utils/jsonLd';
 import { ViewItemTracker } from '@/components/analytics/ViewItemTracker';
-import { bySlug } from '@/lib/services/product.service';
+import { bySlug, resolveRedirect } from '@/lib/services/product.service';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
@@ -45,7 +45,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   let produto;
   try {
     produto = await bySlug(slug);
-  } catch {
+  } catch (err) {
+    if (err instanceof AppError && err.status === 404) {
+      const alvo = await resolveRedirect(slug);
+      if (alvo) permanentRedirect(`/produtos/${alvo.novoSlug}`);
+    }
     return { title: 'Produto não encontrado' };
   }
 
@@ -75,12 +79,20 @@ export default async function ProdutoPage({ params }: Props) {
   const { slug } = await params;
 
   let produto;
+  let redirectAlvo: string | null = null;
   try {
     produto = await bySlug(slug);
   } catch (err) {
-    if (err instanceof AppError && err.status === 404) return notFound();
-    throw err;
+    if (err instanceof AppError && err.status === 404) {
+      const alvo = await resolveRedirect(slug);
+      redirectAlvo = alvo?.novoSlug ?? null;
+    } else {
+      throw err;
+    }
   }
+
+  if (redirectAlvo) permanentRedirect(`/produtos/${redirectAlvo}`);
+  if (!produto) return notFound();
 
   const { items: reviews } = await listReviews(produto.id, { skip: 0, take: 5 });
 

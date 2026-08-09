@@ -152,8 +152,8 @@ model Product {
   // Preço de custo simples do produto, informado direto no cadastro (distinto da
   // composição de custo da tela /admin/precificacao). Nunca exposto na API pública.
   precoCusto       Decimal?        @db.Decimal(10, 2) @map("preco_custo")
-  // Custo da semijoia usado na tela de precificação (/admin/precificacao). Não afeta o
-  // preço de venda (`preco`) automaticamente — é aplicado explicitamente pelo admin.
+  // Custo da semijoia usado na tela de precificação (/admin/precificacao). Ao salvar,
+  // o preço de venda (`preco`) é recalculado automaticamente a partir deste custo.
   custoSemijoia    Decimal?        @db.Decimal(10, 2) @map("custo_semijoia")
   // Override manual do custo de embalagem; null = usar o valor somado dos `productSupplies`.
   custoEmbalagem   Decimal?        @db.Decimal(10, 2) @map("custo_embalagem")
@@ -169,12 +169,28 @@ model Product {
   wishlist         WishlistItem[]
   variants         ProductVariant[]
   productSupplies  ProductSupply[]
+  slugHistory      ProductSlugHistory[]
 
   @@index([categoriaId])
   @@index([material])
   @@index([destaque])
   @@index([lancamento])
   @@map("products")
+}
+
+// Slugs antigos de produtos renomeados — permite redirecionar (308) URLs
+// já compartilhadas/indexadas para a URL atual em vez de quebrar em 404.
+// Gravado automaticamente sempre que `productService.update` muda o slug.
+model ProductSlugHistory {
+  id        String   @id @default(uuid())
+  productId String   @map("product_id")
+  oldSlug   String   @unique @map("old_slug")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_slug_history")
 }
 
 enum SupplyCategoria {

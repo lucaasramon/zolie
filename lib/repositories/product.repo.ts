@@ -62,6 +62,17 @@ export const productRepo = {
   },
   findBySlug: (slug: string) => prisma.product.findFirst({ where: { slug, ativo: true }, include: { categoria: true } }),
   findById: (id: string) => prisma.product.findUnique({ where: { id }, include: { categoria: true } }),
+  /** Resolve um slug antigo para o slug atual do produto — usado para redirecionar
+   * URLs renomeadas em vez de deixá-las cair em 404. Produto inativo não redireciona:
+   * cairia em 404 de qualquer forma via `findBySlug`. */
+  findRedirectTarget: async (oldSlug: string) => {
+    const hit = await prisma.productSlugHistory.findUnique({
+      where: { oldSlug },
+      include: { product: { select: { slug: true, ativo: true } } },
+    });
+    if (!hit || !hit.product.ativo) return null;
+    return { novoSlug: hit.product.slug };
+  },
   slugTaken: async (slug: string, ignoreId?: string) => {
     const found = await prisma.product.findUnique({ where: { slug }, select: { id: true } });
     return Boolean(found && found.id !== ignoreId);
@@ -79,6 +90,7 @@ export const productRepo = {
         imagens: true,
         material: true,
         preco: true,
+        precoCusto: true,
         custoSemijoia: true,
         custoEmbalagem: true,
         margemDesejada: true,
