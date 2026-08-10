@@ -26,7 +26,7 @@ interface Address {
 }
 
 interface CartData {
-  items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null; acabamento: string | null }[];
+  items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null }[];
   resumo: { subtotal: number; frete: number; desconto: number; total: number; totalPix: number };
 }
 
@@ -122,7 +122,7 @@ export default function CheckoutPage() {
         nome: i.nome,
         preco: i.precoUnitario,
         quantidade: i.quantidade,
-        variante: [i.tamanho, i.acabamento].filter(Boolean).join(' / ') || null,
+        variante: i.tamanho || null,
       })),
     );
   }, [cart, pedidoConcluido]);
@@ -269,7 +269,7 @@ export default function CheckoutPage() {
             nome: i.nome,
             preco: i.precoUnitario,
             quantidade: i.quantidade,
-            variante: [i.tamanho, i.acabamento].filter(Boolean).join(' / ') || null,
+            variante: i.tamanho || null,
           })),
         });
       }

@@ -1,6 +1,5 @@
 import { cartRepo, CartOwner } from '@/lib/repositories/cart.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
-import { variantRepo } from '@/lib/repositories/variant.repo';
 import { AppError, notFound } from '@/lib/utils/errors';
 import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
@@ -42,7 +41,6 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
       imagem: (i.product.imagens || [])[0] || null,
       material: i.product.material,
       tamanho: i.tamanho,
-      acabamento: i.acabamento,
       quantidade: i.quantidade,
       // Exposto para o cálculo de peso do frete (ver shipping.logic).
       pesoGramas: i.product.pesoGramas != null ? Number(i.product.pesoGramas) : null,
@@ -55,21 +53,10 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
   };
 }
 
-export async function addItem(owner: CartOwner, payload: { productId: string; quantidade: number; tamanho?: string | null; acabamento?: string | null }) {
+export async function addItem(owner: CartOwner, payload: { productId: string; quantidade: number; tamanho?: string | null }) {
   const product = await productRepo.findById(payload.productId);
   if (!product) throw notFound('Produto');
   if (product.estoque < payload.quantidade) throw new AppError('Estoque insuficiente para esta peça', 422, 'OUT_OF_STOCK');
-
-  // A variação escolhida pode estar esgotada mesmo com o produto tendo saldo
-  // total. Produtos sem variação cadastrada seguem só pelo estoque do produto.
-  const variante = await variantRepo.find({
-    productId: payload.productId,
-    tamanho: payload.tamanho,
-    acabamento: payload.acabamento,
-  });
-  if (variante && (!variante.ativo || variante.estoque < payload.quantidade)) {
-    throw new AppError('Estoque insuficiente para esta combinação de tamanho e acabamento', 422, 'OUT_OF_STOCK_VARIANT');
-  }
 
   await cartRepo.addItem(owner, payload);
   return get(owner);

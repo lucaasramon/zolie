@@ -20,7 +20,6 @@ interface Props {
 
 export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, categoria }: Props) {
   const [tamanho, setTamanho] = useState(tamanhos[0] || '');
-  const [acabamento, setAcabamento] = useState('Polido');
   const [quantidade, setQuantidade] = useState(1);
   const [cep, setCep] = useState('');
   const [frete, setFrete] = useState<{ opcoes: { nome: string; prazoDias: number; valor: number }[] } | null>(null);
@@ -32,7 +31,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   async function addToCart(buyNow = false) {
     setLoading(true);
     try {
-      await api.post('/cart/items', { productId, quantidade, tamanho: tamanho || null, acabamento });
+      await api.post('/cart/items', { productId, quantidade, tamanho: tamanho || null });
       await refresh();
 
       // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
@@ -43,7 +42,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
           preco,
           quantidade,
           categoria,
-          variante: [tamanho, acabamento].filter(Boolean).join(' / ') || null,
+          variante: tamanho || null,
         });
       }
 
@@ -92,26 +91,6 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
           </div>
         </div>
       )}
-
-      <div className="flex flex-col gap-2.5">
-        <span className="text-xs font-medium uppercase tracking-wider text-ink">Acabamento</span>
-        <div className="flex gap-2">
-          {['Polido', 'Fosco'].map(a => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => setAcabamento(a)}
-              className={`rounded-full border px-4 py-2 text-sm font-medium transition-all active:scale-95 ${
-                acabamento === a
-                  ? 'border-gold bg-gold text-ink shadow-xs'
-                  : 'border-border-soft text-ink-muted hover:border-gold-text hover:text-gold-text'
-              }`}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex items-center gap-3">
         <span className="text-xs font-medium uppercase tracking-wider text-ink">Quantidade</span>

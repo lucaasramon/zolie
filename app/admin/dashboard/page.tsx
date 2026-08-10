@@ -78,12 +78,12 @@ export default async function AdminDashboardPage() {
           <h2 className="mb-3 font-sans text-lg font-semibold text-ink">Precisa de atenção</h2>
           <div className="flex flex-col gap-2 text-sm">
             {semEstoque.length > 0 && (
-              <Link href="/admin/estoque" className="flex justify-between text-ink-muted hover:text-danger">
+              <Link href="/admin/produtos" className="flex justify-between text-ink-muted hover:text-danger">
                 <span>Peças sem estoque</span><span className="font-medium">{semEstoque.length}</span>
               </Link>
             )}
             {estoqueBaixo.length > 0 && (
-              <Link href="/admin/estoque" className="flex justify-between text-ink-muted hover:text-danger">
+              <Link href="/admin/produtos" className="flex justify-between text-ink-muted hover:text-danger">
                 <span>Peças com estoque baixo</span><span className="font-medium">{estoqueBaixo.length}</span>
               </Link>
             )}

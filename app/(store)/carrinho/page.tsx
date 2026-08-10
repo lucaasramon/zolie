@@ -18,7 +18,6 @@ interface CartItem {
   imagem: string | null;
   material: string;
   tamanho: string | null;
-  acabamento: string | null;
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
@@ -151,7 +150,7 @@ export default function CarrinhoPage() {
                 <div className="flex flex-1 flex-col gap-1">
                   <span className="font-sans text-base font-medium text-ink">{item.nome}</span>
                   <span className="text-xs text-ink-tertiary">
-                    {[item.tamanho, item.acabamento].filter(Boolean).join(' · ') || 'Tamanho único'}
+                    {item.tamanho || 'Tamanho único'}
                   </span>
                   <div className="mt-1 flex items-center gap-3">
                     <div className="flex items-center rounded-full border border-border-soft">

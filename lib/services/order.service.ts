@@ -1,7 +1,6 @@
 import { cartRepo, CartOwner } from '@/lib/repositories/cart.repo';
 import { addressRepo } from '@/lib/repositories/address.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
-import { variantRepo } from '@/lib/repositories/variant.repo';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { couponRepo } from '@/lib/repositories/coupon.repo';
 import { userRepo } from '@/lib/repositories/user.repo';
@@ -185,25 +184,14 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
         precoUnitario: pricing.precoEfetivo(i.product),
         quantidade: i.quantidade,
         tamanho: i.tamanho,
-        acabamento: i.acabamento,
         subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
       })),
       tx,
     );
 
     for (const i of items) {
-      // Baixa a variação específica (tamanho/acabamento) e o total do produto.
       // A checagem `< 0` depois do decremento é o que impede venda de estoque
       // que outro checkout consumiu entre a validação e esta transação.
-      const variante = await variantRepo.decrementStock(
-        { productId: i.productId, tamanho: i.tamanho, acabamento: i.acabamento },
-        i.quantidade,
-        tx,
-      );
-      if (variante && variante.estoque < 0) {
-        throw new AppError(`Estoque insuficiente: ${i.product.nome}`, 422, 'OUT_OF_STOCK');
-      }
-
       const updated = await productRepo.decrementStock(i.productId, i.quantidade, tx);
       if (updated.estoque < 0) {
         throw new AppError(`Estoque insuficiente: ${i.product.nome}`, 422, 'OUT_OF_STOCK');
@@ -352,11 +340,6 @@ export async function cancelar(id: string, { porAdmin = false, userId, motivo, e
     await tx.orderEvent.create({ data: { orderId: id, status: 'CANCELADO', descricao } });
 
     for (const item of order.items) {
-      await variantRepo.incrementStock(
-        { productId: item.productId, tamanho: item.tamanho, acabamento: item.acabamento },
-        item.quantidade,
-        tx,
-      );
       await productRepo.incrementStock(item.productId, item.quantidade, tx);
     }
     if (order.cupomCodigo) {

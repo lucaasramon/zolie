@@ -9,14 +9,12 @@ import { prisma } from '@/lib/prisma';
 const LIMITE_ESTOQUE_BAIXO = 3;
 
 export async function AdminSidebar() {
-  // O alerta é por variação, não por produto: um produto com 20 peças pode estar
-  // sem nenhuma no tamanho mais vendido.
-  const [aguardando, { total: reviewsPendentes }, variacoesEmFalta, mensagensPendentes, trocasPendentes] =
+  const [aguardando, { total: reviewsPendentes }, produtosEmFalta, mensagensPendentes, trocasPendentes] =
     await Promise.all([
       orderRepo.listAll({ status: 'AGUARDANDO_PAGAMENTO', take: 1 }),
       reviewRepo.listPending({ take: 1 }),
-      prisma.productVariant.count({
-        where: { ativo: true, estoque: { lte: LIMITE_ESTOQUE_BAIXO }, product: { ativo: true } },
+      prisma.product.count({
+        where: { ativo: true, estoque: { lte: LIMITE_ESTOQUE_BAIXO } },
       }),
       prisma.contactMessage.count({ where: { respondida: false } }),
       prisma.returnRequest.count({ where: { status: 'SOLICITADA' } }),
@@ -36,9 +34,8 @@ export async function AdminSidebar() {
     {
       title: 'Catálogo',
       items: [
-        { href: '/admin/produtos', label: 'Anúncios' },
+        { href: '/admin/produtos', label: 'Anúncios', badge: produtosEmFalta || undefined },
         { href: '/admin/categorias', label: 'Categorias' },
-        { href: '/admin/estoque', label: 'Estoque', badge: variacoesEmFalta || undefined },
         { href: '/admin/precificacao', label: 'Precificação' },
       ],
     },

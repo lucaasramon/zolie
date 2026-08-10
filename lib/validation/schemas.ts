@@ -38,7 +38,6 @@ export const cartItemSchema = z.object({
   productId: z.string().min(1),
   quantidade: z.number().int().min(1).max(20).default(1),
   tamanho: z.string().optional().nullable(),
-  acabamento: z.string().optional().nullable(),
 });
 
 const cardSchema = z.object({
@@ -174,10 +173,6 @@ export const returnDecisionSchema = z.object({
   status: z.enum(['APROVADA', 'RECUSADA', 'RECEBIDA', 'CONCLUIDA']),
   respostaAdmin: z.string().trim().max(1000).optional(),
   codigoReversa: z.string().trim().max(60).optional(),
-});
-
-export const variantStockSchema = z.object({
-  estoque: z.number().int().min(0).max(100000),
 });
 
 export const notaFiscalSchema = z.object({

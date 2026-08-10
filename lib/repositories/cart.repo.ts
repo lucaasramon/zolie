@@ -25,23 +25,21 @@ export const cartRepo = {
     }),
   addItem: async (
     owner: CartOwner,
-    { productId, quantidade = 1, tamanho = null, acabamento = null }: { productId: string; quantidade?: number; tamanho?: string | null; acabamento?: string | null },
+    { productId, quantidade = 1, tamanho = null }: { productId: string; quantidade?: number; tamanho?: string | null },
   ) => {
     const cart = await prisma.cart.upsert({ where: ownerWhere(owner) as Prisma.CartWhereUniqueInput, update: {}, create: owner });
     // Chaves compostas do Prisma não aceitam null em lookups; normalizamos para '' só na busca.
     const tamanhoKey = tamanho ?? '';
-    const acabamentoKey = acabamento ?? '';
     return prisma.cartItem.upsert({
       where: {
-        cartId_productId_tamanho_acabamento: {
+        cartId_productId_tamanho: {
           cartId: cart.id,
           productId,
           tamanho: tamanhoKey,
-          acabamento: acabamentoKey,
         },
       },
       update: { quantidade: { increment: quantidade } },
-      create: { cartId: cart.id, productId, quantidade, tamanho: tamanhoKey, acabamento: acabamentoKey },
+      create: { cartId: cart.id, productId, quantidade, tamanho: tamanhoKey },
     });
   },
   findItem: (itemId: string) => prisma.cartItem.findUnique({ where: { id: itemId }, include: { cart: true } }),
@@ -64,15 +62,14 @@ export const cartRepo = {
     for (const item of guestCart.items) {
       await prisma.cartItem.upsert({
         where: {
-          cartId_productId_tamanho_acabamento: {
+          cartId_productId_tamanho: {
             cartId: userCart.id,
             productId: item.productId,
             tamanho: item.tamanho ?? '',
-            acabamento: item.acabamento ?? '',
           },
         },
         update: { quantidade: { increment: item.quantidade } },
-        create: { cartId: userCart.id, productId: item.productId, quantidade: item.quantidade, tamanho: item.tamanho, acabamento: item.acabamento },
+        create: { cartId: userCart.id, productId: item.productId, quantidade: item.quantidade, tamanho: item.tamanho },
       });
     }
 

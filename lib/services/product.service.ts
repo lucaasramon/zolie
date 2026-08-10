@@ -117,67 +117,27 @@ async function uniqueSlug(nome: string, ignoreId?: string): Promise<string> {
   return slug;
 }
 
-const ACABAMENTOS = ['Polido', 'Fosco'];
-
-/**
- * Gera as variações (tamanho × acabamento) de um produto e distribui o estoque
- * informado entre elas. Sem isso um produto novo nasceria sem variação e o
- * checkout — que valida a variação — não conseguiria vendê-lo.
- */
-async function criarVariacoes(productId: string, tamanhos: string[] | undefined, estoqueTotal: number) {
-  const listaTamanhos = tamanhos?.length ? tamanhos : [null];
-  const combinacoes = listaTamanhos.flatMap(tamanho =>
-    ACABAMENTOS.map(acabamento => ({ tamanho, acabamento })),
-  );
-
-  // Divide o estoque entre as variações (resto na primeira), em vez de repetir o
-  // total em cada uma — repetir multiplicaria o estoque real.
-  const base = Math.floor(estoqueTotal / combinacoes.length);
-  const resto = estoqueTotal % combinacoes.length;
-
-  await prisma.productVariant.createMany({
-    data: combinacoes.map((c, i) => ({
-      productId,
-      tamanho: c.tamanho,
-      acabamento: c.acabamento,
-      estoque: base + (i === 0 ? resto : 0),
-    })),
-    skipDuplicates: true,
-  });
-}
-
 export const create = async (data: any) => {
   const slug = data.slug || (await uniqueSlug(data.nome));
   const produto = await productRepo.create({ ...data, slug });
-  await criarVariacoes(produto.id, data.tamanhos, Number(data.estoque) || 0);
   return decorate(produto);
 };
 
 export const update = async (id: string, data: any) => {
-  // `estoque` é derivado da soma das variações e não pode ser gravado direto:
-  // fazer isso dessincronizaria o total e travaria a venda no checkout, que
-  // valida os dois. A edição de estoque passa por /admin/variants/[id].
-  const { estoque, ...semEstoque } = data;
-
   // Slug mudando: preserva o antigo para redirect (link já compartilhado/indexado
   // não pode virar 404). `.catch` absorve uma colisão rara de oldSlug sem travar
   // a atualização do produto em si.
-  if (semEstoque.slug) {
+  if (data.slug) {
     const atual = await productRepo.findById(id);
-    if (atual && atual.slug !== semEstoque.slug) {
+    if (atual && atual.slug !== data.slug) {
       await prisma.productSlugHistory.create({ data: { productId: id, oldSlug: atual.slug } }).catch(() => {});
     }
   }
 
-  const p = await productRepo.update(id, semEstoque);
+  const p = await productRepo.update(id, data);
   if (!p) throw notFound('Produto');
 
-  // Tamanho novo no cadastro precisa de variação correspondente, senão fica
-  // selecionável na loja e sem estoque possível.
-  if (data.tamanhos) await criarVariacoes(id, data.tamanhos, 0);
-
-  const atualizado = await productRepo.findById(id);
-  return decorate(atualizado ?? p);
+  return decorate(p);
 };
 export const remove = (id: string) => productRepo.remove(id);
 

@@ -2,7 +2,6 @@ import { PaymentMethod } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
-import { variantRepo } from '@/lib/repositories/variant.repo';
 import { couponRepo } from '@/lib/repositories/coupon.repo';
 import * as email from '@/lib/services/email.service';
 import * as payments from '@/lib/services/payment.service';
@@ -71,11 +70,6 @@ export async function expirarPedidosNaoPagos() {
         });
 
         for (const item of pedido.items) {
-          await variantRepo.incrementStock(
-            { productId: item.productId, tamanho: item.tamanho, acabamento: item.acabamento },
-            item.quantidade,
-            tx,
-          );
           await productRepo.incrementStock(item.productId, item.quantidade, tx);
         }
 
