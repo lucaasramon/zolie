@@ -60,6 +60,7 @@ model User {
   resetTokens   PasswordResetToken[]
   verificationTokens EmailVerificationToken[]
   returnRequests ReturnRequest[]
+  couponRedemptions CouponRedemption[]
 
   @@map("users")
 }
@@ -366,6 +367,7 @@ model Order {
   items          OrderItem[]
   events         OrderEvent[]
   returnRequests ReturnRequest[]
+  couponRedemptions CouponRedemption[]
 
   @@index([userId])
   @@index([status])
@@ -404,21 +406,50 @@ model OrderEvent {
   @@map("order_events")
 }
 
+enum CouponPurchaseRestriction {
+  PRIMEIRA
+  SEGUNDA
+}
+
 model Coupon {
-  id             String       @id @default(uuid())
-  codigo         String       @unique
-  descricao      String?
-  tipoDesconto   DiscountType @map("tipo_desconto")
-  valor          Decimal      @db.Decimal(10, 2)
-  minimoPedido   Decimal?     @db.Decimal(10, 2) @map("minimo_pedido")
-  usoMaximo      Int?         @map("uso_maximo")
-  usos           Int          @default(0)
-  primeiraCompra Boolean      @default(false) @map("primeira_compra")
-  validade       DateTime?
-  ativo          Boolean      @default(true)
-  createdAt      DateTime     @default(now()) @map("created_at")
+  id              String                     @id @default(uuid())
+  codigo          String                     @unique
+  descricao       String?
+  tipoDesconto    DiscountType               @map("tipo_desconto")
+  valor           Decimal                    @db.Decimal(10, 2)
+  minimoPedido    Decimal?                   @db.Decimal(10, 2) @map("minimo_pedido")
+  usoMaximo       Int?                       @map("uso_maximo")
+  usos            Int                        @default(0)
+  // Restringe o cupom a uma etapa específica do histórico de compras do cliente
+  // (ex: BEMVINDO10 só na 1ª, VOLTEI10 só na 2ª). null = sem restrição por etapa.
+  restricaoCompra CouponPurchaseRestriction? @map("restricao_compra")
+  validade        DateTime?
+  ativo           Boolean                    @default(true)
+  createdAt       DateTime                   @default(now()) @map("created_at")
+
+  redemptions     CouponRedemption[]
 
   @@map("coupons")
+}
+
+// Registra que um usuário já resgatou um cupom específico — impõe uso único
+// por pessoa (o contador `Coupon.usos` é só global, não por usuário). Removido
+// quando o pedido correspondente é cancelado/expira sem pagamento, liberando
+// o cupom para uma nova tentativa.
+model CouponRedemption {
+  id        String   @id @default(uuid())
+  couponId  String   @map("coupon_id")
+  userId    String   @map("user_id")
+  orderId   String   @map("order_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([couponId, userId])
+  @@index([userId])
+  @@map("coupon_redemptions")
 }
 
 model WishlistItem {

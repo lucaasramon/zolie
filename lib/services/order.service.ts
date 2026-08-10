@@ -211,6 +211,7 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
     }
 
     if (cupomId) await couponRepo.incrementUse(cupomId, tx);
+    if (cupomId && userId) await couponRepo.recordRedemption(cupomId, userId, created.id, tx);
 
     await cartRepo.clear(cartOwner, tx);
     return created;
@@ -360,6 +361,7 @@ export async function cancelar(id: string, { porAdmin = false, userId, motivo, e
     }
     if (order.cupomCodigo) {
       await couponRepo.decrementUseByCode(order.cupomCodigo, tx);
+      if (order.userId) await couponRepo.removeRedemptionByCode(order.cupomCodigo, order.userId, tx);
     }
   });
 
@@ -412,6 +414,17 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
   if (emailStatus) {
     if (motivo === 'PAGAMENTO_CONFIRMADO') {
       await email.enviarConfirmacaoPagamento(emailStatus, nomeStatus, order.numero);
+
+      // Se esta confirmação tornou este o 1º pedido pago do cliente, envia o
+      // cupom de "volte na 2ª compra" — convidado (sem userId) fica de fora,
+      // não há como amarrar a regra de uso único sem conta.
+      if (order.userId) {
+        const pedidosPagos = await userRepo.countOrders(order.userId);
+        if (pedidosPagos === 1) {
+          const cupomVoltei = await couponRepo.findActiveComebackCoupon();
+          if (cupomVoltei) await email.enviarCupomVoltei10(emailStatus, nomeStatus, cupomVoltei.codigo);
+        }
+      }
     } else {
       await email.enviarMudancaStatus(emailStatus, nomeStatus, order.numero, status, descricao, {
         codigoRastreio: order.codigoRastreio,

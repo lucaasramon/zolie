@@ -8,7 +8,10 @@ export const userRepo = {
     prisma.user.create({ data: { ...data, email: data.email.toLowerCase() } }),
   update: (id: string, data: Partial<{ nome: string; telefone: string; cpf: string; senhaHash: string; asaasCustomerId: string }>) =>
     prisma.user.update({ where: { id }, data }),
-  countOrders: (userId: string) => prisma.order.count({ where: { userId } }),
+  /** Só pedidos pagos (exclui aguardando pagamento e cancelados) — usado para
+   * decidir se é a 1ª/2ª compra do cliente em regras de cupom. */
+  countOrders: (userId: string) =>
+    prisma.order.count({ where: { userId, status: { notIn: ['AGUARDANDO_PAGAMENTO', 'CANCELADO'] } } }),
   createResetToken: (userId: string, token: string, expiresAt: Date) =>
     prisma.passwordResetToken.create({ data: { userId, token, expiresAt } }),
   findResetToken: (token: string) =>

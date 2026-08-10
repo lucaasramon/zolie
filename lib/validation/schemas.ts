@@ -129,7 +129,7 @@ export const couponSchema = z.object({
   valor: z.number().min(0),
   minimoPedido: z.number().min(0).nullable().optional(),
   usoMaximo: z.number().int().positive().nullable().optional(),
-  primeiraCompra: z.boolean().optional(),
+  restricaoCompra: z.enum(['PRIMEIRA', 'SEGUNDA']).nullable().optional(),
   validade: z.coerce.date().nullable().optional(),
 });
 

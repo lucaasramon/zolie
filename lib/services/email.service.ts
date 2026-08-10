@@ -393,3 +393,17 @@ export async function enviarConfirmacaoPagamento(to: string, nome: string, numer
   );
   await send(to, `Pagamento confirmado: pedido ${numero} — Zoliê`, html);
 }
+
+export async function enviarCupomVoltei10(to: string, nome: string, codigo: string) {
+  const html = layout(
+    `Você ganhou ${codigo} para a próxima compra`,
+    `
+      ${badge('Cupom desbloqueado', 'success')}
+      ${heading('Um mimo para sua próxima peça')}
+      ${paragraph(`Olá, ${nome.split(' ')[0]}! Obrigada pela sua primeira compra na Zoliê. Para sua próxima peça, use o cupom <strong style="color:${COLORS.ink};">${escapar(codigo)}</strong> e ganhe 10% de desconto.`)}
+      ${button('Ver semijoias', `${env.appUrl}/produtos`)}
+      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkTertiary};">Válido para a sua segunda compra, uma vez por cliente.</p>
+    `,
+  );
+  await send(to, `Você ganhou um cupom de 10% — Zoliê`, html);
+}

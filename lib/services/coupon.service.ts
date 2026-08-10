@@ -22,14 +22,28 @@ export async function validar(codigo: string, { subtotal, userId = null, frete =
       'COUPON_MIN_ORDER',
     );
   }
-  if (cupom.primeiraCompra) {
-    // Sem conta não há como verificar se é a primeira compra: em vez de liberar
-    // o cupom sem checagem, exige login (evita reuso ilimitado por convidado).
+  if (cupom.restricaoCompra) {
+    // Sem conta não há como verificar em qual compra o cliente está: em vez de
+    // liberar o cupom sem checagem, exige login (evita reuso ilimitado por convidado).
     if (!userId) {
       throw new AppError('Este cupom é exclusivo para clientes com conta. Crie uma conta gratuita para usá-lo.', 422, 'COUPON_REQUIRES_ACCOUNT');
     }
     const pedidos = await userRepo.countOrders(userId);
-    if (pedidos > 0) throw new AppError('Cupom exclusivo para a primeira compra', 422, 'COUPON_FIRST_ORDER_ONLY');
+    if (cupom.restricaoCompra === 'PRIMEIRA' && pedidos > 0) {
+      throw new AppError('Cupom exclusivo para a primeira compra', 422, 'COUPON_FIRST_ORDER_ONLY');
+    }
+    if (cupom.restricaoCompra === 'SEGUNDA' && pedidos !== 1) {
+      throw new AppError('Cupom exclusivo para a segunda compra', 422, 'COUPON_SECOND_ORDER_ONLY');
+    }
+  }
+
+  // Uso único por pessoa: o contador `usos` acima é só global (soma todo mundo),
+  // então sem essa checagem qualquer cliente logado poderia reaplicar o mesmo
+  // código em toda compra. Convidado não passa por aqui — não há identidade
+  // fixa pra checar, e cupons restritos por etapa de compra já exigem login acima.
+  if (userId) {
+    const jaResgatado = await couponRepo.hasRedeemed(cupom.id, userId);
+    if (jaResgatado) throw new AppError('Você já utilizou este cupom', 422, 'COUPON_ALREADY_USED');
   }
 
   let desconto = 0;

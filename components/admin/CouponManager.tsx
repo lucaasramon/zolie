@@ -14,7 +14,7 @@ interface Coupon {
   minimoPedido: number | string | null;
   usoMaximo: number | null;
   usos: number;
-  primeiraCompra: boolean;
+  restricaoCompra: 'PRIMEIRA' | 'SEGUNDA' | null;
   validade: string | null;
   ativo: boolean;
 }
@@ -24,13 +24,14 @@ function regraTexto(c: Coupon) {
     c.tipoDesconto === 'PERCENT' ? `${Number(c.valor)}% de desconto` : c.tipoDesconto === 'FIXED' ? `${brl(c.valor)} de desconto` : 'Frete grátis';
   const partes = [base];
   if (c.minimoPedido) partes.push(`acima de ${brl(c.minimoPedido)}`);
-  if (c.primeiraCompra) partes.push('só na primeira compra');
+  if (c.restricaoCompra === 'PRIMEIRA') partes.push('só na primeira compra');
+  if (c.restricaoCompra === 'SEGUNDA') partes.push('só na segunda compra');
   return partes.join(' · ');
 }
 
 export function CouponManager({ coupons }: { coupons: Coupon[] }) {
   const router = useRouter();
-  const [form, setForm] = useState({ codigo: '', tipoDesconto: 'PERCENT' as Coupon['tipoDesconto'], valor: '', minimoPedido: '', usoMaximo: '', validade: '', primeiraCompra: false });
+  const [form, setForm] = useState({ codigo: '', tipoDesconto: 'PERCENT' as Coupon['tipoDesconto'], valor: '', minimoPedido: '', usoMaximo: '', validade: '', restricaoCompra: '' as '' | 'PRIMEIRA' | 'SEGUNDA' });
   const [erro, setErro] = useState('');
 
   async function toggleAtivo(c: Coupon) {
@@ -54,9 +55,9 @@ export function CouponManager({ coupons }: { coupons: Coupon[] }) {
         minimoPedido: form.minimoPedido ? Number(form.minimoPedido) : null,
         usoMaximo: form.usoMaximo ? Number(form.usoMaximo) : null,
         validade: form.validade || null,
-        primeiraCompra: form.primeiraCompra,
+        restricaoCompra: form.restricaoCompra || null,
       });
-      setForm({ codigo: '', tipoDesconto: 'PERCENT', valor: '', minimoPedido: '', usoMaximo: '', validade: '', primeiraCompra: false });
+      setForm({ codigo: '', tipoDesconto: 'PERCENT', valor: '', minimoPedido: '', usoMaximo: '', validade: '', restricaoCompra: '' });
       router.refresh();
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível criar o cupom');
@@ -105,9 +106,13 @@ export function CouponManager({ coupons }: { coupons: Coupon[] }) {
         <Field label="Pedido mínimo" type="number" value={form.minimoPedido} onChange={v => setForm(f => ({ ...f, minimoPedido: v }))} />
         <Field label="Validade" type="date" value={form.validade} onChange={v => setForm(f => ({ ...f, validade: v }))} />
         <Field label="Limite de usos" type="number" value={form.usoMaximo} onChange={v => setForm(f => ({ ...f, usoMaximo: v }))} />
-        <label className="flex items-center gap-2.5 text-sm text-ink-muted">
-          <input type="checkbox" checked={form.primeiraCompra} onChange={e => setForm(f => ({ ...f, primeiraCompra: e.target.checked }))} />
-          Só na primeira compra
+        <label className="flex flex-col gap-1.5 text-sm">
+          <span className="text-ink-muted">Restrição de compra</span>
+          <select value={form.restricaoCompra} onChange={e => setForm(f => ({ ...f, restricaoCompra: e.target.value as '' | 'PRIMEIRA' | 'SEGUNDA' }))} className="rounded-md border border-border-subtle px-3 py-2 outline-none transition-colors focus:border-gold">
+            <option value="">Nenhuma restrição</option>
+            <option value="PRIMEIRA">Só na primeira compra</option>
+            <option value="SEGUNDA">Só na segunda compra</option>
+          </select>
         </label>
         <button type="submit" className="rounded-full bg-gold py-2.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover">Criar cupom</button>
       </form>

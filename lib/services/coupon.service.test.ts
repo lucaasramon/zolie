@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/repositories/coupon.repo', () => ({
-  couponRepo: { findByCode: vi.fn() },
+  couponRepo: { findByCode: vi.fn(), hasRedeemed: vi.fn() },
 }));
 vi.mock('@/lib/repositories/user.repo', () => ({
   userRepo: { countOrders: vi.fn() },
@@ -19,13 +19,14 @@ const baseCupom = {
   usoMaximo: null,
   usos: 0,
   minimoPedido: null,
-  primeiraCompra: false,
+  restricaoCompra: null as 'PRIMEIRA' | 'SEGUNDA' | null,
   tipoDesconto: 'PERCENT' as const,
   valor: 10,
 };
 
 beforeEach(() => {
   vi.mocked(couponRepo.findByCode).mockReset();
+  vi.mocked(couponRepo.hasRedeemed).mockReset().mockResolvedValue(false);
   vi.mocked(userRepo.countOrders).mockReset();
 });
 
@@ -57,21 +58,58 @@ describe('coupon.service.validar', () => {
   });
 
   it('rejeita cupom de primeira compra para quem já tem pedidos', async () => {
-    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, primeiraCompra: true } as any);
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'PRIMEIRA' } as any);
     vi.mocked(userRepo.countOrders).mockResolvedValue(2);
     await expect(validar('BRILHE10', { subtotal: 100, userId: 'u1' })).rejects.toThrow('primeira compra');
   });
 
   it('aceita cupom de primeira compra para quem nunca comprou', async () => {
-    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, primeiraCompra: true } as any);
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'PRIMEIRA' } as any);
     vi.mocked(userRepo.countOrders).mockResolvedValue(0);
     const r = await validar('BRILHE10', { subtotal: 100, userId: 'u1' });
     expect(r.desconto).toBe(10);
   });
 
   it('rejeita cupom de primeira compra para convidado (sem conta)', async () => {
-    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, primeiraCompra: true } as any);
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'PRIMEIRA' } as any);
     await expect(validar('BRILHE10', { subtotal: 100, userId: null })).rejects.toThrow('exclusivo para clientes com conta');
+  });
+
+  it('rejeita cupom de segunda compra para quem ainda não comprou', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'SEGUNDA' } as any);
+    vi.mocked(userRepo.countOrders).mockResolvedValue(0);
+    await expect(validar('BRILHE10', { subtotal: 100, userId: 'u1' })).rejects.toThrow('segunda compra');
+  });
+
+  it('rejeita cupom de segunda compra para quem já tem 2 ou mais pedidos', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'SEGUNDA' } as any);
+    vi.mocked(userRepo.countOrders).mockResolvedValue(2);
+    await expect(validar('BRILHE10', { subtotal: 100, userId: 'u1' })).rejects.toThrow('segunda compra');
+  });
+
+  it('aceita cupom de segunda compra para quem tem exatamente 1 pedido pago', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'SEGUNDA' } as any);
+    vi.mocked(userRepo.countOrders).mockResolvedValue(1);
+    const r = await validar('BRILHE10', { subtotal: 100, userId: 'u1' });
+    expect(r.desconto).toBe(10);
+  });
+
+  it('rejeita cupom de segunda compra para convidado (sem conta)', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom, restricaoCompra: 'SEGUNDA' } as any);
+    await expect(validar('BRILHE10', { subtotal: 100, userId: null })).rejects.toThrow('exclusivo para clientes com conta');
+  });
+
+  it('rejeita cupom já resgatado pelo mesmo usuário', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom } as any);
+    vi.mocked(couponRepo.hasRedeemed).mockResolvedValue(true);
+    await expect(validar('BRILHE10', { subtotal: 100, userId: 'u1' })).rejects.toThrow('já utilizou este cupom');
+  });
+
+  it('permite convidado usar cupom sem restrição de compra mesmo sem histórico de resgate', async () => {
+    vi.mocked(couponRepo.findByCode).mockResolvedValue({ ...baseCupom } as any);
+    const r = await validar('BRILHE10', { subtotal: 100, userId: null });
+    expect(r.desconto).toBe(10);
+    expect(couponRepo.hasRedeemed).not.toHaveBeenCalled();
   });
 
   it('calcula desconto percentual sobre o subtotal', async () => {

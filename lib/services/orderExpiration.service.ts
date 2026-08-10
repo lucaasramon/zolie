@@ -81,6 +81,7 @@ export async function expirarPedidosNaoPagos() {
 
         if (pedido.cupomCodigo) {
           await couponRepo.decrementUseByCode(pedido.cupomCodigo, tx);
+          if (pedido.userId) await couponRepo.removeRedemptionByCode(pedido.cupomCodigo, pedido.userId, tx);
         }
 
         return true;
