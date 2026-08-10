@@ -2,6 +2,7 @@ import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
 import { logger } from '@/lib/logger';
+import * as siteConfig from '@/lib/services/site-config.service';
 import {
   calcularPesoKg,
   calcularDimensoes,
@@ -122,7 +123,7 @@ export async function cotar(cep: string, subtotal = 0, { itens }: CotarOpts = {}
     throw new AppError('CEP inválido', 422, 'INVALID_CEP');
   }
   const cepFormatado = limpo.replace(/^(\d{5})(\d{3})$/, '$1-$2');
-  const gratis = subtotal >= env.business.freeShippingThreshold;
+  const gratis = siteConfig.get().freteGratisAtivo && subtotal >= env.business.freeShippingThreshold;
 
   const itensParaPeso = itens?.length ? itens : [{ quantidade: 1 }];
   const pesoKg = calcularPesoKg(itensParaPeso);

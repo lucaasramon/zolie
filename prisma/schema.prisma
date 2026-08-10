@@ -526,3 +526,14 @@ model Banner {
 
   @@map("banners")
 }
+
+/// Linha única (id fixo "default") com liga/desliga de promoções de negócio
+/// editáveis em runtime pelo admin, sem precisar de deploy.
+model SiteConfig {
+  id                 String   @id @default("default")
+  freteGratisAtivo   Boolean  @default(true) @map("frete_gratis_ativo")
+  descontoPixAtivo   Boolean  @default(true) @map("desconto_pix_ativo")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("site_config")
+}

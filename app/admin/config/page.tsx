@@ -1,15 +1,24 @@
 import { env } from '@/lib/env';
 import { brl } from '@/lib/utils/money';
 import { formatarCnpj, formatarTelefone } from '@/lib/loja';
+import * as siteConfig from '@/lib/services/site-config.service';
+import { SiteConfigToggles } from '@/components/admin/SiteConfigToggles';
 
-export default function AdminConfigPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function AdminConfigPage() {
+  await siteConfig.preparar();
+  const config = siteConfig.get();
+
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <SiteConfigToggles config={config} />
+
       <div className="flex flex-col gap-4 rounded-xl bg-white p-5 shadow-xs">
         <h2 className="font-sans text-lg font-semibold text-ink">Regras de venda</h2>
         <p className="text-xs text-ink-tertiary">Estes valores são definidos por variáveis de ambiente do servidor (.env) e exibidos aqui somente para consulta.</p>
-        <Row label="Frete grátis a partir de" value={brl(env.business.freeShippingThreshold)} />
-        <Row label="Desconto no Pix" value={`${env.business.pixDiscountPercent}%`} />
+        <Row label="Valor mínimo p/ frete grátis (quando ativo)" value={brl(env.business.freeShippingThreshold)} />
+        <Row label="Percentual de desconto no Pix (quando ativo)" value={`${env.business.pixDiscountPercent}%`} />
         <Row label="Máximo de parcelas" value={`${env.business.maxInstallments}x`} />
         <Row label="Alerta de estoque baixo" value="3 unidades por variação" />
       </div>

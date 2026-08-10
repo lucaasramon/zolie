@@ -5,6 +5,7 @@ import { precoEfetivo } from '@/lib/services/pricing.service';
 import { calcularPreco } from '@/lib/pricing-calc';
 import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
+import * as siteConfig from '@/lib/services/site-config.service';
 import { slugify } from '@/lib/utils/slug';
 
 // Campos de custo/margem — informação interna de negócio, nunca exposta pela
@@ -34,7 +35,7 @@ export function decorate(p: any) {
     precoEfetivo: preco,
     temDesconto: p.precoPromocional != null,
     percentualDesconto: p.precoPromocional != null ? Math.round((1 - Number(p.precoPromocional) / Number(p.preco)) * 100) : 0,
-    precoPix: round(preco * (1 - env.business.pixDiscountPercent / 100)),
+    precoPix: round(preco * (1 - (siteConfig.get().descontoPixAtivo ? env.business.pixDiscountPercent : 0) / 100)),
     parcela: round(preco / env.business.maxInstallments),
     maxParcelas: env.business.maxInstallments,
     estoqueBaixo: p.estoque > 0 && p.estoque <= 8,
@@ -63,6 +64,7 @@ export function decorateAdmin(p: any) {
 }
 
 export async function list(filters: ProductFilters, sort: string, pagination: { skip?: number; take?: number }) {
+  await siteConfig.preparar();
   const { total, items } = await productRepo.search(filters, sort, pagination);
   return { total, items: items.map(decorate) };
 }
@@ -74,6 +76,7 @@ export async function listAdmin(filters: ProductFilters, sort: string, paginatio
 }
 
 export async function bySlug(slug: string) {
+  await siteConfig.preparar();
   const p = await productRepo.findBySlug(slug);
   if (!p) throw notFound('Produto');
 

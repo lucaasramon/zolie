@@ -108,7 +108,9 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
             <span className="text-[11px] font-light text-ink-tertiary line-through">{brl(p.preco)}</span>
           )}
           <span className="text-lg font-medium leading-tight text-ink">{brl(p.precoEfetivo)}</span>
-          <span className="text-[10px] text-gold-text">{brl(p.precoPix)} no Pix</span>
+          {p.precoPix < p.precoEfetivo && (
+            <span className="text-[10px] text-gold-text">{brl(p.precoPix)} no Pix</span>
+          )}
           <span className="text-[10px] font-light text-ink-tertiary">
             ou {p.maxParcelas}x de {brl(p.parcela)}
           </span>

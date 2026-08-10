@@ -4,6 +4,7 @@ import { AppError, notFound } from '@/lib/utils/errors';
 import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
 import * as coupons from '@/lib/services/coupon.service';
+import * as siteConfig from '@/lib/services/site-config.service';
 
 interface CartOpts {
   cep?: string;
@@ -11,6 +12,7 @@ interface CartOpts {
 }
 
 export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
+  await siteConfig.preparar();
   const cart = await cartRepo.getByOwner(owner);
   const items = cart.items.filter(i => i.product);
   let frete = 0;

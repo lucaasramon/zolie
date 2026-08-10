@@ -7,6 +7,7 @@ import { userRepo } from '@/lib/repositories/user.repo';
 import { AppError, notFound, forbidden } from '@/lib/utils/errors';
 import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
+import * as siteConfig from '@/lib/services/site-config.service';
 import * as coupons from '@/lib/services/coupon.service';
 import * as payments from '@/lib/services/payment.service';
 import * as email from '@/lib/services/email.service';
@@ -108,6 +109,7 @@ async function resolveContatoEEndereco(
 }
 
 export async function create(userId: string | null, cartOwner: CartOwner, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp, guest }: CreateOrderInput) {
+  await siteConfig.preparar();
   const { contato, endereco } = await resolveContatoEEndereco(userId, { enderecoId, guest });
 
   const cart = await cartRepo.getByOwner(cartOwner);

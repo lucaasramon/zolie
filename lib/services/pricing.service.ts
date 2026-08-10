@@ -1,5 +1,6 @@
 import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
+import * as siteConfig from '@/lib/services/site-config.service';
 
 interface PricedProduct {
   preco: unknown;
@@ -23,15 +24,18 @@ interface ResumoOpts {
 
 /** Resumo financeiro de um conjunto de itens. Fonte única de verdade de preço. */
 export function resumo(items: ResumoItem[], { frete = 0, desconto = 0, formaPagamento = 'CARTAO_CREDITO' }: ResumoOpts = {}) {
+  const config = siteConfig.get();
   const subtotal = round(items.reduce((a, i) => a + precoEfetivo(i.product) * i.quantidade, 0));
-  const freteFinal = subtotal >= env.business.freeShippingThreshold ? 0 : round(frete);
+  const freteGratisAtivo = config.freteGratisAtivo && subtotal >= env.business.freeShippingThreshold;
+  const freteFinal = freteGratisAtivo ? 0 : round(frete);
   const total = round(Math.max(0, subtotal - desconto + freteFinal));
-  const pix = round(total * (1 - env.business.pixDiscountPercent / 100));
+  const pixDiscountPercent = config.descontoPixAtivo ? env.business.pixDiscountPercent : 0;
+  const pix = round(total * (1 - pixDiscountPercent / 100));
   return {
     subtotal,
     frete: freteFinal,
     freteGratis: freteFinal === 0,
-    faltaParaFreteGratis: round(Math.max(0, env.business.freeShippingThreshold - subtotal)),
+    faltaParaFreteGratis: config.freteGratisAtivo ? round(Math.max(0, env.business.freeShippingThreshold - subtotal)) : 0,
     desconto: round(desconto),
     total,
     totalPix: pix,

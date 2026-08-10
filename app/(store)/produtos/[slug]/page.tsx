@@ -164,7 +164,9 @@ export default async function ProdutoPage({ params }: Props) {
               </div>
             )}
             <span className="text-[36px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
-            <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
+            {produto.precoPix < produto.precoEfetivo && (
+              <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
+            )}
             <span className="text-sm text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
           </div>
 

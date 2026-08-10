@@ -620,7 +620,11 @@ export default function CheckoutPage() {
                   <Field label="CVV" value={cartao.cvv} onChange={v => setCartao(c => ({ ...c, cvv: v.replace(/\D/g, '').slice(0, 4) }))} />
                 </div>
               )}
-              {formaPagamento === 'PIX' && <p className="text-sm text-gold-text">{brl(resumo.totalPix)} no Pix (10% de desconto), QR gerado após confirmar.</p>}
+              {formaPagamento === 'PIX' && (
+                <p className="text-sm text-gold-text">
+                  {brl(resumo.totalPix)} no Pix{resumo.totalPix < resumo.total ? ' (com desconto)' : ''}, QR gerado após confirmar.
+                </p>
+              )}
               {formaPagamento === 'BOLETO' && <p className="text-sm text-ink-muted">Vencimento em 3 dias úteis após a confirmação.</p>}
 
               <div className="flex gap-3">

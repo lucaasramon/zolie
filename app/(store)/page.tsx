@@ -4,6 +4,7 @@ import { organizationJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
 import { list as listProducts } from '@/lib/services/product.service';
 import { list as listBanners } from '@/lib/services/banner.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
+import * as siteConfig from '@/lib/services/site-config.service';
 import { ZolieCard, DecoratedProduct } from '@/components/product/ZolieCard';
 import { CategoryIcon } from '@/components/product/CategoryIcon';
 import { HeroCarousel } from '@/components/layout/HeroCarousel';
@@ -11,16 +12,18 @@ import { Reveal } from '@/components/layout/Reveal';
 
 export const dynamic = 'force-dynamic';
 
-export const metadata: Metadata = {
-  // A home usa o title padrão (sem o sufixo do template) por ser a raiz da marca.
-  title: 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k',
-  description:
-    'Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil e 10% de desconto no Pix.',
-  alternates: { canonical: '/' },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  await siteConfig.preparar();
+  const { descontoPixAtivo } = siteConfig.get();
+  return {
+    // A home usa o title padrão (sem o sufixo do template) por ser a raiz da marca.
+    title: 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k',
+    description: `Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil${descontoPixAtivo ? ' e 10% de desconto no Pix' : ''}.`,
+    alternates: { canonical: '/' },
+  };
+}
 
-const DIFERENCIAIS = [
-  { titulo: 'Frete grátis', texto: 'Acima de R$ 199 em todo o Brasil.' },
+const DIFERENCIAIS_BASE = [
   { titulo: 'Garantia de 1 ano', texto: 'Cobertura total contra desgaste do banho.' },
   { titulo: 'Troca facilitada', texto: 'Até 30 dias para trocar sem burocracia.' },
   { titulo: 'Banho de ouro 18k', texto: 'Camada reforçada, brilho duradouro.' },
@@ -34,6 +37,8 @@ const DEPOIMENTOS = [
 ];
 
 export default async function HomePage() {
+  await siteConfig.preparar();
+  const { freteGratisAtivo } = siteConfig.get();
   const [categorias, banners, ofertas, maisAmadas, lancamentos] = await Promise.all([
     categoryRepo.list(),
     listBanners(),
@@ -41,6 +46,9 @@ export default async function HomePage() {
     listProducts({ destaque: true }, 'mais_vendidos', { skip: 0, take: 4 }),
     listProducts({ lancamento: true }, 'lancamentos', { skip: 0, take: 4 }),
   ]);
+  const diferenciais = freteGratisAtivo
+    ? [{ titulo: 'Frete grátis', texto: 'Acima de R$ 199 em todo o Brasil.' }, ...DIFERENCIAIS_BASE]
+    : DIFERENCIAIS_BASE;
 
   return (
     <div>
@@ -95,7 +103,7 @@ export default async function HomePage() {
       <Reveal>
         <section className="mx-auto max-w-[1280px] px-5 py-14">
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-5">
-            {DIFERENCIAIS.map(d => (
+            {diferenciais.map(d => (
               <div key={d.titulo} className="flex flex-col gap-2">
                 <span className="h-[2px] w-8 rounded-full bg-gold" />
                 <span className="font-sans text-lg font-semibold text-ink">{d.titulo}</span>

@@ -243,3 +243,8 @@ export const bannerSchema = z.object({
   ordem: z.number().int().optional(),
   ativo: z.boolean().optional(),
 });
+
+export const siteConfigSchema = z.object({
+  freteGratisAtivo: z.boolean().optional(),
+  descontoPixAtivo: z.boolean().optional(),
+});
