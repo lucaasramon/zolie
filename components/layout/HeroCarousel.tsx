@@ -37,7 +37,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   return (
     <section
-      className="relative overflow-hidden bg-ink animate-zfade"
+      className="relative overflow-hidden animate-zfade"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -74,21 +74,21 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
             </div>
           );
         })}
-      </div>
 
-      {banners.length > 1 && (
-        <div className="relative flex justify-center gap-1.5 pb-5">
-          {banners.map((b, i) => (
-            <button
-              key={b.id}
-              type="button"
-              aria-label={`Ir para o banner ${i + 1}`}
-              onClick={() => goTo(i)}
-              className={`h-[3px] w-[26px] rounded-full transition-colors ${i === index ? 'bg-white' : 'bg-white/35 hover:bg-white/60'}`}
-            />
-          ))}
-        </div>
-      )}
+        {banners.length > 1 && (
+          <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+            {banners.map((b, i) => (
+              <button
+                key={b.id}
+                type="button"
+                aria-label={`Ir para o banner ${i + 1}`}
+                onClick={() => goTo(i)}
+                className={`h-[3px] w-[26px] rounded-full shadow-sm transition-colors ${i === index ? 'bg-white' : 'bg-white/45 hover:bg-white/70'}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </section>
   );
 }
