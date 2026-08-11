@@ -35,58 +35,45 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   if (banners.length === 0) return null;
 
-  const banner = banners[index];
-
   return (
     <section
       className="relative overflow-hidden bg-ink animate-zfade"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative aspect-[16/7] w-full sm:aspect-[21/8]">
-        {banners.map((b, i) => (
-          <div
-            key={b.id}
-            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-            style={{ opacity: i === index ? 1 : 0, pointerEvents: i === index ? 'auto' : 'none' }}
-            aria-hidden={i !== index}
-          >
-            {b.imagem && (
-              <Image
-                src={b.imagem}
-                alt={b.titulo}
-                fill
-                priority={i === 0}
-                sizes="100vw"
-                className="object-cover"
-              />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/20 to-transparent" />
-            <div className="relative flex h-full w-full items-center">
-              <div className="mx-auto flex w-full max-w-[1280px] flex-col items-start gap-3 px-6 sm:gap-5">
-                {b.tag && (
-                  <span className="text-[10px] uppercase tracking-[0.3em] text-[#F0E4C4]">{b.tag}</span>
-                )}
-                <h1 className="max-w-[520px] font-serif text-2xl leading-tight text-white sm:text-4xl">
-                  {b.titulo}
-                </h1>
-                {b.subtitulo && (
-                  <p className="hidden max-w-[400px] font-light text-[15px] leading-relaxed text-[#E3D9C4] sm:block">
-                    {b.subtitulo}
-                  </p>
-                )}
-                {b.cta && (
-                  <Link
-                    href={b.link || '/produtos'}
-                    className="mt-1.5 rounded-full bg-white px-6 py-3 text-xs font-medium uppercase tracking-[0.14em] text-ink shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md sm:px-[30px] sm:py-4"
-                  >
-                    {b.cta}
-                  </Link>
-                )}
-              </div>
+      <div className="relative aspect-[16/9] w-full sm:aspect-[21/8]">
+        {banners.map((b, i) => {
+          const conteudo = (
+            <>
+              {b.imagem && (
+                <Image
+                  src={b.imagem}
+                  alt={b.titulo}
+                  fill
+                  priority={i === 0}
+                  sizes="100vw"
+                  className="object-cover"
+                />
+              )}
+            </>
+          );
+          return (
+            <div
+              key={b.id}
+              className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+              style={{ opacity: i === index ? 1 : 0, pointerEvents: i === index ? 'auto' : 'none' }}
+              aria-hidden={i !== index}
+            >
+              {b.link ? (
+                <Link href={b.link} aria-label={b.titulo} className="block h-full w-full">
+                  {conteudo}
+                </Link>
+              ) : (
+                conteudo
+              )}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {banners.length > 1 && (
