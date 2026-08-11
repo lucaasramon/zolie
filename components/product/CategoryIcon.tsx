@@ -32,6 +32,11 @@ const ICON_BY_SLUG: Record<string, React.ReactNode> = {
       <circle cx="18" cy="18.5" r="1.8" />
     </>
   ),
+  acessorios: (
+    <>
+      <path d="M12 3.5 14 9.5 20.5 10 15.5 14 17 20.5 12 17 7 20.5 8.5 14 3.5 10 10 9.5Z" />
+    </>
+  ),
 };
 
 export function CategoryIcon({ slug, className }: { slug: string; className?: string }) {

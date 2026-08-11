@@ -8,7 +8,7 @@ import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
-import { SearchIcon, UserIcon, HeartIcon, BagIcon, MenuIcon } from '@/components/layout/HeaderIcons';
+import { SearchIcon, UserIcon, HeartIcon, BagIcon, MenuIcon, TagIcon } from '@/components/layout/HeaderIcons';
 import { CategoryIcon } from '@/components/product/CategoryIcon';
 
 interface Categoria {
@@ -222,6 +222,16 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
                 <HeartIcon className="h-[18px] w-[18px]" />
               </span>
               <span className="hidden text-xs font-medium tracking-wide text-ink sm:inline">Favoritos</span>
+            </Link>
+
+            <Link
+              href="/conta/cupons"
+              className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+            >
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
+                <TagIcon className="h-[18px] w-[18px]" />
+              </span>
+              <span className="hidden text-xs font-medium tracking-wide text-ink sm:inline">Cupons</span>
             </Link>
 
             <Link

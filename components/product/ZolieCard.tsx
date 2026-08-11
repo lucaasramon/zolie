@@ -2,9 +2,13 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
 import { brl } from '@/lib/utils/money';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { useWishlist } from '@/components/providers/WishlistProvider';
+import { useToast } from '@/components/providers/ToastProvider';
 
 export interface DecoratedProduct {
   id: string;
@@ -28,16 +32,27 @@ export interface DecoratedProduct {
 
 interface ZolieCardProps {
   product: DecoratedProduct;
-  wished?: boolean;
-  onToggleWish?: (id: string) => void;
 }
 
-export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCardProps) {
+export function ZolieCard({ product: p }: ZolieCardProps) {
   const [justWished, setJustWished] = useState(false);
+  const { user } = useAuth();
+  const { isWished, toggle } = useWishlist();
+  const { showToast } = useToast();
+  const router = useRouter();
+  const wished = isWished(p.id);
 
-  function handleToggleWish() {
-    setJustWished(true);
-    onToggleWish?.(p.id);
+  async function handleToggleWish() {
+    if (!user) {
+      router.push(`/login?next=/produtos/${p.slug}`);
+      return;
+    }
+    if (!wished) setJustWished(true);
+    try {
+      await toggle(p.id);
+    } catch {
+      showToast('Não foi possível atualizar os favoritos');
+    }
   }
 
   return (
@@ -58,7 +73,7 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
       <button
         type="button"
         onClick={handleToggleWish}
-        aria-label="Adicionar aos favoritos"
+        aria-label={wished ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
         className="absolute right-2 top-2 z-[2] grid h-[34px] w-[34px] place-items-center rounded-full bg-white/92 text-base leading-none text-gold-text transition-colors hover:bg-hoverbg"
       >
         {wished ? (
@@ -99,10 +114,12 @@ export function ZolieCard({ product: p, wished = false, onToggleWish }: ZolieCar
         >
           {p.nome}
         </Link>
-        <div className="flex items-center gap-[5px]">
-          <span className="text-[11px] tracking-wide text-gold-text">{stars(Number(p.notaMedia))}</span>
-          <span className="text-[10px] font-light text-ink-tertiary">({p.totalAvaliacoes})</span>
-        </div>
+        {p.totalAvaliacoes > 0 && (
+          <div className="flex items-center gap-[5px]">
+            <span className="text-[11px] tracking-wide text-gold-text">{stars(Number(p.notaMedia))}</span>
+            <span className="text-[10px] font-light text-ink-tertiary">({p.totalAvaliacoes})</span>
+          </div>
+        )}
         <div className="mt-px flex flex-col gap-px">
           {p.temDesconto && (
             <span className="text-[11px] font-light text-ink-tertiary line-through">{brl(p.preco)}</span>

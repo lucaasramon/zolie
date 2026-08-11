@@ -20,6 +20,10 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Proporção real (largura/altura) de cada imagem, descoberta ao carregar — os
+  // banners podem ter dimensões diferentes entre si, então não dá pra assumir
+  // um valor fixo sem cortar ou distorcer.
+  const [ratios, setRatios] = useState<Record<number, number>>({});
 
   const goTo = useCallback((i: number) => {
     setIndex(((i % banners.length) + banners.length) % banners.length);
@@ -35,13 +39,17 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   if (banners.length === 0) return null;
 
+  // Enquanto a proporção do banner ativo ainda não foi descoberta, usa a média
+  // razoável de um banner promocional (2:1) para não colapsar a altura a zero.
+  const ratioAtivo = ratios[index] ?? 2;
+
   return (
     <section
       className="relative overflow-hidden animate-zfade"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative aspect-[16/9] w-full sm:aspect-[21/8]">
+      <div className="relative w-full transition-[aspect-ratio] duration-300" style={{ aspectRatio: ratioAtivo }}>
         {banners.map((b, i) => {
           const conteudo = (
             <>
@@ -52,7 +60,13 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
                   fill
                   priority={i === 0}
                   sizes="100vw"
-                  className="object-cover"
+                  className="object-contain"
+                  onLoad={e => {
+                    const img = e.currentTarget;
+                    if (img.naturalWidth && img.naturalHeight) {
+                      setRatios(r => ({ ...r, [i]: img.naturalWidth / img.naturalHeight }));
+                    }
+                  }}
                 />
               )}
             </>

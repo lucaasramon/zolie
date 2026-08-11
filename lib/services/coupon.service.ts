@@ -57,3 +57,22 @@ export async function validar(codigo: string, { subtotal, userId = null, frete =
 
   return { cupom, desconto, freteGratis, freteAplicado: freteGratis ? 0 : frete };
 }
+
+/** Cupons que o usuário logado pode usar agora: ativos, válidos, não esgotados,
+ * compatíveis com a etapa de compra dele e ainda não resgatados por ele. */
+export async function listarDisponiveis(userId: string) {
+  const [ativos, pedidos] = await Promise.all([
+    couponRepo.listActive(),
+    userRepo.countOrders(userId),
+  ]);
+
+  const elegiveis = ativos.filter(c => {
+    if (c.usoMaximo != null && c.usos >= c.usoMaximo) return false;
+    if (c.restricaoCompra === 'PRIMEIRA' && pedidos > 0) return false;
+    if (c.restricaoCompra === 'SEGUNDA' && pedidos !== 1) return false;
+    return true;
+  });
+
+  const resgates = await Promise.all(elegiveis.map(c => couponRepo.hasRedeemed(c.id, userId)));
+  return elegiveis.filter((_, i) => !resgates[i]);
+}

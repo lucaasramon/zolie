@@ -143,8 +143,12 @@ export default async function ProdutoPage({ params }: Props) {
             </span>
             <h1 className="mt-1.5 font-serif text-3xl leading-tight text-ink lg:text-[40px]">{produto.nome}</h1>
             <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-              <span className="flex items-center gap-1 text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
-              <span className="text-sm text-ink-tertiary">({produto.totalAvaliacoes} avaliações)</span>
+              {produto.totalAvaliacoes > 0 && (
+                <>
+                  <span className="flex items-center gap-1 text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
+                  <span className="text-sm text-ink-tertiary">({produto.totalAvaliacoes} avaliações)</span>
+                </>
+              )}
               <span
                 className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${
                   produto.disponivel ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'

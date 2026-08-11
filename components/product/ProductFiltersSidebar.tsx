@@ -1,3 +1,6 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 interface Categoria {
@@ -38,10 +41,24 @@ const FAIXAS_PRECO = [
 ];
 
 export function ProductFiltersSidebar({ categorias, searchParams: sp }: Props) {
+  const [open, setOpen] = useState(false);
   const hasFilters = Boolean(sp.categoria || sp.material || sp.pedra || sp.notaMin || sp.precoMin || sp.precoMax || sp.promocao);
 
-  return (
-    <aside className="flex w-full flex-col gap-6 lg:w-[220px] lg:flex-none">
+  // Fecha o drawer automaticamente sempre que os filtros mudam (usuário navegou por um link de filtro).
+  useEffect(() => {
+    setOpen(false);
+  }, [sp]);
+
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
+  const conteudo = (
+    <>
       {hasFilters && (
         <Link href="/produtos" className="text-xs font-medium uppercase tracking-wider text-gold-text hover:text-gold-text-hover">
           Limpar filtros
@@ -85,7 +102,50 @@ export function ProductFiltersSidebar({ categorias, searchParams: sp }: Props) {
           <FilterOption key={n} label={`${n}+ estrelas`} active={sp.notaMin === n} href={buildHref(sp, { notaMin: sp.notaMin === n ? undefined : n })} />
         ))}
       </FilterGroup>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      <div className="lg:hidden">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex items-center gap-2 rounded-full border border-border-soft px-4 py-2.5 text-sm font-medium text-ink-muted"
+        >
+          <FilterIcon className="h-4 w-4" />
+          Filtros
+          {hasFilters && <span className="h-1.5 w-1.5 rounded-full bg-gold" />}
+        </button>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 z-[60] flex lg:hidden">
+          <div className="absolute inset-0 bg-black/45" onClick={() => setOpen(false)} />
+          <div className="relative ml-auto flex h-full w-[min(320px,86vw)] flex-col gap-6 overflow-y-auto bg-white p-6 shadow-lg animate-zfade">
+            <div className="flex items-center justify-between">
+              <span className="font-sans text-[13px] font-medium uppercase tracking-[0.2em] text-ink">Filtros</span>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Fechar filtros" className="text-xl text-ink-tertiary">
+                ×
+              </button>
+            </div>
+            {conteudo}
+          </div>
+        </div>
+      )}
+
+      <aside className="hidden w-[220px] flex-none flex-col gap-6 lg:flex">{conteudo}</aside>
+    </>
+  );
+}
+
+function FilterIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M4 6h16" />
+      <path d="M7 12h10" />
+      <path d="M10 18h4" />
+    </svg>
   );
 }
 

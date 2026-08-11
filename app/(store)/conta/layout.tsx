@@ -11,6 +11,7 @@ const NAV = [
   { href: '/conta/pedidos', label: 'Meus pedidos' },
   { href: '/conta/enderecos', label: 'Meus endereços' },
   { href: '/conta/favoritos', label: 'Meus favoritos' },
+  { href: '/conta/cupons', label: 'Meus cupons' },
 ];
 
 export default function ContaLayout({ children }: { children: React.ReactNode }) {

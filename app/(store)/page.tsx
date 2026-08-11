@@ -61,15 +61,15 @@ export default async function HomePage() {
       <Reveal>
         <section className="mx-auto max-w-[1280px] px-5 pt-9">
           <h2 className="mb-4 font-sans text-2xl font-semibold text-ink">Escolha por categoria</h2>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+          <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
             {categorias.map(c => (
               <Link
                 key={c.id}
                 href={`/produtos?categoria=${c.slug}`}
-                className="group flex flex-col items-center justify-center gap-1.5 rounded-lg bg-white px-2 py-4 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md"
+                className="group flex flex-col items-center justify-center gap-1 rounded-lg bg-white px-1 py-2.5 text-center shadow-xs transition-all hover:-translate-y-0.5 hover:shadow-md sm:gap-1.5 sm:px-2 sm:py-4"
               >
-                <CategoryIcon slug={c.slug} className="h-6 w-6 text-gold-text transition-transform group-hover:scale-110" />
-                <span className="font-sans text-xs font-medium text-ink">{c.nome}</span>
+                <CategoryIcon slug={c.slug} className="h-4 w-4 text-gold-text transition-transform group-hover:scale-110 sm:h-6 sm:w-6" />
+                <span className="font-sans text-[9px] font-medium leading-tight text-ink sm:text-xs">{c.nome}</span>
               </Link>
             ))}
           </div>
