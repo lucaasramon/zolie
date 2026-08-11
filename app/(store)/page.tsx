@@ -58,14 +58,6 @@ export default async function HomePage() {
       />
       <HeroCarousel banners={banners} />
 
-      <section className="bg-ink">
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-[30px] gap-y-2.5 px-5 py-3.5">
-          {['Prata 925 legítima', 'Banho de ouro 18k reforçado', 'Embalagem-presente inclusa', 'Compra 100% segura'].map(t => (
-            <span key={t} className="whitespace-nowrap text-[11px] text-[#F2EEE7]">{t}</span>
-          ))}
-        </div>
-      </section>
-
       <Reveal>
         <section className="mx-auto max-w-[1280px] px-5 pt-9">
           <h2 className="mb-4 font-sans text-2xl font-semibold text-ink">Escolha por categoria</h2>
