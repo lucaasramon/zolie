@@ -1502,7 +1502,7 @@ class Component extends DCLogic {
       ],
       onAdminNovo: () => this.toast('Formulário de cadastro (mock)'),
 
-      redes: ['Instagram', 'TikTok', 'WhatsApp'],
+      redes: ['Instagram', 'WhatsApp'],
       pagamentosFooter: ['Visa', 'Mastercard', 'Elo', 'Pix', 'Boleto'],
       footerCols: [
         { titulo: 'Institucional', links: [['sobre', 'Sobre a Zoliê'], ['trocas', 'Trocas e devoluções'], ['privacidade', 'Política de privacidade'], ['faq', 'Perguntas frequentes'], ['contato', 'Fale com a gente']].map(([k, label]) => ({ label, onClick: () => this.go('inst', { instKey: k }) })) },

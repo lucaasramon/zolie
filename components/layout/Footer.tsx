@@ -19,13 +19,13 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
             <span className="grid h-11 w-11 place-items-center rounded-full bg-ink">
-              <Image src="/images/zolie-logo-transparent.png" alt="Zoliê Semijoias" width={30} height={30} className="object-contain" />
+              <Image src="/images/zolie.png" alt="Zoliê Semijoias" width={30} height={38} className="object-contain" />
             </span>
             <span className="font-serif text-2xl tracking-[0.14em] text-ink">ZOLIÊ</span>
           </div>
           <p className="text-sm font-light text-ink-tertiary">Semijoias em prata 925 e banho de ouro 18k para brilhar todos os dias.</p>
           <div className="flex gap-2 pt-1">
-            {['Instagram', 'TikTok', 'WhatsApp'].map(n => (
+            {['Instagram', 'WhatsApp'].map(n => (
               <span key={n} className="rounded-full bg-bg-alt px-3 py-1 text-[11px] text-ink-muted">
                 {n}
               </span>

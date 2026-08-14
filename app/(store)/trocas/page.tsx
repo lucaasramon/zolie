@@ -12,9 +12,8 @@ export default function TrocasPage() {
   return (
     <InstitutionalPage titulo="Trocas e devoluções">
       <p>
-        Você tem até <strong>30 dias corridos</strong> após o recebimento para solicitar
-        troca ou devolução. O Código de Defesa do Consumidor garante 7 dias para
-        arrependimento em compras online — nós ampliamos esse prazo.
+        O Código de Defesa do Consumidor garante 7 dias para
+        arrependimento em compras online.
       </p>
 
       <h2 className="mt-6 font-sans text-lg font-semibold text-ink">Como solicitar</h2>

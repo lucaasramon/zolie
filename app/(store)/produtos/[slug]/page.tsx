@@ -203,10 +203,6 @@ export default async function ProdutoPage({ params }: Props) {
             <dd className="text-right font-medium text-ink">{MATERIAL_LABEL[produto.material] || produto.material}</dd>
             <dt className="text-ink-tertiary">Pedra</dt>
             <dd className="text-right font-medium text-ink">{produto.pedra || 'Sem pedra'}</dd>
-            <dt className="text-ink-tertiary">Peso</dt>
-            <dd className="text-right font-medium text-ink">{produto.pesoGramas ? `${Number(produto.pesoGramas).toFixed(1)}g` : '—'}</dd>
-            <dt className="text-ink-tertiary">Garantia</dt>
-            <dd className="text-right font-medium text-ink">1 ano</dd>
             <dt className="text-ink-tertiary">Código</dt>
             <dd className="text-right font-medium text-ink">{produto.slug}</dd>
           </dl>

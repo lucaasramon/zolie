@@ -24,8 +24,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const DIFERENCIAIS_BASE = [
-  { titulo: 'Garantia de 1 ano', texto: 'Cobertura total contra desgaste do banho.' },
-  { titulo: 'Troca facilitada', texto: 'Até 30 dias para trocar sem burocracia.' },
   { titulo: 'Banho de ouro 18k', texto: 'Camada reforçada, brilho duradouro.' },
   { titulo: 'Compra segura', texto: 'Pagamento protegido e dados criptografados.' },
 ];
