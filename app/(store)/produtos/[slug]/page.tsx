@@ -7,6 +7,7 @@ import { bySlug, resolveRedirect } from '@/lib/services/product.service';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
+import { SetSuggestion } from '@/components/product/SetSuggestion';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ReviewForm } from '@/components/product/ReviewForm';
@@ -214,6 +215,8 @@ export default async function ProdutoPage({ params }: Props) {
           </div>
         )}
       </div>
+
+      <SetSuggestion produto={produto} sugestoes={produto.sugestoesConjunto} />
 
       <div className="mt-14">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

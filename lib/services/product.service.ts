@@ -75,6 +75,43 @@ export async function listAdmin(filters: ProductFilters, sort: string, paginatio
   return { total, items: items.map(decorateAdmin) };
 }
 
+// Categorias complementares de cada categoria — o que combina para "fechar o
+// conjunto" (ex.: quem vê um brinco, sugerimos colares e pulseiras). Cada
+// categoria complementar rende no máximo 1 peça sugerida (nunca uma lista da
+// mesma categoria). "Conjuntos" já é a peça completa, então sugerimos avulsos
+// que combinam com qualquer roupa.
+const CATEGORIAS_COMPLEMENTARES: Record<string, string[]> = {
+  brincos: ['colares', 'pulseiras'],
+  colares: ['brincos', 'pulseiras'],
+  aneis: ['pulseiras', 'colares'],
+  pulseiras: ['aneis', 'brincos'],
+  conjuntos: ['brincos', 'aneis'],
+};
+
+/**
+ * Sugere uma peça complementar por categoria diferente (ex.: um colar e uma
+ * pulseira para um brinco) — nunca mais de uma peça da mesma categoria, e nunca
+ * uma lista genérica. Prioriza, por categoria, mesmo material (prata com prata,
+ * dourado com dourado, pra combinar visualmente) e o mais bem avaliado.
+ */
+async function sugestoesComplementares(p: { id: string; categoria: { slug: string } | null; material: string }) {
+  const categoriasAlvo = p.categoria ? CATEGORIAS_COMPLEMENTARES[p.categoria.slug] : undefined;
+  if (!categoriasAlvo || categoriasAlvo.length === 0) return [];
+
+  const sugestoes = await Promise.all(
+    categoriasAlvo.map(async categoria => {
+      const { items } = await productRepo.search({ categoria, material: p.material }, 'melhor_avaliados', { skip: 0, take: 1 });
+      if (items.length > 0) return items[0];
+
+      // Sem opção no mesmo material: melhor avaliado da categoria complementar, qualquer material.
+      const fallback = await productRepo.search({ categoria }, 'melhor_avaliados', { skip: 0, take: 1 });
+      return fallback.items[0] ?? null;
+    }),
+  );
+
+  return sugestoes.filter((s): s is NonNullable<typeof s> => Boolean(s));
+}
+
 export async function bySlug(slug: string) {
   await siteConfig.preparar();
   const p = await productRepo.findBySlug(slug);
@@ -98,9 +135,12 @@ export async function bySlug(slug: string) {
     }
   }
 
+  const sugestoes = await sugestoesComplementares(p);
+
   return {
     ...decorate(p),
     relacionados: relacionados.slice(0, 6).map(decorate),
+    sugestoesConjunto: sugestoes.map(decorate),
   };
 }
 
