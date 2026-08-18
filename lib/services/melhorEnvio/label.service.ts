@@ -51,10 +51,39 @@ export async function comprarEtiqueta(orderId: string) {
   if (order.status === 'AGUARDANDO_PAGAMENTO') {
     throw new AppError('Confirme o pagamento antes de comprar a etiqueta', 422, 'ORDER_NOT_PAID');
   }
-  if (!order.endereco) throw new AppError('Pedido sem endereço de entrega', 422, 'ADDRESS_MISSING');
+
+  // Pedido de conta usa o endereço salvo (`order.endereco`); pedido de convidado
+  // não tem `Address` vinculado — o endereço fica gravado direto no pedido nos
+  // campos `guest*`. Sem esse fallback, todo pedido de convidado era rejeitado
+  // aqui como "sem endereço", mesmo tendo um.
+  const endereco = order.endereco
+    ? {
+        rua: order.endereco.rua,
+        numero: order.endereco.numero,
+        complemento: order.endereco.complemento,
+        bairro: order.endereco.bairro,
+        cidade: order.endereco.cidade,
+        estado: order.endereco.estado,
+        cep: order.endereco.cep,
+      }
+    : order.guestRua && order.guestCep
+      ? {
+          rua: order.guestRua,
+          numero: order.guestNumero || '',
+          complemento: order.guestComplemento,
+          bairro: order.guestBairro || '',
+          cidade: order.guestCidade || '',
+          estado: order.guestEstado || '',
+          cep: order.guestCep,
+        }
+      : null;
+  if (!endereco) throw new AppError('Pedido sem endereço de entrega', 422, 'ADDRESS_MISSING');
+
+  const nomeDestinatario = order.user?.nome || order.guestNome || 'Cliente';
+  const emailDestinatario = order.user?.email || order.guestEmail || undefined;
+  const telefoneDestinatario = order.user?.telefone || order.guestTelefone || undefined;
 
   const { remetente } = env.melhorEnvio;
-  const { endereco, user } = order;
 
   // O peso real é a soma dos itens; cai no padrão se nenhum produto tiver peso.
   const pesoTotal = order.items.reduce((soma, item) => soma + Number(item.quantidade) * 0.15, 0);
@@ -75,9 +104,9 @@ export async function comprarEtiqueta(orderId: string) {
       postal_code: env.melhorEnvio.cepOrigem.replace(/\D/g, ''),
     },
     to: {
-      name: nomeParts(user?.nome || 'Cliente'),
-      email: user?.email || undefined,
-      phone: user?.telefone?.replace(/\D/g, '') || undefined,
+      name: nomeParts(nomeDestinatario),
+      email: emailDestinatario,
+      phone: telefoneDestinatario?.replace(/\D/g, '') || undefined,
       address: endereco.rua,
       number: endereco.numero,
       complement: endereco.complemento || undefined,
