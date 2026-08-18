@@ -82,6 +82,7 @@ export async function comprarEtiqueta(orderId: string) {
   const nomeDestinatario = order.user?.nome || order.guestNome || 'Cliente';
   const emailDestinatario = order.user?.email || order.guestEmail || undefined;
   const telefoneDestinatario = order.user?.telefone || order.guestTelefone || undefined;
+  const documentoDestinatario = (order.user?.cpf || order.guestCpf || '').replace(/\D/g, '') || undefined;
 
   const { remetente } = env.melhorEnvio;
 
@@ -106,6 +107,7 @@ export async function comprarEtiqueta(orderId: string) {
     to: {
       name: nomeParts(nomeDestinatario),
       email: emailDestinatario,
+      document: documentoDestinatario,
       phone: telefoneDestinatario?.replace(/\D/g, '') || undefined,
       address: endereco.rua,
       number: endereco.numero,
