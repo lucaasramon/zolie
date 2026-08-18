@@ -104,7 +104,12 @@ export default function CheckoutPage() {
   const [parcelas, setParcelas] = useState(1);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
-  const [pedidoConcluido, setPedidoConcluido] = useState<{ numero: string; pagamento: any } | null>(null);
+  const [pedidoConcluido, setPedidoConcluido] = useState<{ numero: string; pagamento: any; email: string } | null>(null);
+  // Só passa a `true` quando a consulta pública de status confirma o pagamento
+  // (Pix/boleto) — cartão já confirma (ou não) na hora, então não faz polling.
+  const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
+  const [verificandoPagamentoAgora, setVerificandoPagamentoAgora] = useState(false);
+  const [pagamentoAindaPendente, setPagamentoAindaPendente] = useState(false);
   const [cpfInput, setCpfInput] = useState('');
   const [salvandoCpf, setSalvandoCpf] = useState(false);
   const [reenviandoEmail, setReenviandoEmail] = useState(false);
@@ -116,11 +121,13 @@ export default function CheckoutPage() {
   // já invalide a confirmação automaticamente na re-renderização, sem precisar
   // de um effect só para "resetar" o estado a cada tecla digitada.
   const [emailConfirmadoPara, setEmailConfirmadoPara] = useState<string | null>(null);
+  // Controla a troca entre o formulário de identificação e a tela de "confirme
+  // seu e-mail" — ambos ocupam a etapa 1, sem mexer no indicador de progresso.
+  const [aguardandoConfirmacaoEmail, setAguardandoConfirmacaoEmail] = useState(false);
   const [enviandoConfirmacaoEmail, setEnviandoConfirmacaoEmail] = useState(false);
   const [confirmacaoEmailEnviada, setConfirmacaoEmailEnviada] = useState(false);
   const [confirmacaoEmailErro, setConfirmacaoEmailErro] = useState('');
   const [verificandoConfirmacaoAgora, setVerificandoConfirmacaoAgora] = useState(false);
-  const emailVerificacaoEnviadaParaRef = useRef('');
   const cepContaBuscadoRef = useRef('');
   const cepConvidadoBuscadoRef = useRef('');
   const [buscandoCepConta, setBuscandoCepConta] = useState(false);
@@ -195,54 +202,35 @@ export default function CheckoutPage() {
     };
   }, [guestContato.email, modo]);
 
-  // Convidado sem conta (checagem acima já terminou e não achou uma): dispara o
-  // e-mail de confirmação uma vez por endereço e fica checando (polling) se o
-  // link já foi clicado, para liberar a etapa seguinte. A confirmação em si
-  // acontece em outra aba (o convidado abre o e-mail), por isso o polling em
-  // vez de esperar uma resposta direta desta aba.
+  // Tela de "confirme seu e-mail" ativa: fica checando (polling) se o link já
+  // foi clicado, para liberar a etapa seguinte automaticamente. A confirmação em
+  // si acontece em outra aba (o convidado abre o e-mail), por isso o polling em
+  // vez de esperar uma resposta direta desta aba. O envio do e-mail em si é
+  // disparado por onIniciarConfirmacaoEmail, ao clicar em "Continuar".
   useEffect(() => {
-    if (modo !== 'convidado' || !emailFormatoValido || verificandoEmail || emailExiste) return;
+    if (!aguardandoConfirmacaoEmail) return;
     const emailAtual = guestContato.email.trim().toLowerCase();
     let cancelado = false;
 
-    const checarConfirmacao = async (): Promise<boolean> => {
+    const checarConfirmacao = async () => {
       try {
         const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
-        if (!cancelado && data.confirmado) setEmailConfirmadoPara(emailAtual);
-        return data.confirmado;
+        if (!cancelado && data.confirmado) {
+          setEmailConfirmadoPara(emailAtual);
+          setAguardandoConfirmacaoEmail(false);
+          setStep(2);
+        }
       } catch {
-        return false;
+        // Tenta de novo no próximo tick do polling.
       }
     };
 
-    const enviarSeNecessario = async () => {
-      // Guarda por e-mail (não só pelas deps do effect) para sobreviver a um
-      // eventual double-invoke do efeito em desenvolvimento sem mandar 2 e-mails.
-      if (emailVerificacaoEnviadaParaRef.current === emailAtual) return;
-      emailVerificacaoEnviadaParaRef.current = emailAtual;
-      setEnviandoConfirmacaoEmail(true);
-      setConfirmacaoEmailErro('');
-      setConfirmacaoEmailEnviada(false);
-      const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
-      if (cancelado) return;
-      if (erro) setConfirmacaoEmailErro(erro);
-      else setConfirmacaoEmailEnviada(true);
-      setEnviandoConfirmacaoEmail(false);
-    };
-
-    // Confere primeiro se esse e-mail já foi confirmado antes (ex: convidado
-    // voltou para o checkout depois de já ter clicado no link) — só manda um
-    // e-mail novo se realmente ainda não estiver confirmado.
-    checarConfirmacao().then(confirmado => {
-      if (!cancelado && !confirmado) enviarSeNecessario();
-    });
     const interval = setInterval(checarConfirmacao, 4000);
-
     return () => {
       cancelado = true;
       clearInterval(interval);
     };
-  }, [modo, emailFormatoValido, verificandoEmail, emailExiste, guestContato.email]);
+  }, [aguardandoConfirmacaoEmail, guestContato.email]);
 
   // Endereço de convidado (etapa 2): preenche rua/bairro/cidade/UF a partir do CEP.
   useEffect(() => {
@@ -283,6 +271,32 @@ export default function CheckoutPage() {
       cancelado = true;
     };
   }, [addressForm.cep]);
+
+  // Tela de sucesso com Pix/boleto: fica checando (polling) se o webhook do
+  // Asaas já confirmou o pagamento, para trocar a tela sozinha sem o cliente
+  // precisar atualizar a página manualmente.
+  useEffect(() => {
+    if (!pedidoConcluido || pagamentoConfirmado) return;
+    let cancelado = false;
+
+    const checar = async () => {
+      try {
+        const { data } = await api.get<{ pago: boolean }>(
+          `/orders/publico/status?numero=${encodeURIComponent(pedidoConcluido.numero)}&email=${encodeURIComponent(pedidoConcluido.email)}`,
+        );
+        if (!cancelado && data.pago) setPagamentoConfirmado(true);
+      } catch {
+        // Tenta de novo no próximo tick do polling.
+      }
+    };
+
+    checar();
+    const interval = setInterval(checar, 5000);
+    return () => {
+      cancelado = true;
+      clearInterval(interval);
+    };
+  }, [pedidoConcluido, pagamentoConfirmado]);
 
   // `begin_checkout` uma única vez por sessão de checkout. O ref é necessário
   // porque `cart` é recarregado a cada mudança de frete/endereço, e sem a guarda
@@ -346,6 +360,41 @@ export default function CheckoutPage() {
     }
   }
 
+  // Dispara o e-mail de confirmação ao clicar em "Continuar" na identificação
+  // (não mais ao digitar) e troca para a tela de espera de confirmação.
+  async function onIniciarConfirmacaoEmail() {
+    const emailAtual = guestContato.email.trim().toLowerCase();
+    if (emailAtual === emailConfirmadoPara) {
+      setStep(2);
+      return;
+    }
+    setAguardandoConfirmacaoEmail(true);
+    setEnviandoConfirmacaoEmail(true);
+    setConfirmacaoEmailErro('');
+    setConfirmacaoEmailEnviada(false);
+
+    // Confere primeiro se esse e-mail já foi confirmado antes (ex: convidado
+    // voltou para o checkout depois de já ter clicado no link) — só manda um
+    // e-mail novo se realmente ainda não estiver confirmado.
+    try {
+      const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
+      if (data.confirmado) {
+        setEmailConfirmadoPara(emailAtual);
+        setAguardandoConfirmacaoEmail(false);
+        setEnviandoConfirmacaoEmail(false);
+        setStep(2);
+        return;
+      }
+    } catch {
+      // Segue para o envio normalmente se a checagem falhar.
+    }
+
+    const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
+    if (erro) setConfirmacaoEmailErro(erro);
+    else setConfirmacaoEmailEnviada(true);
+    setEnviandoConfirmacaoEmail(false);
+  }
+
   async function onReenviarConfirmacaoEmail() {
     const emailAtual = guestContato.email.trim().toLowerCase();
     setEnviandoConfirmacaoEmail(true);
@@ -361,8 +410,13 @@ export default function CheckoutPage() {
     setVerificandoConfirmacaoAgora(true);
     try {
       const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
-      if (data.confirmado) setEmailConfirmadoPara(emailAtual);
-      else setConfirmacaoEmailErro('Ainda não recebemos a confirmação. Verifique se clicou no link do e-mail.');
+      if (data.confirmado) {
+        setEmailConfirmadoPara(emailAtual);
+        setAguardandoConfirmacaoEmail(false);
+        setStep(2);
+      } else {
+        setConfirmacaoEmailErro('Ainda não recebemos a confirmação. Verifique se clicou no link do e-mail.');
+      }
     } catch (err) {
       setConfirmacaoEmailErro(describeError(err, 'Não foi possível verificar agora'));
     } finally {
@@ -370,12 +424,40 @@ export default function CheckoutPage() {
     }
   }
 
+  function onVoltarParaIdentificacao() {
+    setAguardandoConfirmacaoEmail(false);
+    setConfirmacaoEmailErro('');
+  }
+
+  // Botão "Já fiz o pagamento" na tela de sucesso do Pix/boleto: consulta a
+  // mesma rota do polling automático, mas na hora — útil quando o cliente já
+  // pagou e não quer esperar o próximo tick (até 5s) para ver a confirmação.
+  async function onVerificarPagamentoAgora() {
+    if (!pedidoConcluido) return;
+    setVerificandoPagamentoAgora(true);
+    setPagamentoAindaPendente(false);
+    try {
+      const { data } = await api.get<{ pago: boolean }>(
+        `/orders/publico/status?numero=${encodeURIComponent(pedidoConcluido.numero)}&email=${encodeURIComponent(pedidoConcluido.email)}`,
+      );
+      if (data.pago) setPagamentoConfirmado(true);
+      else setPagamentoAindaPendente(true);
+    } catch (err) {
+      setErro(describeError(err, 'Não foi possível verificar o pagamento agora'));
+    } finally {
+      setVerificandoPagamentoAgora(false);
+    }
+  }
+
+  // Não exige mais `guestEmailConfirmado` aqui: o botão "Continuar" é quem
+  // dispara a confirmação de e-mail agora, então só precisa liberar o clique
+  // com os dados básicos preenchidos.
   const guestContatoValido =
     guestContato.nome.trim().length >= 3 &&
     emailFormatoValido &&
     cpfValido(guestContato.cpf) &&
     !emailExiste &&
-    guestEmailConfirmado;
+    !verificandoEmail;
 
   const guestEnderecoValido =
     guestEndereco.cep.trim().length >= 8 &&
@@ -477,7 +559,8 @@ export default function CheckoutPage() {
         });
       }
 
-      setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento });
+      setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento, email: contatoTitular.email });
+      setPagamentoConfirmado(formaPagamento === 'CARTAO_CREDITO');
       setStep(5);
       await refreshCart();
     } catch (err) {
@@ -525,16 +608,22 @@ export default function CheckoutPage() {
   }
 
   if (step === 5 && pedidoConcluido) {
+    const aguardandoPix = pedidoConcluido.pagamento?.metodo === 'PIX' && !pagamentoConfirmado;
+    const aguardandoBoleto = pedidoConcluido.pagamento?.metodo === 'BOLETO' && !pagamentoConfirmado;
+
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-20 text-center">
         <div className="w-full rounded-xl border border-success-soft bg-success-bg p-6">
-          <p className="font-sans text-2xl font-semibold text-ink">Pedido confirmado!</p>
+          <p className="font-sans text-2xl font-semibold text-ink">
+            {aguardandoPix || aguardandoBoleto ? 'Pedido recebido!' : 'Pagamento confirmado!'}
+          </p>
           <p className="mt-2 text-sm text-ink-muted">Número do pedido: <strong>{pedidoConcluido.numero}</strong></p>
           <p className="mt-1 text-xs text-ink-tertiary">
-            Enviamos a confirmação para {modo === 'conta' ? user?.email : guestContato.email}.
+            Enviamos a confirmação para {pedidoConcluido.email}.
           </p>
-          {pedidoConcluido.pagamento?.metodo === 'PIX' && (
+          {aguardandoPix && (
             <div className="mt-3 flex flex-col items-center gap-2">
+              <p className="text-xs text-ink-muted">Assim que o pagamento for identificado, esta página atualiza sozinha.</p>
               {pedidoConcluido.pagamento.qrCode && (
                 <img src={`data:image/png;base64,${pedidoConcluido.pagamento.qrCode}`} alt="QR Code Pix" className="h-40 w-40" />
               )}
@@ -542,8 +631,9 @@ export default function CheckoutPage() {
               <input readOnly value={pedidoConcluido.pagamento.copiaECola || ''} onFocus={e => e.target.select()} className="w-full rounded-md border border-border-subtle px-3 py-2 text-xs" />
             </div>
           )}
-          {pedidoConcluido.pagamento?.metodo === 'BOLETO' && (
+          {aguardandoBoleto && (
             <div className="mt-2 flex flex-col items-center gap-1 text-xs text-ink-tertiary">
+              <p className="text-ink-muted">Assim que o pagamento for identificado, esta página atualiza sozinha.</p>
               {pedidoConcluido.pagamento.url && (
                 <a href={pedidoConcluido.pagamento.url} target="_blank" rel="noreferrer" className="text-gold-text hover:text-gold-text-hover">
                   Ver boleto
@@ -551,6 +641,24 @@ export default function CheckoutPage() {
               )}
               {pedidoConcluido.pagamento.linhaDigitavel && <span>{pedidoConcluido.pagamento.linhaDigitavel}</span>}
             </div>
+          )}
+          {(aguardandoPix || aguardandoBoleto) && (
+            <div className="mt-4 flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={onVerificarPagamentoAgora}
+                disabled={verificandoPagamentoAgora}
+                className="rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+              >
+                {verificandoPagamentoAgora ? 'Verificando...' : 'Já fiz o pagamento'}
+              </button>
+              {pagamentoAindaPendente && (
+                <p className="text-xs text-ink-tertiary">Ainda não identificamos seu pagamento. Se você já pagou, aguarde alguns instantes e tente de novo.</p>
+              )}
+            </div>
+          )}
+          {(pedidoConcluido.pagamento?.metodo === 'PIX' || pedidoConcluido.pagamento?.metodo === 'BOLETO') && pagamentoConfirmado && (
+            <p className="mt-2 text-sm text-success">Recebemos seu pagamento — já vamos preparar seu pedido!</p>
           )}
           {pedidoConcluido.pagamento?.metodo === 'CARTAO_CREDITO' && (
             <p className="mt-2 text-xs text-ink-tertiary">Status do pagamento: {pedidoConcluido.pagamento.status}</p>
@@ -665,7 +773,7 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {step === 1 && modo === 'convidado' && (
+          {step === 1 && modo === 'convidado' && !aguardandoConfirmacaoEmail && (
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
               <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
               <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
@@ -683,37 +791,8 @@ export default function CheckoutPage() {
                       para continuar com seus dados salvos.
                     </p>
                   )}
-                  {emailFormatoValido && !verificandoEmail && !emailExiste && (
-                    guestEmailConfirmado ? (
-                      <p className="text-xs text-success">E-mail confirmado.</p>
-                    ) : (
-                      <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
-                        <p className="text-xs text-ink-muted">
-                          {enviandoConfirmacaoEmail && !confirmacaoEmailEnviada
-                            ? 'Enviando e-mail de confirmação...'
-                            : <>Enviamos um link de confirmação para <strong>{guestContato.email}</strong>. Abra sua caixa de entrada (e o spam) e clique nele para continuar — pode voltar para esta aba depois.</>}
-                        </p>
-                        {confirmacaoEmailErro && <p className="text-xs text-danger">{confirmacaoEmailErro}</p>}
-                        <div className="flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={onReenviarConfirmacaoEmail}
-                            disabled={enviandoConfirmacaoEmail}
-                            className="text-xs text-gold-text hover:text-gold-text-hover disabled:opacity-50"
-                          >
-                            {enviandoConfirmacaoEmail ? 'Enviando...' : 'Reenviar e-mail'}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={onVerificarConfirmacaoAgora}
-                            disabled={verificandoConfirmacaoAgora}
-                            className="text-xs text-gold-text hover:text-gold-text-hover disabled:opacity-50"
-                          >
-                            {verificandoConfirmacaoAgora ? 'Verificando...' : 'Já confirmei'}
-                          </button>
-                        </div>
-                      </div>
-                    )
+                  {emailFormatoValido && !verificandoEmail && !emailExiste && guestEmailConfirmado && (
+                    <p className="text-xs text-success">E-mail confirmado.</p>
                   )}
                 </div>
                 <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} />
@@ -731,11 +810,46 @@ export default function CheckoutPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={() => (guestEmailConfirmado ? setStep(2) : onIniciarConfirmacaoEmail())}
                 disabled={!guestContatoValido}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
+              </button>
+            </div>
+          )}
+
+          {step === 1 && modo === 'convidado' && aguardandoConfirmacaoEmail && (
+            <div className="flex flex-col items-center gap-4 rounded-xl shadow-xs p-5 py-10 text-center">
+              <h2 className="font-sans text-xl font-semibold text-ink">Confirme seu e-mail</h2>
+              <p className="max-w-sm text-sm text-ink-muted">
+                {enviandoConfirmacaoEmail && !confirmacaoEmailEnviada ? (
+                  'Enviando e-mail de confirmação...'
+                ) : (
+                  <>Enviamos um link de confirmação para <strong>{guestContato.email}</strong>. Abra sua caixa de entrada (e o spam) e clique no link para continuar — esta página avança sozinha assim que você confirmar.</>
+                )}
+              </p>
+              {confirmacaoEmailErro && <p className="text-xs text-danger">{confirmacaoEmailErro}</p>}
+              <div className="flex flex-wrap justify-center gap-3">
+                <button
+                  type="button"
+                  onClick={onVerificarConfirmacaoAgora}
+                  disabled={verificandoConfirmacaoAgora}
+                  className="rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+                >
+                  {verificandoConfirmacaoAgora ? 'Verificando...' : 'Já confirmei'}
+                </button>
+                <button
+                  type="button"
+                  onClick={onReenviarConfirmacaoEmail}
+                  disabled={enviandoConfirmacaoEmail}
+                  className="rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text disabled:opacity-50"
+                >
+                  {enviandoConfirmacaoEmail ? 'Enviando...' : 'Reenviar e-mail'}
+                </button>
+              </div>
+              <button type="button" onClick={onVoltarParaIdentificacao} className="text-xs text-ink-tertiary underline hover:text-ink-muted">
+                Corrigir e-mail
               </button>
             </div>
           )}

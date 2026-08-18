@@ -105,6 +105,19 @@ model GuestEmailVerification {
   @@map("guest_email_verifications")
 }
 
+// Token permanente (não expira) que dá a um convidado sem conta acesso à lista
+// dos próprios pedidos feitos com aquele e-mail, enviado por link no e-mail de
+// confirmação de pedido. Um por e-mail: pedidos futuros reusam o mesmo token,
+// então o link salvo pelo cliente continua funcionando para sempre.
+model GuestOrderAccess {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  token     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("guest_order_access")
+}
+
 model Address {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")

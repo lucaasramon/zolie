@@ -5,6 +5,8 @@ import { orderRepo } from '@/lib/repositories/order.repo';
 import { couponRepo } from '@/lib/repositories/coupon.repo';
 import { userRepo } from '@/lib/repositories/user.repo';
 import { guestEmailVerificationRepo } from '@/lib/repositories/guestEmailVerification.repo';
+import { guestOrderAccessRepo } from '@/lib/repositories/guestOrderAccess.repo';
+import { randomUUID } from 'crypto';
 import { AppError, notFound, forbidden } from '@/lib/utils/errors';
 import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
@@ -241,7 +243,22 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
 
   await orderRepo.setAsaasPayment(order.id, pagamento.asaasPaymentId as string, pagamento.asaasStatus as string);
 
-  await email.enviarConfirmacaoPedido(contato.email, contato.nome, order.numero, order.items, order.total);
+  // Convidado (sem conta): o e-mail de confirmação leva também o link para ver
+  // todos os pedidos feitos com aquele e-mail, sem precisar criar conta. O token
+  // é o mesmo em toda compra futura do mesmo e-mail — reusar em vez de gerar um
+  // novo é o que faz o link salvo pelo cliente continuar valendo depois.
+  let guestOrderAccessToken: string | null = null;
+  if (!userId) {
+    const emailNormalizado = contato.email.trim().toLowerCase();
+    const existente = await guestOrderAccessRepo.findByEmail(emailNormalizado);
+    guestOrderAccessToken = existente?.token ?? null;
+    if (!guestOrderAccessToken) {
+      guestOrderAccessToken = randomUUID();
+      await guestOrderAccessRepo.create(emailNormalizado, guestOrderAccessToken);
+    }
+  }
+
+  await email.enviarConfirmacaoPedido(contato.email, contato.nome, order.numero, order.items, order.total, guestOrderAccessToken);
 
   return { order: { ...order, asaasPaymentId: pagamento.asaasPaymentId, asaasStatus: pagamento.asaasStatus }, pagamento };
 }
@@ -255,6 +272,17 @@ export async function detail(userId: string, id: string, isAdmin = false) {
   if (!order) throw notFound('Pedido');
   if (!isAdmin && order.userId !== userId) throw forbidden();
   return order;
+}
+
+/**
+ * Consulta pública de status (sem autenticação) — usada pela tela de sucesso do
+ * checkout para saber quando um Pix/boleto foi pago e trocar a tela sozinha. Só
+ * expõe o mínimo (status pago ou não), nunca dados do pedido.
+ */
+export async function statusPublico(numero: string, email: string) {
+  const order = await orderRepo.findByNumeroAndEmail(numero, email.trim().toLowerCase());
+  if (!order) throw notFound('Pedido');
+  return { status: order.status, pago: order.status !== 'AGUARDANDO_PAGAMENTO' && order.status !== 'CANCELADO' };
 }
 
 export async function retomarPagamento(userId: string, id: string, isAdmin = false) {
@@ -285,6 +313,8 @@ interface CancelarOpts {
   porAdmin?: boolean;
   /** userId de quem pediu — usado para checar posse quando não é admin. */
   userId?: string;
+  /** E-mail de convidado (sem conta) autenticado via token — alternativa a `userId`. */
+  guestEmail?: string;
   motivo?: string;
   /**
    * Se deve devolver o dinheiro quando o pedido já foi pago. O admin decide caso
@@ -300,10 +330,13 @@ interface CancelarOpts {
  * É o único caminho de cancelamento do sistema — webhook, admin e cliente passam
  * todos por aqui, para que nenhum deles esqueça de repor estoque.
  */
-export async function cancelar(id: string, { porAdmin = false, userId, motivo, estornar = false }: CancelarOpts = {}) {
+export async function cancelar(id: string, { porAdmin = false, userId, guestEmail, motivo, estornar = false }: CancelarOpts = {}) {
   const order = await orderRepo.findById(id);
   if (!order) throw notFound('Pedido');
-  if (!porAdmin && order.userId !== userId) throw forbidden();
+  if (!porAdmin) {
+    const dono = userId ? order.userId === userId : order.userId === null && order.guestEmail === guestEmail;
+    if (!dono) throw forbidden();
+  }
 
   if (order.status === 'CANCELADO') {
     throw new AppError('Este pedido já foi cancelado', 422, 'ORDER_ALREADY_CANCELLED');

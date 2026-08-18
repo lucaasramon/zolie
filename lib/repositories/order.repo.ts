@@ -20,6 +20,20 @@ export const orderRepo = {
     ]);
     return { total, items };
   },
+  /** Pedidos de convidado (sem conta) pelo e-mail — usado no acesso público via token. */
+  listByGuestEmail: async (email: string, { skip = 0, take = 10 }: { skip?: number; take?: number } = {}) => {
+    const [total, items] = await Promise.all([
+      prisma.order.count({ where: { userId: null, guestEmail: email } }),
+      prisma.order.findMany({
+        where: { userId: null, guestEmail: email },
+        skip,
+        take,
+        orderBy: { createdAt: 'desc' },
+        include: { items: true },
+      }),
+    ]);
+    return { total, items };
+  },
   listAll: async ({ skip = 0, take = 20, status }: { skip?: number; take?: number; status?: string } = {}) => {
     const where = status ? { status: status as OrderStatus } : {};
     const [total, items] = await Promise.all([
@@ -99,6 +113,20 @@ export const orderRepo = {
     }),
   findByAsaasPaymentId: (asaasPaymentId: string) =>
     prisma.order.findUnique({ where: { asaasPaymentId } }),
+  /**
+   * Busca por número + e-mail do titular (conta ou convidado) — usada pela
+   * consulta pública de status de pagamento (sem autenticação), então o e-mail
+   * funciona como segredo compartilhado: impede que alguém descubra o status de
+   * outro pedido só incrementando o número sequencial.
+   */
+  findByNumeroAndEmail: (numero: string, email: string) =>
+    prisma.order.findFirst({
+      where: {
+        numero,
+        OR: [{ user: { email } }, { guestEmail: email }],
+      },
+      select: { status: true, asaasStatus: true, formaPagamento: true },
+    }),
   updateAsaasStatus: (id: string, asaasStatus: string) =>
     prisma.order.update({ where: { id }, data: { asaasStatus } }),
   /**

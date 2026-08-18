@@ -138,7 +138,14 @@ interface OrderItemInfo {
   subtotal: unknown;
 }
 
-export async function enviarConfirmacaoPedido(to: string, nome: string, numero: string, items: OrderItemInfo[], total: unknown) {
+export async function enviarConfirmacaoPedido(
+  to: string,
+  nome: string,
+  numero: string,
+  items: OrderItemInfo[],
+  total: unknown,
+  guestOrderAccessToken?: string | null,
+) {
   const itensHtml = items
     .map(
       i => `
@@ -167,8 +174,17 @@ export async function enviarConfirmacaoPedido(to: string, nome: string, numero: 
         </tr>
       </table>
       ${divider()}
-      ${paragraph('Você pode acompanhar cada etapa do seu pedido — do pagamento à entrega — a qualquer momento em "Meus pedidos".')}
-      ${button('Acompanhar meu pedido', `${env.appUrl}/conta/pedidos`)}
+      ${
+        guestOrderAccessToken
+          ? `
+            ${paragraph('Você comprou sem criar conta. Guarde este e-mail: o link abaixo mostra todos os seus pedidos feitos com este endereço de e-mail, sem precisar de senha.')}
+            ${button('Acompanhar meu pedido', `${env.appUrl}/pedidos-convidado/${guestOrderAccessToken}`)}
+          `
+          : `
+            ${paragraph('Você pode acompanhar cada etapa do seu pedido — do pagamento à entrega — a qualquer momento em "Meus pedidos".')}
+            ${button('Acompanhar meu pedido', `${env.appUrl}/conta/pedidos`)}
+          `
+      }
     `,
   );
   await send(to, `Pedido ${numero} confirmado — Zoliê`, html);
