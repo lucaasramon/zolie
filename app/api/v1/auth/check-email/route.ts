@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
+import { email } from '@/lib/validation/schemas';
 import { userRepo } from '@/lib/repositories/user.repo';
 import { ok } from '@/lib/http/envelope';
 import { withErrorHandling } from '@/lib/http/withAuth';
 import { assertRateLimit } from '@/lib/http/rateLimit';
 
-const querySchema = z.object({ email: z.string().trim().toLowerCase().pipe(z.string().email()) });
+const querySchema = z.object({ email });
 
 // Usado no checkout de convidado para avisar antes da compra que aquele e-mail
 // já tem conta, em vez do cliente só descobrir isso num erro depois de pagar.

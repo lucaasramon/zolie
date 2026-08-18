@@ -91,6 +91,20 @@ model EmailVerificationToken {
   @@map("email_verification_tokens")
 }
 
+// Confirmação de e-mail para quem compra como convidado (sem conta). Sem relação
+// com User — nesse ponto do checkout ainda não existe usuário, só o e-mail digitado.
+model GuestEmailVerification {
+  id          String    @id @default(uuid())
+  email       String
+  token       String    @unique
+  expiresAt   DateTime  @map("expires_at")
+  confirmedAt DateTime? @map("confirmed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([email])
+  @@map("guest_email_verifications")
+}
+
 model Address {
   id          String   @id @default(uuid())
   userId      String   @map("user_id")

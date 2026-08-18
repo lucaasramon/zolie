@@ -10,7 +10,7 @@ const cpf = z
   .refine(cpfValido, 'CPF inválido');
 
 // trim/lowercase antes do .email(): validar primeiro rejeitaria espaços acidentais nas pontas.
-const email = z.string().trim().toLowerCase().pipe(z.string().email());
+export const email = z.string().trim().toLowerCase().pipe(z.string().email());
 
 export const registerSchema = z.object({
   nome: z.string().min(3),
