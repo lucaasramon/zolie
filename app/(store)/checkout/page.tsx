@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api-client';
 import { ZodIssue } from 'zod';
-import { brl } from '@/lib/utils/money';
+import { brl, round } from '@/lib/utils/money';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -44,6 +44,26 @@ const STEPS = ['Identificação', 'Entrega', 'Pagamento', 'Confirmação'];
 const EMPTY_ADDRESS_FORM = { apelido: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' };
 const EMPTY_GUEST_CONTATO = { nome: '', email: '', telefone: '', cpf: '' };
 
+interface ViaCepResponse {
+  logradouro: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
+
+async function buscarEnderecoPorCep(cepLimpo: string): Promise<{ rua: string; bairro: string; cidade: string; estado: string } | null> {
+  try {
+    const res = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+    if (!res.ok) return null;
+    const data: ViaCepResponse = await res.json();
+    if (data.erro) return null;
+    return { rua: data.logradouro || '', bairro: data.bairro || '', cidade: data.localidade || '', estado: data.uf || '' };
+  } catch {
+    return null;
+  }
+}
+
 function describeError(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
   const issues = err.issues as ZodIssue[] | undefined;
@@ -51,6 +71,16 @@ function describeError(err: unknown, fallback: string): string {
     return issues.map(i => (i.path?.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join(' · ');
   }
   return err.message || fallback;
+}
+
+/** Dispara o e-mail de confirmação do checkout de convidado. Retorna a mensagem de erro, ou null se deu certo. */
+async function enviarEmailConfirmacaoConvidado(email: string): Promise<string | null> {
+  try {
+    await api.post('/auth/guest-email-verification', { email });
+    return null;
+  } catch (err) {
+    return describeError(err, 'Não foi possível enviar o e-mail de confirmação');
+  }
 }
 
 export default function CheckoutPage() {
@@ -80,6 +110,26 @@ export default function CheckoutPage() {
   const [reenviandoEmail, setReenviandoEmail] = useState(false);
   const [emailReenviado, setEmailReenviado] = useState(false);
   const [cartao, setCartao] = useState({ numero: '', nomeImpresso: '', validadeMes: '', validadeAno: '', cvv: '' });
+  const [emailExiste, setEmailExiste] = useState(false);
+  const [verificandoEmail, setVerificandoEmail] = useState(false);
+  // Guarda o e-mail confirmado (não um boolean solto) para que trocar de e-mail
+  // já invalide a confirmação automaticamente na re-renderização, sem precisar
+  // de um effect só para "resetar" o estado a cada tecla digitada.
+  const [emailConfirmadoPara, setEmailConfirmadoPara] = useState<string | null>(null);
+  const [enviandoConfirmacaoEmail, setEnviandoConfirmacaoEmail] = useState(false);
+  const [confirmacaoEmailEnviada, setConfirmacaoEmailEnviada] = useState(false);
+  const [confirmacaoEmailErro, setConfirmacaoEmailErro] = useState('');
+  const [verificandoConfirmacaoAgora, setVerificandoConfirmacaoAgora] = useState(false);
+  const emailVerificacaoEnviadaParaRef = useRef('');
+  const cepContaBuscadoRef = useRef('');
+  const cepConvidadoBuscadoRef = useRef('');
+  const [buscandoCepConta, setBuscandoCepConta] = useState(false);
+  const [buscandoCepConvidado, setBuscandoCepConvidado] = useState(false);
+
+  // Declarados cedo (não junto de `guestContatoValido`, mais abaixo) porque os
+  // effects de verificação de e-mail, logo a seguir, já dependem deles.
+  const emailFormatoValido = /\S+@\S+\.\S+/.test(guestContato.email);
+  const guestEmailConfirmado = emailConfirmadoPara !== null && emailConfirmadoPara === guestContato.email.trim().toLowerCase();
 
   // Usuário já logado ao entrar no checkout: pula a tela de escolha.
   useEffect(() => {
@@ -108,6 +158,131 @@ export default function CheckoutPage() {
       if (modo === 'conta') await loadAddresses();
     })();
   }, [modo, loadCart, loadAddresses]);
+
+  // Volta para o topo a cada troca de etapa — no mobile, sem isso o cliente
+  // avança e continua vendo o rodapé da etapa anterior, sem perceber a mudança.
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [step, modo]);
+
+  // Avisa antes da compra (e não só num erro depois) que aquele e-mail já tem
+  // conta, para o convidado não duplicar cadastro ou perder o histórico dele.
+  // Não roda (nem reseta estado) para um e-mail com formato inválido: a exibição
+  // do aviso já é condicionada a `emailFormatoValido` mais abaixo, no JSX.
+  useEffect(() => {
+    if (modo !== 'convidado') return;
+    const email = guestContato.email.trim();
+    if (!/\S+@\S+\.\S+/.test(email)) return;
+    let cancelado = false;
+    // `setVerificandoEmail(true)` só entra dentro do timer (não direto no corpo do
+    // effect) para não disparar setState síncrono a cada tecla digitada — só depois
+    // do debounce, quando a checagem de fato começa.
+    const timer = setTimeout(async () => {
+      if (cancelado) return;
+      setVerificandoEmail(true);
+      try {
+        const { data } = await api.get<{ exists: boolean }>(`/auth/check-email?email=${encodeURIComponent(email)}`);
+        if (!cancelado) setEmailExiste(data.exists);
+      } catch {
+        if (!cancelado) setEmailExiste(false);
+      } finally {
+        if (!cancelado) setVerificandoEmail(false);
+      }
+    }, 500);
+    return () => {
+      cancelado = true;
+      clearTimeout(timer);
+    };
+  }, [guestContato.email, modo]);
+
+  // Convidado sem conta (checagem acima já terminou e não achou uma): dispara o
+  // e-mail de confirmação uma vez por endereço e fica checando (polling) se o
+  // link já foi clicado, para liberar a etapa seguinte. A confirmação em si
+  // acontece em outra aba (o convidado abre o e-mail), por isso o polling em
+  // vez de esperar uma resposta direta desta aba.
+  useEffect(() => {
+    if (modo !== 'convidado' || !emailFormatoValido || verificandoEmail || emailExiste) return;
+    const emailAtual = guestContato.email.trim().toLowerCase();
+    let cancelado = false;
+
+    const checarConfirmacao = async (): Promise<boolean> => {
+      try {
+        const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
+        if (!cancelado && data.confirmado) setEmailConfirmadoPara(emailAtual);
+        return data.confirmado;
+      } catch {
+        return false;
+      }
+    };
+
+    const enviarSeNecessario = async () => {
+      // Guarda por e-mail (não só pelas deps do effect) para sobreviver a um
+      // eventual double-invoke do efeito em desenvolvimento sem mandar 2 e-mails.
+      if (emailVerificacaoEnviadaParaRef.current === emailAtual) return;
+      emailVerificacaoEnviadaParaRef.current = emailAtual;
+      setEnviandoConfirmacaoEmail(true);
+      setConfirmacaoEmailErro('');
+      setConfirmacaoEmailEnviada(false);
+      const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
+      if (cancelado) return;
+      if (erro) setConfirmacaoEmailErro(erro);
+      else setConfirmacaoEmailEnviada(true);
+      setEnviandoConfirmacaoEmail(false);
+    };
+
+    // Confere primeiro se esse e-mail já foi confirmado antes (ex: convidado
+    // voltou para o checkout depois de já ter clicado no link) — só manda um
+    // e-mail novo se realmente ainda não estiver confirmado.
+    checarConfirmacao().then(confirmado => {
+      if (!cancelado && !confirmado) enviarSeNecessario();
+    });
+    const interval = setInterval(checarConfirmacao, 4000);
+
+    return () => {
+      cancelado = true;
+      clearInterval(interval);
+    };
+  }, [modo, emailFormatoValido, verificandoEmail, emailExiste, guestContato.email]);
+
+  // Endereço de convidado (etapa 2): preenche rua/bairro/cidade/UF a partir do CEP.
+  useEffect(() => {
+    const limpo = guestEndereco.cep.replace(/\D/g, '');
+    if (limpo.length !== 8 || limpo === cepConvidadoBuscadoRef.current) return;
+    cepConvidadoBuscadoRef.current = limpo;
+    let cancelado = false;
+    setBuscandoCepConvidado(true);
+    buscarEnderecoPorCep(limpo)
+      .then(endereco => {
+        if (cancelado || !endereco) return;
+        setGuestEndereco(f => ({ ...f, rua: endereco.rua || f.rua, bairro: endereco.bairro || f.bairro, cidade: endereco.cidade || f.cidade, estado: endereco.estado || f.estado }));
+      })
+      .finally(() => {
+        if (!cancelado) setBuscandoCepConvidado(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [guestEndereco.cep]);
+
+  // Novo endereço de cliente logado (etapa 2): mesma coisa, no form de endereço da conta.
+  useEffect(() => {
+    const limpo = addressForm.cep.replace(/\D/g, '');
+    if (limpo.length !== 8 || limpo === cepContaBuscadoRef.current) return;
+    cepContaBuscadoRef.current = limpo;
+    let cancelado = false;
+    setBuscandoCepConta(true);
+    buscarEnderecoPorCep(limpo)
+      .then(endereco => {
+        if (cancelado || !endereco) return;
+        setAddressForm(f => ({ ...f, rua: endereco.rua || f.rua, bairro: endereco.bairro || f.bairro, cidade: endereco.cidade || f.cidade, estado: endereco.estado || f.estado }));
+      })
+      .finally(() => {
+        if (!cancelado) setBuscandoCepConta(false);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [addressForm.cep]);
 
   // `begin_checkout` uma única vez por sessão de checkout. O ref é necessário
   // porque `cart` é recarregado a cada mudança de frete/endereço, e sem a guarda
@@ -171,8 +346,36 @@ export default function CheckoutPage() {
     }
   }
 
+  async function onReenviarConfirmacaoEmail() {
+    const emailAtual = guestContato.email.trim().toLowerCase();
+    setEnviandoConfirmacaoEmail(true);
+    setConfirmacaoEmailErro('');
+    const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
+    if (erro) setConfirmacaoEmailErro(erro);
+    else setConfirmacaoEmailEnviada(true);
+    setEnviandoConfirmacaoEmail(false);
+  }
+
+  async function onVerificarConfirmacaoAgora() {
+    const emailAtual = guestContato.email.trim().toLowerCase();
+    setVerificandoConfirmacaoAgora(true);
+    try {
+      const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
+      if (data.confirmado) setEmailConfirmadoPara(emailAtual);
+      else setConfirmacaoEmailErro('Ainda não recebemos a confirmação. Verifique se clicou no link do e-mail.');
+    } catch (err) {
+      setConfirmacaoEmailErro(describeError(err, 'Não foi possível verificar agora'));
+    } finally {
+      setVerificandoConfirmacaoAgora(false);
+    }
+  }
+
   const guestContatoValido =
-    guestContato.nome.trim().length >= 3 && /\S+@\S+\.\S+/.test(guestContato.email) && cpfValido(guestContato.cpf);
+    guestContato.nome.trim().length >= 3 &&
+    emailFormatoValido &&
+    cpfValido(guestContato.cpf) &&
+    !emailExiste &&
+    guestEmailConfirmado;
 
   const guestEnderecoValido =
     guestEndereco.cep.trim().length >= 8 &&
@@ -262,8 +465,8 @@ export default function CheckoutPage() {
       if (cart) {
         trackPurchase({
           numero: data.order.numero,
-          total: formaPagamento === 'PIX' ? cart.resumo.totalPix : cart.resumo.total,
-          frete: cart.resumo.frete,
+          total: formaPagamento === 'PIX' ? totalPixComFrete : totalComFrete,
+          frete: freteSelecionado ?? 0,
           itens: cart.items.map(i => ({
             id: i.id,
             nome: i.nome,
@@ -353,13 +556,13 @@ export default function CheckoutPage() {
             <p className="mt-2 text-xs text-ink-tertiary">Status do pagamento: {pedidoConcluido.pagamento.status}</p>
           )}
         </div>
-        <div className="flex gap-3">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
           {modo === 'conta' && (
-            <Link href="/conta/pedidos" className="rounded-full bg-gold px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
+            <Link href="/conta/pedidos" className="rounded-full bg-gold px-5 py-2.5 text-center text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
               Ver meus pedidos
             </Link>
           )}
-          <Link href="/produtos" className="rounded-full border border-border-soft px-5 py-2.5 text-xs uppercase text-ink-muted">
+          <Link href="/produtos" className="rounded-full border border-border-soft px-5 py-2.5 text-center text-xs uppercase text-ink-muted">
             Continuar comprando
           </Link>
         </div>
@@ -370,22 +573,34 @@ export default function CheckoutPage() {
   if (!cart) return null;
   const { resumo } = cart;
 
+  // O `/cart` nunca sabe o frete real (nenhum CEP é passado até a etapa 3), então
+  // `resumo.frete`/`resumo.total` vêm sempre com frete 0 — mostrar isso como "Grátis"
+  // antes do cliente escolher uma opção de envio é enganoso. Em vez de confiar nesses
+  // campos, o frete exibido fica null até haver uma opção selecionada, e o total é
+  // recalculado no cliente somando subtotal, desconto e o valor da opção escolhida.
+  const freteSelecionado = shippingOptions.length > 0 ? shippingOptions.find(o => o.id === envioId)?.valor ?? null : null;
+  // Proporção do desconto Pix já aplicada pelo backend sobre subtotal-desconto (sem
+  // frete); reaplicá-la sobre o total com frete evita duplicar a regra de desconto no client.
+  const pixRatio = resumo.total > 0 ? resumo.totalPix / resumo.total : 1;
+  const totalComFrete = round(resumo.subtotal - resumo.desconto + (freteSelecionado ?? 0));
+  const totalPixComFrete = round(totalComFrete * pixRatio);
+
   return (
-    <div className="mx-auto max-w-[1280px] px-5 py-8">
-      <div className="mb-6 flex items-center gap-3">
+    <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-5 sm:py-8">
+      <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:gap-3">
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center gap-2">
-            <span className={`text-xs font-medium uppercase tracking-wider ${step >= i + 1 ? 'text-gold-text' : 'text-ink-tertiary'}`}>
+            <span className={`text-[11px] font-medium uppercase tracking-wider sm:text-xs ${step >= i + 1 ? 'text-gold-text' : 'text-ink-tertiary'}`}>
               {i + 1}. {label}
             </span>
-            {i < STEPS.length - 1 && <span className="h-px w-6 bg-border-soft" />}
+            {i < STEPS.length - 1 && <span className="h-px w-4 flex-none bg-border-soft sm:w-6" />}
           </div>
         ))}
       </div>
 
       {erro && <p className="mb-4 text-sm text-danger">{erro}</p>}
 
-      <div className="flex flex-col gap-8 lg:flex-row">
+      <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <div className="flex-1">
           {step === 1 && modo === 'conta' && user && (
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
@@ -454,9 +669,53 @@ export default function CheckoutPage() {
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
               <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
               <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="col-span-2" />
-                <Field label="E-mail" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} required className="col-span-2" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="sm:col-span-2" />
+                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                  <Field label="E-mail" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} required />
+                  {emailFormatoValido && verificandoEmail && <span className="text-xs text-ink-tertiary">Verificando e-mail...</span>}
+                  {emailFormatoValido && !verificandoEmail && emailExiste && (
+                    <p className="text-xs text-danger">
+                      Este e-mail já tem uma conta na Zoliê.{' '}
+                      <button type="button" onClick={() => router.push('/login?next=/checkout')} className="underline hover:text-danger">
+                        Entrar
+                      </button>{' '}
+                      para continuar com seus dados salvos.
+                    </p>
+                  )}
+                  {emailFormatoValido && !verificandoEmail && !emailExiste && (
+                    guestEmailConfirmado ? (
+                      <p className="text-xs text-success">E-mail confirmado.</p>
+                    ) : (
+                      <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
+                        <p className="text-xs text-ink-muted">
+                          {enviandoConfirmacaoEmail && !confirmacaoEmailEnviada
+                            ? 'Enviando e-mail de confirmação...'
+                            : <>Enviamos um link de confirmação para <strong>{guestContato.email}</strong>. Abra sua caixa de entrada (e o spam) e clique nele para continuar — pode voltar para esta aba depois.</>}
+                        </p>
+                        {confirmacaoEmailErro && <p className="text-xs text-danger">{confirmacaoEmailErro}</p>}
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={onReenviarConfirmacaoEmail}
+                            disabled={enviandoConfirmacaoEmail}
+                            className="text-xs text-gold-text hover:text-gold-text-hover disabled:opacity-50"
+                          >
+                            {enviandoConfirmacaoEmail ? 'Enviando...' : 'Reenviar e-mail'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={onVerificarConfirmacaoAgora}
+                            disabled={verificandoConfirmacaoAgora}
+                            className="text-xs text-gold-text hover:text-gold-text-hover disabled:opacity-50"
+                          >
+                            {verificandoConfirmacaoAgora ? 'Verificando...' : 'Já confirmei'}
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+                </div>
                 <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} />
                 <label className="flex flex-col gap-1.5 text-sm">
                   <span className="text-ink-muted">CPF</span>
@@ -496,16 +755,19 @@ export default function CheckoutPage() {
               ))}
 
               {showAddressForm ? (
-                <form onSubmit={onCreateAddress} className="grid grid-cols-2 gap-3 rounded-md border border-border-subtle p-3">
+                <form onSubmit={onCreateAddress} className="grid grid-cols-1 gap-3 rounded-md border border-border-subtle p-3 sm:grid-cols-2">
                   <Field label="Apelido" value={addressForm.apelido} onChange={v => setAddressForm(f => ({ ...f, apelido: v }))} />
-                  <Field label="CEP" value={addressForm.cep} onChange={v => setAddressForm(f => ({ ...f, cep: v }))} required />
-                  <Field label="Rua" value={addressForm.rua} onChange={v => setAddressForm(f => ({ ...f, rua: v }))} required className="col-span-2" />
+                  <div className="flex flex-col gap-1.5">
+                    <Field label="CEP" value={addressForm.cep} onChange={v => setAddressForm(f => ({ ...f, cep: v }))} required />
+                    {buscandoCepConta && <span className="text-xs text-ink-tertiary">Buscando endereço...</span>}
+                  </div>
+                  <Field label="Rua" value={addressForm.rua} onChange={v => setAddressForm(f => ({ ...f, rua: v }))} required className="sm:col-span-2" />
                   <Field label="Número" value={addressForm.numero} onChange={v => setAddressForm(f => ({ ...f, numero: v }))} required />
                   <Field label="Complemento" value={addressForm.complemento} onChange={v => setAddressForm(f => ({ ...f, complemento: v }))} />
                   <Field label="Bairro" value={addressForm.bairro} onChange={v => setAddressForm(f => ({ ...f, bairro: v }))} required />
                   <Field label="Cidade" value={addressForm.cidade} onChange={v => setAddressForm(f => ({ ...f, cidade: v }))} required />
-                  <Field label="Estado (UF)" value={addressForm.estado} onChange={v => setAddressForm(f => ({ ...f, estado: v.toUpperCase() }))} required />
-                  <button type="submit" className="col-span-2 self-start rounded-full bg-gold px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs">Salvar endereço</button>
+                  <EstadoField value={addressForm.estado} onChange={v => setAddressForm(f => ({ ...f, estado: v }))} />
+                  <button type="submit" className="w-full self-start rounded-full bg-gold px-5 py-2.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs sm:col-span-2 sm:w-auto">Salvar endereço</button>
                 </form>
               ) : (
                 <button type="button" onClick={() => setShowAddressForm(true)} className="self-start text-xs text-gold-text hover:text-gold-text-hover">
@@ -513,11 +775,11 @@ export default function CheckoutPage() {
                 </button>
               )}
 
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(1)} className="self-start rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={() => setStep(1)} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text sm:w-auto sm:self-start">
                   Voltar
                 </button>
-                <button type="button" onClick={onAdvanceToPayment} className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
+                <button type="button" onClick={onAdvanceToPayment} className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover sm:w-auto sm:self-start">
                   Continuar
                 </button>
               </div>
@@ -527,25 +789,28 @@ export default function CheckoutPage() {
           {step === 2 && modo === 'convidado' && (
             <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
               <h2 className="font-sans text-xl font-semibold text-ink">Entrega</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="CEP" value={guestEndereco.cep} onChange={v => setGuestEndereco(f => ({ ...f, cep: v }))} required />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Field label="CEP" value={guestEndereco.cep} onChange={v => setGuestEndereco(f => ({ ...f, cep: v }))} required />
+                  {buscandoCepConvidado && <span className="text-xs text-ink-tertiary">Buscando endereço...</span>}
+                </div>
                 <Field label="Número" value={guestEndereco.numero} onChange={v => setGuestEndereco(f => ({ ...f, numero: v }))} required />
-                <Field label="Rua" value={guestEndereco.rua} onChange={v => setGuestEndereco(f => ({ ...f, rua: v }))} required className="col-span-2" />
+                <Field label="Rua" value={guestEndereco.rua} onChange={v => setGuestEndereco(f => ({ ...f, rua: v }))} required className="sm:col-span-2" />
                 <Field label="Complemento" value={guestEndereco.complemento} onChange={v => setGuestEndereco(f => ({ ...f, complemento: v }))} />
                 <Field label="Bairro" value={guestEndereco.bairro} onChange={v => setGuestEndereco(f => ({ ...f, bairro: v }))} required />
                 <Field label="Cidade" value={guestEndereco.cidade} onChange={v => setGuestEndereco(f => ({ ...f, cidade: v }))} required />
-                <Field label="Estado (UF)" value={guestEndereco.estado} onChange={v => setGuestEndereco(f => ({ ...f, estado: v.toUpperCase() }))} required />
+                <EstadoField value={guestEndereco.estado} onChange={v => setGuestEndereco(f => ({ ...f, estado: v }))} />
               </div>
 
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(1)} className="self-start rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={() => setStep(1)} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text sm:w-auto sm:self-start">
                   Voltar
                 </button>
                 <button
                   type="button"
                   onClick={onAdvanceToPayment}
                   disabled={!guestEnderecoValido}
-                  className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+                  className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50 sm:w-auto sm:self-start"
                 >
                   Continuar
                 </button>
@@ -573,7 +838,7 @@ export default function CheckoutPage() {
               )}
 
               <h2 className="mt-2 font-sans text-xl font-semibold text-ink">Pagamento</h2>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {(['CARTAO_CREDITO', 'PIX', 'BOLETO'] as const).map(m => (
                   <button
                     key={m}
@@ -590,15 +855,15 @@ export default function CheckoutPage() {
                   <span className="text-ink-muted">Parcelas</span>
                   <select value={parcelas} onChange={e => setParcelas(Number(e.target.value))} className="rounded-md border border-border-subtle px-3 py-2">
                     {Array.from({ length: 12 }, (_, i) => i + 1).map(n => (
-                      <option key={n} value={n}>{n}x de {brl(resumo.total / n)}</option>
+                      <option key={n} value={n}>{n}x de {brl(totalComFrete / n)}</option>
                     ))}
                   </select>
                 </label>
               )}
               {formaPagamento === 'CARTAO_CREDITO' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Número do cartão" value={cartao.numero} onChange={v => setCartao(c => ({ ...c, numero: v.replace(/\D/g, '').slice(0, 19) }))} className="col-span-2" />
-                  <Field label="Nome impresso no cartão" value={cartao.nomeImpresso} onChange={v => setCartao(c => ({ ...c, nomeImpresso: v }))} className="col-span-2" />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Field label="Número do cartão" value={cartao.numero} onChange={v => setCartao(c => ({ ...c, numero: v.replace(/\D/g, '').slice(0, 19) }))} className="sm:col-span-2" />
+                  <Field label="Nome impresso no cartão" value={cartao.nomeImpresso} onChange={v => setCartao(c => ({ ...c, nomeImpresso: v }))} className="sm:col-span-2" />
                   <label className="flex flex-col gap-1.5 text-sm">
                     <span className="text-ink-muted">Mês</span>
                     <select value={cartao.validadeMes} onChange={e => setCartao(c => ({ ...c, validadeMes: e.target.value }))} className="rounded-md border border-border-subtle px-3.5 py-2.5">
@@ -622,16 +887,16 @@ export default function CheckoutPage() {
               )}
               {formaPagamento === 'PIX' && (
                 <p className="text-sm text-gold-text">
-                  {brl(resumo.totalPix)} no Pix{resumo.totalPix < resumo.total ? ' (com desconto)' : ''}, QR gerado após confirmar.
+                  {brl(totalPixComFrete)} no Pix{totalPixComFrete < totalComFrete ? ' (com desconto)' : ''}, QR gerado após confirmar.
                 </p>
               )}
               {formaPagamento === 'BOLETO' && <p className="text-sm text-ink-muted">Vencimento em 3 dias úteis após a confirmação.</p>}
 
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(2)} className="self-start rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={() => setStep(2)} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text sm:w-auto sm:self-start">
                   Voltar
                 </button>
-                <button type="button" onClick={() => setStep(4)} className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
+                <button type="button" onClick={() => setStep(4)} className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover sm:w-auto sm:self-start">
                   Revisar pedido
                 </button>
               </div>
@@ -649,17 +914,17 @@ export default function CheckoutPage() {
                   </div>
                 ))}
               </div>
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(3)} disabled={loading} className="self-start rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text disabled:opacity-50">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={() => setStep(3)} disabled={loading} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text disabled:opacity-50 sm:w-auto sm:self-start">
                   Voltar
                 </button>
                 <button
                   type="button"
                   disabled={loading}
                   onClick={onConfirm}
-                  className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+                  className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50 sm:w-auto sm:self-start"
                 >
-                  {loading ? 'Processando...' : `Confirmar e pagar ${brl(resumo.total)}`}
+                  {loading ? 'Processando...' : `Confirmar e pagar ${brl(totalComFrete)}`}
                 </button>
               </div>
             </div>
@@ -667,14 +932,14 @@ export default function CheckoutPage() {
         </div>
 
         <div className="w-full flex-none lg:w-[320px]">
-          <div className="sticky top-24 flex flex-col gap-2 rounded-xl shadow-xs p-5 text-sm">
+          <div className="flex flex-col gap-2 rounded-xl shadow-xs p-5 text-sm lg:sticky lg:top-24">
             <h2 className="font-sans text-lg font-semibold text-ink">Resumo</h2>
             <Row label="Subtotal" value={brl(resumo.subtotal)} />
-            <Row label="Frete" value={resumo.frete === 0 ? 'Grátis' : brl(resumo.frete)} />
+            <Row label="Frete" value={freteSelecionado === null ? 'A calcular' : freteSelecionado === 0 ? 'Grátis' : brl(freteSelecionado)} />
             {resumo.desconto > 0 && <Row label="Desconto" value={`- ${brl(resumo.desconto)}`} />}
             <div className="mt-1 flex justify-between border-t border-border-subtle pt-2 text-base font-medium text-ink">
               <span>Total</span>
-              <span>{brl(resumo.total)}</span>
+              <span>{brl(totalComFrete)}</span>
             </div>
           </div>
         </div>
@@ -689,6 +954,22 @@ function Row({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span>{value}</span>
     </div>
+  );
+}
+
+function EstadoField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1.5 text-sm">
+      <span className="text-ink-muted">Estado (UF)</span>
+      <input
+        value={value}
+        onChange={e => onChange(e.target.value.replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase())}
+        maxLength={2}
+        required
+        placeholder="UF"
+        className="rounded-md border border-border-subtle px-3.5 py-2.5 uppercase outline-none transition-colors focus:border-gold"
+      />
+    </label>
   );
 }
 
