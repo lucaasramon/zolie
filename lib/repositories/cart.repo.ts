@@ -52,6 +52,26 @@ export const cartRepo = {
     await db.cartItem.deleteMany({ where: { cartId: cart.id } });
     return true;
   },
+  /**
+   * Recria os itens de um carrinho já limpo — usado para devolver a sacola ao
+   * cliente quando o pedido é criado (e o carrinho já foi esvaziado na mesma
+   * transação) mas a cobrança falha depois no gateway de pagamento.
+   */
+  restoreItems: async (
+    owner: CartOwner,
+    items: { productId: string; quantidade: number; tamanho: string | null }[],
+    db: Db = prisma,
+  ) => {
+    const cart = await db.cart.upsert({ where: ownerWhere(owner) as Prisma.CartWhereUniqueInput, update: {}, create: owner });
+    for (const item of items) {
+      const tamanhoKey = item.tamanho ?? '';
+      await db.cartItem.upsert({
+        where: { cartId_productId_tamanho: { cartId: cart.id, productId: item.productId, tamanho: tamanhoKey } },
+        update: { quantidade: { increment: item.quantidade } },
+        create: { cartId: cart.id, productId: item.productId, quantidade: item.quantidade, tamanho: item.tamanho },
+      });
+    }
+  },
   /** Move os itens do carrinho de sessão anônima para o carrinho do usuário recém-logado/cadastrado. */
   mergeSessionIntoUser: async (sessionId: string, userId: string) => {
     const guestCart = await prisma.cart.findUnique({ where: { sessionId }, include: { items: true } });

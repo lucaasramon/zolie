@@ -236,8 +236,25 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
     await prisma.$transaction(async (tx) => {
       for (const i of items) await productRepo.incrementStock(i.productId, i.quantidade, tx);
       await orderRepo.updateStatus(order.id, 'CANCELADO', 'Falha ao criar cobrança no gateway de pagamento', tx);
+      // O carrinho já foi limpo na transação de criação do pedido, antes desta
+      // chamada ao gateway (que é externa e não pode entrar na mesma transação
+      // de banco). Sem isso, uma falha aqui apagava a sacola do cliente mesmo
+      // sem o pedido ter ido pra frente.
+      await cartRepo.restoreItems(
+        cartOwner,
+        items.map(i => ({ productId: i.productId, quantidade: i.quantidade, tamanho: i.tamanho })),
+        tx,
+      );
+      // Mesmo raciocínio do carrinho: o cupom já foi marcado como "usado" na
+      // transação de criação do pedido, antes da tentativa de cobrança. Sem
+      // reverter aqui, uma falha no gateway consumia o cupom (e o resgate único
+      // por cliente) de uma compra que nunca chegou a acontecer.
+      if (cupomCodigo) {
+        await couponRepo.decrementUseByCode(cupomCodigo, tx);
+        if (userId) await couponRepo.removeRedemptionByCode(cupomCodigo, userId, tx);
+      }
     });
-    logger.error('Falha ao criar cobrança Asaas; pedido cancelado e estoque revertido', err, { orderId: order.id });
+    logger.error('Falha ao criar cobrança Asaas; pedido cancelado, estoque, carrinho e cupom revertidos', err, { orderId: order.id });
     throw err;
   }
 

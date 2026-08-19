@@ -28,6 +28,7 @@ interface Address {
 interface CartData {
   items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null }[];
   resumo: { subtotal: number; frete: number; desconto: number; total: number; totalPix: number };
+  cupom: { codigo: string; descricao: string } | null;
 }
 
 interface ShippingOption {
@@ -132,6 +133,10 @@ export default function CheckoutPage() {
   const cepConvidadoBuscadoRef = useRef('');
   const [buscandoCepConta, setBuscandoCepConta] = useState(false);
   const [buscandoCepConvidado, setBuscandoCepConvidado] = useState(false);
+  const [cupomInput, setCupomInput] = useState('');
+  const [cupomAplicado, setCupomAplicado] = useState<{ codigo: string; descricao: string } | null>(null);
+  const [cupomMsg, setCupomMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [aplicandoCupom, setAplicandoCupom] = useState(false);
 
   // Declarados cedo (não junto de `guestContatoValido`, mais abaixo) porque os
   // effects de verificação de e-mail, logo a seguir, já dependem deles.
@@ -145,11 +150,16 @@ export default function CheckoutPage() {
     return () => clearTimeout(timer);
   }, [authLoading, user, modo]);
 
-  const loadCart = useCallback(async () => {
-    const { data } = await api.get<CartData>('/cart');
-    setCart(data);
-    if (data.items.length === 0 && !pedidoConcluido) router.replace('/carrinho');
-  }, [router, pedidoConcluido]);
+  const loadCart = useCallback(
+    async (cupom?: string) => {
+      const qs = cupom ? `?cupom=${encodeURIComponent(cupom)}` : '';
+      const { data } = await api.get<CartData>(`/cart${qs}`);
+      setCart(data);
+      setCupomAplicado(data.cupom);
+      if (data.items.length === 0 && !pedidoConcluido) router.replace('/carrinho');
+    },
+    [router, pedidoConcluido],
+  );
 
   const loadAddresses = useCallback(async () => {
     const { data } = await api.get<Address[]>('/addresses');
@@ -467,6 +477,27 @@ export default function CheckoutPage() {
     guestEndereco.cidade.trim().length >= 2 &&
     guestEndereco.estado.trim().length === 2;
 
+  async function onAplicarCupom() {
+    if (!cupomInput.trim()) return;
+    setAplicandoCupom(true);
+    setCupomMsg(null);
+    try {
+      await api.post('/cart/coupon', { codigo: cupomInput });
+      await loadCart(cupomInput);
+      setCupomMsg({ ok: true, text: 'Cupom aplicado com sucesso!' });
+    } catch (err) {
+      setCupomMsg({ ok: false, text: err instanceof ApiError ? err.message : 'Cupom inválido' });
+    } finally {
+      setAplicandoCupom(false);
+    }
+  }
+
+  async function onRemoverCupom() {
+    setCupomInput('');
+    setCupomMsg(null);
+    await loadCart();
+  }
+
   async function onAdvanceToPayment() {
     const cep = modo === 'conta' ? addresses.find(a => a.id === enderecoId)?.cep : guestEndereco.cep;
     if (!cep) {
@@ -540,6 +571,7 @@ export default function CheckoutPage() {
         envioId,
         creditCardToken,
         cartao: cartaoFallback,
+        cupom: cupomAplicado?.codigo,
       });
       // O carrinho é limpo logo abaixo, então os itens são capturados aqui.
       // Disparado na criação do pedido, não na confirmação do pagamento: Pix e
@@ -1051,6 +1083,38 @@ export default function CheckoutPage() {
             <Row label="Subtotal" value={brl(resumo.subtotal)} />
             <Row label="Frete" value={freteSelecionado === null ? 'A calcular' : freteSelecionado === 0 ? 'Grátis' : brl(freteSelecionado)} />
             {resumo.desconto > 0 && <Row label="Desconto" value={`- ${brl(resumo.desconto)}`} />}
+
+            <div className="border-t border-border-subtle pt-2">
+              {cupomAplicado ? (
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-success">Cupom <strong>{cupomAplicado.codigo}</strong> aplicado</span>
+                  <button type="button" onClick={onRemoverCupom} className="text-xs text-ink-tertiary underline hover:text-danger">
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      value={cupomInput}
+                      onChange={e => setCupomInput(e.target.value.toUpperCase())}
+                      placeholder="Código do cupom"
+                      className="min-w-0 flex-1 rounded-md border border-border-subtle px-3 py-2 text-xs outline-none transition-colors focus:border-gold"
+                    />
+                    <button
+                      type="button"
+                      onClick={onAplicarCupom}
+                      disabled={aplicandoCupom || !cupomInput.trim()}
+                      className="flex-none rounded-full border border-border-soft px-3 py-2 text-xs font-medium uppercase text-ink-muted hover:border-gold-text disabled:opacity-50"
+                    >
+                      {aplicandoCupom ? 'Aplicando...' : 'Aplicar'}
+                    </button>
+                  </div>
+                  {cupomMsg && <span className={`text-xs ${cupomMsg.ok ? 'text-success' : 'text-danger'}`}>{cupomMsg.text}</span>}
+                </div>
+              )}
+            </div>
+
             <div className="mt-1 flex justify-between border-t border-border-subtle pt-2 text-base font-medium text-ink">
               <span>Total</span>
               <span>{brl(totalComFrete)}</span>
