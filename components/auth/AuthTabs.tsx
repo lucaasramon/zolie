@@ -98,6 +98,17 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-14">
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="z-eyebrow">
+          {tab === 'recuperar' ? 'Recuperar acesso' : 'Bem-vinda à Zoliê'}
+        </span>
+        <h1 className="z-title text-3xl">
+          {tab === 'login' ? 'Que bom te ver de novo' : tab === 'cadastro' ? 'Crie sua conta' : 'Esqueceu a senha?'}
+        </h1>
+        <span className="z-rule" />
+      </div>
+
+      <div className="z-card flex flex-col gap-6 p-6 sm:p-8">
       <div className="flex gap-6 border-b border-border-subtle">
         {(['login', 'cadastro'] as Tab[]).map(t => (
           <button
@@ -107,8 +118,8 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
               setTab(t);
               setErro('');
             }}
-            className={`pb-3 text-sm font-medium uppercase tracking-wider ${
-              tab === t ? 'border-b-2 border-gold text-ink' : 'text-ink-tertiary'
+            className={`relative -mb-px pb-3 text-sm font-medium uppercase tracking-[0.12em] transition-colors ${
+              tab === t ? 'border-b-2 border-gold text-ink' : 'text-ink-tertiary hover:text-ink-muted'
             }`}
           >
             {t === 'login' ? 'Entrar' : 'Criar conta'}
@@ -116,7 +127,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
         ))}
       </div>
 
-      {erro && <p className="text-sm text-danger">{erro}</p>}
+      {erro && <p className="rounded-lg bg-danger-bg px-3.5 py-2.5 text-sm text-danger">{erro}</p>}
 
       {tab === 'login' && (
         <form onSubmit={onLogin} className="flex flex-col gap-4">
@@ -125,7 +136,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           <button type="button" onClick={() => setTab('recuperar')} className="self-start text-xs text-gold-text hover:text-gold-text-hover">
             Esqueci minha senha
           </button>
-          <button type="submit" disabled={loading} className="rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
+          <button type="submit" disabled={loading} className="rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50">
             Entrar
           </button>
         </form>
@@ -134,7 +145,8 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
       {tab === 'cadastro' && (
         <form onSubmit={onCadastro} className="flex flex-col gap-4">
           {welcomeCoupon && (
-            <p className="rounded-lg bg-hoverbg px-3 py-2 text-xs text-gold-text">
+            <p className="flex items-center gap-2 rounded-xl border border-gold/25 bg-hoverbg px-3.5 py-3 text-xs leading-relaxed text-gold-text">
+              <span className="font-serif text-xl" aria-hidden="true">✦</span>
               {welcomeCoupon.tipoDesconto === 'FREE_SHIPPING'
                 ? `Ganhe frete grátis na primeira compra com o cupom ${welcomeCoupon.codigo}`
                 : welcomeCoupon.tipoDesconto === 'PERCENT'
@@ -154,7 +166,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           />
           <Field label="Celular / WhatsApp" value={cadastroForm.telefone} onChange={v => setCadastroForm(f => ({ ...f, telefone: v }))} required />
           <Field label="Senha" type="password" value={cadastroForm.senha} onChange={v => setCadastroForm(f => ({ ...f, senha: v }))} required />
-          <button type="submit" disabled={loading} className="rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
+          <button type="submit" disabled={loading} className="rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50">
             Criar conta
           </button>
         </form>
@@ -163,7 +175,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
       {tab === 'recuperar' && (
         <form onSubmit={onRecuperar} className="flex flex-col gap-4">
           <Field label="E-mail" type="email" value={recuperarEmail} onChange={setRecuperarEmail} required />
-          <button type="submit" disabled={loading} className="rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
+          <button type="submit" disabled={loading} className="rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50">
             Enviar link
           </button>
           <button type="button" onClick={() => setTab('login')} className="text-xs text-ink-tertiary hover:text-gold-text">
@@ -171,6 +183,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           </button>
         </form>
       )}
+      </div>
     </div>
   );
 }

@@ -4,7 +4,7 @@ export function Skeleton({ className = '' }: { className?: string }) {
 
 export function CartItemSkeleton() {
   return (
-    <div className="flex gap-4 rounded-lg p-4 shadow-xs">
+    <div className="flex gap-4 rounded-xl border border-border-subtle bg-white p-4 shadow-xs">
       <Skeleton className="h-24 w-24 flex-none" />
       <div className="flex flex-1 flex-col gap-2">
         <Skeleton className="h-4 w-2/3" />
@@ -35,7 +35,7 @@ export function OrderRowSkeleton() {
 export function ProductCardSkeleton() {
   return (
     <div className="flex flex-col gap-2.5">
-      <Skeleton className="aspect-[3/4] w-full" />
+      <Skeleton className="aspect-[4/5] w-full rounded-xl" />
       <Skeleton className="h-3.5 w-3/4" />
       <Skeleton className="h-3 w-1/2" />
       <Skeleton className="h-4 w-1/3" />

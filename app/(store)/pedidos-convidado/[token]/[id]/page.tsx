@@ -128,7 +128,7 @@ export default function DetalhePedidoConvidadoPage() {
 
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-sans text-2xl font-semibold text-ink">Pedido {order.numero}</h1>
+          <h1 className="z-title text-2xl sm:text-[28px]">Pedido {order.numero}</h1>
           <span className={`rounded-full border px-3 py-1 text-xs ${style.text} ${style.border} ${style.bg}`}>
             {STATUS_LABEL[order.status]}
           </span>

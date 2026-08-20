@@ -79,7 +79,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   return (
     <section
-      className="relative overflow-hidden animate-zfade select-none"
+      className="group/hero relative overflow-hidden animate-zfade select-none"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => {
         setPaused(false);
@@ -150,9 +150,9 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               type="button"
               aria-label="Banner anterior"
               onClick={() => goTo(index - 1)}
-              className="hidden sm:flex absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/70 text-zinc-800 shadow-sm transition-colors hover:bg-white"
+              className="absolute left-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-ink opacity-0 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white hover:shadow-md group-hover/hero:opacity-100 sm:flex"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M15 18l-6-6 6-6" />
               </svg>
             </button>
@@ -160,21 +160,23 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
               type="button"
               aria-label="Próximo banner"
               onClick={() => goTo(index + 1)}
-              className="hidden sm:flex absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 items-center justify-center rounded-full bg-white/70 text-zinc-800 shadow-sm transition-colors hover:bg-white"
+              className="absolute right-4 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-white/75 text-ink opacity-0 shadow-sm backdrop-blur-sm transition-all duration-300 hover:bg-white hover:shadow-md group-hover/hero:opacity-100 sm:flex"
             >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 18l6-6-6-6" />
               </svg>
             </button>
 
-            <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
+            <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
               {banners.map((b, i) => (
                 <button
                   key={b.id}
                   type="button"
                   aria-label={`Ir para o banner ${i + 1}`}
                   onClick={() => goTo(i)}
-                  className={`h-[3px] w-[26px] rounded-full shadow-sm transition-colors ${i === index ? 'bg-white' : 'bg-white/45 hover:bg-white/70'}`}
+                  className={`h-[4px] rounded-full shadow-sm transition-all duration-300 ${
+                    i === index ? 'w-8 bg-gold' : 'w-4 bg-white/55 hover:bg-white/85'
+                  }`}
                 />
               ))}
             </div>

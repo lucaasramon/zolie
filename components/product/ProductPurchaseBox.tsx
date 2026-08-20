@@ -74,7 +74,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   }
 
   return (
-    <div className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow-sm sm:p-6">
+    <div className="flex flex-col gap-5 rounded-2xl border border-border-subtle bg-white p-5 shadow-sm sm:p-6">
       {tamanhos.length > 0 && tamanhos[0] !== 'Único' && (
         <div className="flex flex-col gap-2.5">
           <span className="text-xs font-medium uppercase tracking-wider text-ink">Tamanho</span>

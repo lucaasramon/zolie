@@ -139,12 +139,12 @@ export default async function ProdutoPage({ params }: Props) {
         <ProductGallery imagens={produto.imagens || []} nome={produto.nome} slug={produto.slug} />
 
         <div className="flex flex-col gap-5">
-          <div className="rounded-2xl bg-white">
-            <div className="px-5 pt-4">
-              <span className="text-xs font-medium uppercase tracking-wider text-gold-text">
+          <div className="rounded-2xl border border-border-subtle bg-white shadow-xs">
+            <div className="px-6 pt-5">
+              <span className="z-eyebrow !text-[10px]">
                 {MATERIAL_LABEL[produto.material] || produto.material}
               </span>
-              <h1 className="mt-1.5 font-serif text-3xl leading-tight text-ink lg:text-[40px]">{produto.nome}</h1>
+              <h1 className="z-title mt-2 text-3xl lg:text-[40px]">{produto.nome}</h1>
               <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
                 {produto.totalAvaliacoes > 0 && (
                   <>
@@ -163,18 +163,21 @@ export default async function ProdutoPage({ params }: Props) {
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col gap-1 border-t border-border-subtle px-5 py-4">
+            <div className="mt-5 flex flex-col gap-1 border-t border-border-subtle bg-bg-alt/60 px-6 py-5">
               {produto.temDesconto && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-ink-tertiary line-through">{brl(produto.preco)}</span>
-                  <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink">-{produto.percentualDesconto}%</span>
+                  <span className="text-sm font-light text-ink-tertiary line-through">{brl(produto.preco)}</span>
+                  <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink shadow-xs">-{produto.percentualDesconto}%</span>
                 </div>
               )}
-              <span className="text-[36px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
+              <span className="text-[38px] font-medium leading-tight tracking-tight text-ink">{brl(produto.precoEfetivo)}</span>
               {produto.precoPix < produto.precoEfetivo && (
-                <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
+                <span className="flex items-center gap-1.5 text-sm font-medium text-gold-text">
+                  {brl(produto.precoPix)} no Pix
+                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">economize</span>
+                </span>
               )}
-              <span className="text-sm text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
+              <span className="text-sm font-light text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
             </div>
           </div>
 
@@ -201,8 +204,9 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       <div className="mt-16 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl bg-white p-6 shadow-xs">
-          <h2 className="mb-3 font-serif text-2xl text-ink">Sobre esta peça</h2>
+        <div className="rounded-2xl border border-border-subtle bg-white p-7 shadow-xs">
+          <span className="z-eyebrow mb-2 !text-[10px]">Detalhes</span>
+          <h2 className="z-title mb-3 text-2xl">Sobre esta peça</h2>
           <p className="text-sm leading-relaxed text-ink-muted">{produto.descricao}</p>
           <dl className="mt-5 grid grid-cols-2 gap-y-3 border-t border-border-subtle pt-4 text-sm">
             <dt className="text-ink-tertiary">Material</dt>
@@ -214,8 +218,9 @@ export default async function ProdutoPage({ params }: Props) {
           </dl>
         </div>
         {produto.cuidados && (
-          <div className="rounded-2xl bg-white p-6">
-            <h2 className="mb-2 font-serif text-2xl text-ink">Cuidados com a peça</h2>
+          <div className="rounded-2xl border border-border-subtle bg-white p-7 shadow-xs">
+            <span className="z-eyebrow mb-2 !text-[10px]">Para durar mais</span>
+            <h2 className="z-title mb-2 text-2xl">Cuidados com a peça</h2>
             <p className="text-sm leading-relaxed text-ink-muted">{produto.cuidados}</p>
           </div>
         )}
@@ -223,21 +228,28 @@ export default async function ProdutoPage({ params }: Props) {
 
       <SetSuggestion produto={produto} sugestoes={produto.sugestoesConjunto} />
 
-      <div className="mt-14 rounded-2xl border border-border-subtle bg-white p-5 sm:p-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-serif text-2xl text-ink">Avaliações</h2>
+      <div className="mt-14 rounded-2xl border border-border-subtle bg-white p-6 shadow-xs sm:p-7">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+          <div className="flex flex-col gap-1">
+            <span className="z-eyebrow !text-[10px]">O que dizem as clientes</span>
+            <h2 className="z-title text-2xl">Avaliações</h2>
+          </div>
           <ReviewForm productId={produto.id} />
         </div>
         {reviews.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border-soft py-12 text-center">
-            <p className="text-sm text-ink-tertiary">Ainda não há avaliações para esta peça.</p>
+          <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border-soft py-14 text-center">
+            <span className="font-serif text-4xl text-gold/40">✦</span>
+            <p className="text-sm font-light text-ink-tertiary">Ainda não há avaliações para esta peça. Seja a primeira a avaliar!</p>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {reviews.map((r: any) => (
-              <div key={r.id} className="rounded-xl border border-border-subtle p-4 transition-shadow hover:shadow-sm">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gold-text">{stars(r.nota)}</span>
+              <div key={r.id} className="rounded-xl border border-border-subtle bg-bg-alt/40 p-5 transition-shadow hover:shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-bg-alt font-serif text-sm text-gold-text">
+                    {(r.user?.nome || 'C').charAt(0)}
+                  </span>
+                  <span className="text-sm text-gold-soft">{stars(r.nota)}</span>
                   <span className="text-sm font-medium text-ink">{r.user?.nome || 'Cliente Zoliê'}</span>
                   {r.compraVerificada && (
                     <span className="rounded-full bg-success-bg px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-success">
@@ -263,8 +275,11 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       {produto.relacionados.length > 0 && (
-        <div className="mt-14">
-          <h2 className="mb-4 font-serif text-2xl text-ink">Combina com esta peça</h2>
+        <div className="mt-16">
+          <div className="mb-6 flex flex-col gap-1">
+            <span className="z-eyebrow">Complete o look</span>
+            <h2 className="z-title text-[26px]">Combina com esta peça</h2>
+          </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
             {produto.relacionados.map((p: any) => (
               <ZolieCard key={p.id} product={p} />

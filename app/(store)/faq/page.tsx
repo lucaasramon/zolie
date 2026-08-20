@@ -38,9 +38,12 @@ export default async function FaqPage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(faqJsonLd) }}
       />
       {perguntas.map(p => (
-        <div key={p.q}>
-          <p className="font-medium text-ink">{p.q}</p>
-          <p>{p.r}</p>
+        <div key={p.q} className="border-b border-border-subtle pb-4 last:border-b-0 last:pb-0">
+          <p className="mb-1.5 flex items-start gap-2 font-serif text-lg font-medium leading-snug text-ink">
+            <span className="mt-0.5 text-sm text-gold" aria-hidden="true">✦</span>
+            {p.q}
+          </p>
+          <p className="pl-6">{p.r}</p>
         </div>
       ))}
     </InstitutionalPage>

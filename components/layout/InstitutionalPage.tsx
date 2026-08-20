@@ -1,8 +1,14 @@
 export function InstitutionalPage({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-5 py-14">
-      <h1 className="mb-6 font-sans text-3xl font-semibold text-ink">{titulo}</h1>
-      <div className="flex flex-col gap-4 text-sm leading-relaxed text-ink-muted">{children}</div>
+    <div className="mx-auto max-w-3xl px-5 py-16">
+      <div className="mb-8 flex flex-col gap-3">
+        <span className="z-eyebrow">Zoliê Semijoias</span>
+        <h1 className="z-title text-4xl">{titulo}</h1>
+        <span className="z-rule" />
+      </div>
+      <div className="z-card flex flex-col gap-4 p-7 text-[15px] font-light leading-relaxed text-ink-muted sm:p-9">
+        {children}
+      </div>
     </div>
   );
 }

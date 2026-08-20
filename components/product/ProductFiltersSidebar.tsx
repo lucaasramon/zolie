@@ -151,22 +151,28 @@ function FilterIcon({ className }: { className?: string }) {
 
 function FilterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <span className="text-xs font-medium uppercase tracking-wider text-ink">{title}</span>
-      <div className="flex flex-col gap-1.5">{children}</div>
+    <div className="flex flex-col gap-3 border-b border-border-subtle pb-5 last:border-b-0 last:pb-0">
+      <span className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-ink">
+        {title}
+        <span className="h-px flex-1 bg-gradient-to-r from-border-soft to-transparent" aria-hidden="true" />
+      </span>
+      <div className="flex flex-col gap-2">{children}</div>
     </div>
   );
 }
 
 function FilterOption({ label, active, href }: { label: string; active: boolean; href: string }) {
   return (
-    <Link href={href} className="flex items-center gap-2.5 text-sm text-ink-muted hover:text-gold-text">
+    <Link
+      href={href}
+      className={`group flex items-center gap-2.5 text-sm transition-colors hover:text-gold-text ${active ? 'font-medium text-ink' : 'text-ink-muted'}`}
+    >
       <span
-        className={`grid h-[15px] w-[15px] flex-none place-items-center rounded-sm border ${
-          active ? 'border-gold-soft bg-gold-soft text-white' : 'border-border-soft bg-white'
+        className={`grid h-4 w-4 flex-none place-items-center rounded-[5px] border transition-all ${
+          active ? 'border-gold bg-gold text-ink' : 'border-border-soft bg-white group-hover:border-gold-soft'
         }`}
       >
-        {active && <span className="text-[10px] leading-none">✓</span>}
+        {active && <span className="text-[10px] font-bold leading-none">✓</span>}
       </span>
       {label}
     </Link>

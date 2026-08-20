@@ -617,9 +617,11 @@ export default function CheckoutPage() {
 
   if (modo === 'escolha') {
     return (
-      <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-20 text-center">
-        <h1 className="font-serif text-3xl text-ink">Como você quer continuar?</h1>
-        <p className="text-sm text-ink-muted">Você pode comprar sem criar conta, informando só os dados necessários para a entrega.</p>
+      <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-24 text-center">
+        <span className="z-eyebrow">Checkout</span>
+        <h1 className="z-title text-3xl sm:text-4xl">Como você quer continuar?</h1>
+        <span className="z-rule" />
+        <p className="text-sm font-light leading-relaxed text-ink-muted">Você pode comprar sem criar conta, informando só os dados necessários para a entrega.</p>
         <div className="mt-4 flex w-full flex-col gap-3 sm:flex-row">
           <button
             type="button"
@@ -646,8 +648,11 @@ export default function CheckoutPage() {
 
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center gap-4 px-5 py-20 text-center">
-        <div className="w-full rounded-xl border border-success-soft bg-success-bg p-6">
-          <p className="font-sans text-2xl font-semibold text-ink">
+        <div className="w-full rounded-2xl border border-success-soft bg-success-bg p-7 shadow-xs">
+          <span className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full border border-success-soft bg-white text-2xl text-success shadow-xs">
+            {aguardandoPix || aguardandoBoleto ? '⏳' : '✓'}
+          </span>
+          <p className="z-title text-[26px]">
             {aguardandoPix || aguardandoBoleto ? 'Pedido recebido!' : 'Pagamento confirmado!'}
           </p>
           <p className="mt-2 text-sm text-ink-muted">Número do pedido: <strong>{pedidoConcluido.numero}</strong></p>
@@ -728,15 +733,32 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-5 sm:py-8">
-      <div className="mb-6 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:gap-3">
-        {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center gap-2">
-            <span className={`text-[11px] font-medium uppercase tracking-wider sm:text-xs ${step >= i + 1 ? 'text-gold-text' : 'text-ink-tertiary'}`}>
-              {i + 1}. {label}
-            </span>
-            {i < STEPS.length - 1 && <span className="h-px w-4 flex-none bg-border-soft sm:w-6" />}
-          </div>
-        ))}
+      <div className="mb-8 flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 sm:gap-3">
+        {STEPS.map((label, i) => {
+          const done = step > i + 1;
+          const atual = step === i + 1;
+          return (
+            <div key={label} className="flex items-center gap-2 sm:gap-3">
+              <span className="flex items-center gap-2">
+                <span
+                  className={`grid h-7 w-7 flex-none place-items-center rounded-full border text-[11px] font-semibold transition-all ${
+                    done
+                      ? 'border-gold bg-gold text-ink'
+                      : atual
+                        ? 'border-gold bg-white text-gold-text shadow-[0_0_0_3px_rgba(212,175,55,0.15)]'
+                        : 'border-border-soft bg-white text-ink-tertiary'
+                  }`}
+                >
+                  {done ? '✓' : i + 1}
+                </span>
+                <span className={`text-[11px] font-medium uppercase tracking-[0.12em] sm:text-xs ${step >= i + 1 ? 'text-ink' : 'text-ink-tertiary'}`}>
+                  {label}
+                </span>
+              </span>
+              {i < STEPS.length - 1 && <span className={`h-px w-5 flex-none sm:w-8 ${done ? 'bg-gold' : 'bg-border-soft'}`} />}
+            </div>
+          );
+        })}
       </div>
 
       {erro && <p className="mb-4 text-sm text-danger">{erro}</p>}
@@ -744,8 +766,8 @@ export default function CheckoutPage() {
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <div className="flex-1">
           {step === 1 && modo === 'conta' && user && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Identificação</h2>
               <p className="text-sm text-ink-muted">Olá, {user.nome}! Confirme seus dados para continuar.</p>
               <div className="text-sm text-ink-muted">
                 <div>E-mail: {user.email}</div>
@@ -807,8 +829,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 1 && modo === 'convidado' && !aguardandoConfirmacaoEmail && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Identificação</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Identificação</h2>
               <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="sm:col-span-2" />
@@ -854,8 +876,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 1 && modo === 'convidado' && aguardandoConfirmacaoEmail && (
-            <div className="flex flex-col items-center gap-4 rounded-xl shadow-xs p-5 py-10 text-center">
-              <h2 className="font-sans text-xl font-semibold text-ink">Confirme seu e-mail</h2>
+            <div className="flex flex-col items-center gap-4 z-card p-5 sm:p-6 py-10 text-center">
+              <h2 className="z-title text-2xl">Confirme seu e-mail</h2>
               <p className="max-w-sm text-sm text-ink-muted">
                 {enviandoConfirmacaoEmail && !confirmacaoEmailEnviada ? (
                   'Enviando e-mail de confirmação...'
@@ -889,8 +911,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 2 && modo === 'conta' && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Entrega</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Entrega</h2>
               {addresses.map(a => (
                 <label key={a.id} className={`flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm ${enderecoId === a.id ? 'border-gold' : 'border-border-soft'}`}>
                   <input type="radio" checked={enderecoId === a.id} onChange={() => setEnderecoId(a.id)} className="mt-1" />
@@ -935,8 +957,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 2 && modo === 'convidado' && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Entrega</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Entrega</h2>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
                   <Field label="CEP" value={guestEndereco.cep} onChange={v => setGuestEndereco(f => ({ ...f, cep: v }))} required />
@@ -967,8 +989,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 3 && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Forma de envio</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Forma de envio</h2>
               {shippingOptions.map(o => (
                 <label key={o.id} className={`flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm ${envioId === o.id ? 'border-gold' : 'border-border-soft'}`}>
                   <span className="flex items-center gap-3">
@@ -985,7 +1007,7 @@ export default function CheckoutPage() {
                 </p>
               )}
 
-              <h2 className="mt-2 font-sans text-xl font-semibold text-ink">Pagamento</h2>
+              <h2 className="mt-2 z-title text-2xl">Pagamento</h2>
               <div className="flex flex-wrap gap-2">
                 {(['CARTAO_CREDITO', 'PIX', 'BOLETO'] as const).map(m => (
                   <button
@@ -1052,8 +1074,8 @@ export default function CheckoutPage() {
           )}
 
           {step === 4 && (
-            <div className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-              <h2 className="font-sans text-xl font-semibold text-ink">Confirmação</h2>
+            <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <h2 className="z-title text-2xl">Confirmação</h2>
               <div className="flex flex-col gap-2">
                 {cart.items.map(item => (
                   <div key={item.id} className="flex justify-between text-sm text-ink-muted">
@@ -1080,8 +1102,8 @@ export default function CheckoutPage() {
         </div>
 
         <div className="w-full flex-none lg:w-[320px]">
-          <div className="flex flex-col gap-2 rounded-xl shadow-xs p-5 text-sm lg:sticky lg:top-24">
-            <h2 className="font-sans text-lg font-semibold text-ink">Resumo</h2>
+          <div className="flex flex-col gap-2 z-card p-5 sm:p-6 text-sm lg:sticky lg:top-24">
+            <h2 className="z-title text-xl">Resumo do pedido</h2>
             <Row label="Subtotal" value={brl(resumo.subtotal)} />
             <Row label="Frete" value={freteSelecionado === null ? 'A calcular' : freteSelecionado === 0 ? 'Grátis' : brl(freteSelecionado)} />
             {resumo.desconto > 0 && <Row label="Desconto" value={`- ${brl(resumo.desconto)}`} />}

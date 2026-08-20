@@ -34,6 +34,23 @@ interface ZolieCardProps {
   product: DecoratedProduct;
 }
 
+function HeartSvg({ filled, className }: { filled: boolean; className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill={filled ? 'currentColor' : 'none'}
+      stroke="currentColor"
+      strokeWidth={1.7}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+    </svg>
+  );
+}
+
 export function ZolieCard({ product: p }: ZolieCardProps) {
   const [justWished, setJustWished] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -42,6 +59,7 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
   const { showToast } = useToast();
   const router = useRouter();
   const wished = isWished(p.id);
+  const segundaImagem = p.imagens?.[1];
 
   async function handleToggleWish() {
     if (!user) {
@@ -57,16 +75,16 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
   }
 
   return (
-    <div className="group relative flex h-full flex-col overflow-hidden rounded-lg bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-      <div className="absolute left-[10px] top-[10px] z-[2] flex flex-col items-start gap-[5px]">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-border-soft hover:shadow-lg">
+      <div className="absolute left-3 top-3 z-[2] flex flex-col items-start gap-1.5">
         {p.temDesconto && (
-          <span className="rounded-sm bg-gold px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-ink">
+          <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink shadow-xs">
             -{p.percentualDesconto}%
           </span>
         )}
         {p.lancamento && (
-          <span className="rounded-sm border border-border-soft bg-white px-2 py-1.5 text-[10px] font-medium uppercase tracking-[0.1em] text-gold-text">
-            Lançamento
+          <span className="rounded-full border border-gold/40 bg-white/92 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text backdrop-blur-sm">
+            Novo
           </span>
         )}
       </div>
@@ -75,18 +93,18 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
         type="button"
         onClick={handleToggleWish}
         aria-label={wished ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-        className="absolute right-2 top-2 z-[2] grid h-[34px] w-[34px] place-items-center rounded-full bg-white/92 text-base leading-none text-gold-text transition-colors hover:bg-hoverbg"
+        className={`absolute right-2.5 top-2.5 z-[2] grid h-9 w-9 place-items-center rounded-full bg-white/90 shadow-xs backdrop-blur-sm transition-all hover:scale-110 ${
+          wished ? 'text-gold-text' : 'text-ink-tertiary hover:text-gold-text'
+        }`}
       >
-        {wished ? (
-          <span className={justWished ? 'animate-zpop inline-block' : 'inline-block'}>♥</span>
-        ) : (
-          <span className="text-ink-tertiary">♡</span>
-        )}
+        <span className={justWished && wished ? 'animate-zpop inline-block' : 'inline-block'}>
+          <HeartSvg filled={wished} className="h-[18px] w-[18px]" />
+        </span>
       </button>
 
       <Link
         href={`/produtos/${p.slug}`}
-        className={p.imagens?.[0] ? 'relative block aspect-square overflow-hidden' : 'img-placeholder grid aspect-square place-items-center p-3'}
+        className={p.imagens?.[0] ? 'relative block aspect-[4/5] overflow-hidden bg-bg-alt' : 'img-placeholder grid aspect-[4/5] place-items-center p-3'}
       >
         {p.imagens?.[0] ? (
           <>
@@ -96,11 +114,20 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
               alt={p.nome}
               fill
               sizes="(max-width: 768px) 50vw, 300px"
-              className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
-                imgLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
+              className={`object-cover transition-all duration-700 ease-out ${
+                segundaImagem ? 'group-hover:opacity-0' : 'group-hover:scale-[1.06]'
+              } ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setImgLoaded(true)}
             />
+            {segundaImagem && (
+              <Image
+                src={segundaImagem}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 50vw, 300px"
+                className="scale-[1.04] object-cover opacity-0 transition-all duration-700 ease-out group-hover:scale-100 group-hover:opacity-100"
+              />
+            )}
           </>
         ) : (
           <span className="text-center font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-ink-tertiary">
@@ -111,42 +138,42 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
         )}
       </Link>
 
-      <div className="flex flex-1 flex-col gap-[5px] p-[13px] pb-[15px]">
-        <span className="text-[9px] uppercase tracking-[0.13em] text-ink-tertiary">
+      <div className="flex flex-1 flex-col gap-1.5 p-4 pt-3.5">
+        <span className="text-[9px] font-medium uppercase tracking-[0.18em] text-gold-text">
           {MATERIAL_LABEL[p.material] || p.material}
         </span>
         <Link
           href={`/produtos/${p.slug}`}
-          className="min-h-[36px] font-sans text-sm font-medium leading-tight text-ink hover:text-gold-text"
+          className="min-h-[40px] font-serif text-[17px] font-medium leading-snug text-ink transition-colors hover:text-gold-text"
         >
           {p.nome}
         </Link>
         {p.totalAvaliacoes > 0 && (
-          <div className="flex items-center gap-[5px]">
-            <span className="text-[11px] tracking-wide text-gold-text">{stars(Number(p.notaMedia))}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] tracking-[0.08em] text-gold-soft">{stars(Number(p.notaMedia))}</span>
             <span className="text-[10px] font-light text-ink-tertiary">({p.totalAvaliacoes})</span>
           </div>
         )}
-        <div className="mt-px flex flex-col gap-px">
+        <div className="mt-0.5 flex flex-col gap-px">
           {p.temDesconto && (
             <span className="text-[11px] font-light text-ink-tertiary line-through">{brl(p.preco)}</span>
           )}
-          <span className="text-lg font-medium leading-tight text-ink">{brl(p.precoEfetivo)}</span>
+          <span className="text-lg font-medium leading-tight tracking-tight text-ink">{brl(p.precoEfetivo)}</span>
           {p.precoPix < p.precoEfetivo && (
-            <span className="text-[10px] text-gold-text">{brl(p.precoPix)} no Pix</span>
+            <span className="text-[10.5px] font-medium text-gold-text">{brl(p.precoPix)} no Pix</span>
           )}
-          <span className="text-[10px] font-light text-ink-tertiary">
+          <span className="text-[10.5px] font-light text-ink-tertiary">
             ou {p.maxParcelas}x de {brl(p.parcela)}
           </span>
         </div>
         {p.estoqueBaixo && (
-          <span className="text-[9px] uppercase tracking-wide text-danger">Últimas {p.estoque} peças</span>
+          <span className="text-[9px] font-medium uppercase tracking-[0.1em] text-danger">Últimas {p.estoque} peças</span>
         )}
         <Link
           href={`/produtos/${p.slug}`}
-          className="mt-auto rounded-full bg-bg-alt py-[11px] text-center text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text transition-all hover:bg-gold hover:text-ink active:scale-95"
+          className="mt-auto rounded-full border border-border-soft bg-white pt-[11px] pb-[10px] text-center text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition-all duration-300 hover:border-gold hover:bg-gold hover:shadow-sm active:scale-95 group-hover:border-gold group-hover:bg-gold"
         >
-          Comprar
+          Ver peça
         </Link>
       </div>
     </div>

@@ -120,10 +120,15 @@ export default function CarrinhoPage() {
 
   if (cart.items.length === 0) {
     return (
-      <div className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-5 py-20 text-center">
-        <p className="font-sans text-2xl font-semibold text-ink">Sua sacola está vazia</p>
-        <Link href="/produtos" className="rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover">
-          Ver ofertas
+      <div className="mx-auto flex max-w-[1280px] flex-col items-center gap-4 px-5 py-24 text-center">
+        <span className="grid h-16 w-16 place-items-center rounded-full border border-gold/30 bg-white font-serif text-3xl text-gold-text shadow-xs">✦</span>
+        <p className="z-title text-3xl">Sua sacola está vazia</p>
+        <p className="max-w-xs text-sm font-light text-ink-tertiary">Que tal descobrir as peças que estão encantando outras clientes?</p>
+        <Link
+          href="/produtos"
+          className="mt-2 rounded-full bg-gold px-8 py-3.5 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md"
+        >
+          Ver as peças
         </Link>
       </div>
     );
@@ -133,39 +138,46 @@ export default function CarrinhoPage() {
 
   return (
     <div className="mx-auto max-w-[1280px] px-5 py-8">
-      <h1 className="mb-6 font-sans text-3xl font-semibold text-ink">Minha sacola</h1>
+      <div className="mb-7 flex flex-col gap-1">
+        <span className="z-eyebrow">Quase lá</span>
+        <h1 className="z-title text-[32px] sm:text-4xl">Minha sacola</h1>
+      </div>
       <div className="flex flex-col gap-8 lg:flex-row">
         <div className="flex-1">
-          <Link href="/produtos" className="mb-4 inline-block text-sm text-gold-text hover:text-gold-text-hover">← Continuar comprando</Link>
+          <Link href="/produtos" className="mb-4 inline-flex items-center gap-1.5 text-sm text-gold-text transition-colors hover:text-gold-text-hover">
+            ← Continuar comprando
+          </Link>
           <div className="flex flex-col gap-4">
             {cart.items.map(item => (
-              <div key={item.id} className="flex gap-4 rounded-lg shadow-xs p-4">
+              <div key={item.id} className="z-card flex gap-4 p-4 transition-shadow hover:shadow-sm sm:gap-5">
                 {item.imagem ? (
-                  <div className="relative h-24 w-24 flex-none overflow-hidden rounded-md">
-                    <Image src={item.imagem} alt={item.nome} fill sizes="96px" className="object-cover" />
-                  </div>
+                  <Link href={`/produtos/${item.slug}`} className="relative h-28 w-24 flex-none overflow-hidden rounded-lg bg-bg-alt">
+                    <Image src={item.imagem} alt={item.nome} fill sizes="96px" className="object-cover transition-transform duration-500 hover:scale-105" />
+                  </Link>
                 ) : (
-                  <div className="img-placeholder h-24 w-24 flex-none rounded-md" />
+                  <div className="img-placeholder h-28 w-24 flex-none rounded-lg" />
                 )}
                 <div className="flex flex-1 flex-col gap-1">
-                  <span className="font-sans text-base font-medium text-ink">{item.nome}</span>
-                  <span className="text-xs text-ink-tertiary">
+                  <Link href={`/produtos/${item.slug}`} className="font-serif text-lg font-medium leading-snug text-ink transition-colors hover:text-gold-text">
+                    {item.nome}
+                  </Link>
+                  <span className="text-xs font-light text-ink-tertiary">
                     {item.tamanho || 'Tamanho único'}
                   </span>
-                  <div className="mt-1 flex items-center gap-3">
-                    <div className="flex items-center rounded-full border border-border-soft">
-                      <button type="button" onClick={() => updateQty(item.id, item.quantidade - 1)} className="px-2.5 py-1 text-ink-muted">−</button>
-                      <span className="w-7 text-center text-sm">{item.quantidade}</span>
-                      <button type="button" onClick={() => updateQty(item.id, item.quantidade + 1)} className="px-2.5 py-1 text-ink-muted">+</button>
+                  <div className="mt-auto flex items-center gap-4 pt-2">
+                    <div className="flex items-center rounded-full border border-border-soft bg-bg-alt">
+                      <button type="button" onClick={() => updateQty(item.id, item.quantidade - 1)} className="grid h-8 w-8 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90">−</button>
+                      <span className="w-7 text-center text-sm font-medium">{item.quantidade}</span>
+                      <button type="button" onClick={() => updateQty(item.id, item.quantidade + 1)} className="grid h-8 w-8 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90">+</button>
                     </div>
-                    <button type="button" onClick={() => removeItem(item.id)} className="text-xs text-danger hover:underline">
+                    <button type="button" onClick={() => removeItem(item.id)} className="text-xs text-ink-tertiary underline decoration-transparent transition-colors hover:text-danger hover:decoration-danger">
                       Remover
                     </button>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm text-ink-tertiary">{brl(item.precoUnitario)} un.</div>
-                  <div className="font-medium text-ink">{brl(item.subtotal)}</div>
+                <div className="flex flex-col items-end justify-between text-right">
+                  <div className="text-xs font-light text-ink-tertiary">{brl(item.precoUnitario)} un.</div>
+                  <div className="text-base font-medium text-ink">{brl(item.subtotal)}</div>
                 </div>
               </div>
             ))}
@@ -173,15 +185,17 @@ export default function CarrinhoPage() {
         </div>
 
         <div className="w-full flex-none lg:w-[340px]">
-          <div className="sticky top-24 flex flex-col gap-4 rounded-xl shadow-xs p-5">
-            <h2 className="font-sans text-lg font-semibold text-ink">Resumo</h2>
+          <div className="z-card sticky top-24 flex flex-col gap-4 p-6">
+            <h2 className="z-title text-xl">Resumo do pedido</h2>
 
             {!resumo.freteGratis && resumo.faltaParaFreteGratis > 0 && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs text-ink-muted">Faltam {brl(resumo.faltaParaFreteGratis)} para frete grátis</span>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#EADFC6]">
+              <div className="flex flex-col gap-2 rounded-xl bg-bg-alt p-3.5">
+                <span className="text-xs text-ink-muted">
+                  Faltam <strong className="text-gold-text">{brl(resumo.faltaParaFreteGratis)}</strong> para ganhar frete grátis
+                </span>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-[#EADFC6]">
                   <div
-                    className="h-full bg-gold-soft"
+                    className="h-full rounded-full bg-gradient-to-r from-gold-soft to-gold transition-all duration-500"
                     style={{ width: `${Math.min(100, ((resumo.subtotal) / (resumo.subtotal + resumo.faltaParaFreteGratis)) * 100)}%` }}
                   />
                 </div>
@@ -239,11 +253,17 @@ export default function CarrinhoPage() {
             <button
               type="button"
               onClick={() => router.push('/checkout')}
-              className="mt-2 rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover"
+              className="mt-2 rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98]"
             >
               Finalizar compra
             </button>
-            <p className="text-center text-[11px] text-ink-tertiary">Compra 100% segura e protegida</p>
+            <p className="flex items-center justify-center gap-1.5 text-[11px] font-light text-ink-tertiary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 text-gold-text" aria-hidden="true">
+                <rect x="5" y="10" width="14" height="10" rx="2" />
+                <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+              </svg>
+              Compra 100% segura e protegida
+            </p>
           </div>
         </div>
       </div>

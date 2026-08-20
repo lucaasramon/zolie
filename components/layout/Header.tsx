@@ -25,7 +25,7 @@ interface Suggestion {
   precoEfetivo: number;
 }
 
-export function Header({ categorias }: { categorias: Categoria[] }) {
+export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; avisos?: string[] }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [catPos, setCatPos] = useState({ top: 0, left: 0 });
@@ -136,6 +136,20 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
 
   return (
     <>
+      {avisos.length > 0 && (
+        <div className="z-dark-glow relative overflow-hidden">
+          <div className="mx-auto flex max-w-[1280px] items-center justify-center gap-3 px-5 py-2 sm:gap-5">
+            {avisos.map((aviso, i) => (
+              <span key={aviso} className={`items-center gap-3 sm:gap-5 ${i > 0 ? 'hidden sm:flex' : 'flex'}`}>
+                {i > 0 && <span className="h-3 w-px rotate-12 bg-white/20" aria-hidden="true" />}
+                <span className="whitespace-nowrap text-[10px] font-light uppercase tracking-[0.22em] text-[#E8DEC9] sm:text-[11px]">
+                  {aviso}
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
       <header
         className={`sticky top-0 z-40 border-b bg-white/85 backdrop-blur-md transition-shadow duration-300 ${
           scrolled ? 'border-border-subtle shadow-sm' : 'border-transparent'

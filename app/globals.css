@@ -196,6 +196,61 @@ a:hover {
   }
 }
 
+/* ——— Vocabulário visual da loja (lado do cliente) ———
+   Classes compostas usadas nas telas da vitrine para manter o mesmo tom
+   editorial de joalheria em todas as páginas. */
+
+/* Rótulo pequeno acima dos títulos ("eyebrow"). */
+.z-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--color-gold-text);
+}
+.z-eyebrow::before {
+  content: '';
+  width: 1.75rem;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-gold));
+}
+
+/* Título de seção em serifa — a voz tipográfica da marca. */
+.z-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
+/* Cartão base da loja: superfície branca com contorno quente e sombra suave. */
+.z-card {
+  background: #fff;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Fio decorativo dourado sob títulos centrais. */
+.z-rule {
+  height: 1px;
+  width: 72px;
+  background: linear-gradient(90deg, transparent, var(--color-gold), transparent);
+}
+
+/* Fundo escuro com brilho dourado difuso (newsletter, rodapé). */
+.z-dark-glow {
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(212, 175, 55, 0.14), transparent 60%),
+    radial-gradient(900px 380px at 0% 110%, rgba(212, 175, 55, 0.08), transparent 55%),
+    var(--color-ink);
+}
+
 .img-placeholder {
   background: repeating-linear-gradient(135deg, #F7F4EC 0 7px, #EFE9DC 7px 14px);
 }

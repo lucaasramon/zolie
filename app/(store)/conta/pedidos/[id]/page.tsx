@@ -147,7 +147,7 @@ export default function DetalhePedidoPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <span className="text-xs uppercase tracking-wider text-ink-tertiary">Pedido</span>
-            <h1 className="font-sans text-2xl font-semibold text-ink sm:text-[26px]">{order.numero}</h1>
+            <h1 className="z-title text-2xl sm:text-[28px]">{order.numero}</h1>
             <p className="mt-1 text-xs text-ink-tertiary">
               Realizado em {new Date(order.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </p>

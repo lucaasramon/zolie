@@ -56,7 +56,7 @@ function RedefinirSenhaForm() {
 
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-14">
-      <h1 className="font-sans text-2xl font-semibold text-ink">Redefinir senha</h1>
+      <h1 className="z-title text-3xl">Redefinir senha</h1>
       {erro && <p className="text-sm text-danger">{erro}</p>}
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
