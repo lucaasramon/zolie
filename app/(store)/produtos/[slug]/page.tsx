@@ -10,6 +10,7 @@ import { ZolieCard } from '@/components/product/ZolieCard';
 import { SetSuggestion } from '@/components/product/SetSuggestion';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
 import { ProductGallery } from '@/components/product/ProductGallery';
+import { ProductSocialProof } from '@/components/product/ProductSocialProof';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
@@ -138,41 +139,43 @@ export default async function ProdutoPage({ params }: Props) {
         <ProductGallery imagens={produto.imagens || []} nome={produto.nome} slug={produto.slug} />
 
         <div className="flex flex-col gap-5">
-          <div>
-            <span className="text-xs font-medium uppercase tracking-wider text-gold-text">
-              {MATERIAL_LABEL[produto.material] || produto.material}
-            </span>
-            <h1 className="mt-1.5 font-serif text-3xl leading-tight text-ink lg:text-[40px]">{produto.nome}</h1>
-            <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
-              {produto.totalAvaliacoes > 0 && (
-                <>
-                  <span className="flex items-center gap-1 text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
-                  <span className="text-sm text-ink-tertiary">({produto.totalAvaliacoes} avaliações)</span>
-                </>
-              )}
-              <span
-                className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${
-                  produto.disponivel ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
-                }`}
-              >
-                <span className={`h-1.5 w-1.5 rounded-full ${produto.disponivel ? 'bg-success' : 'bg-danger'}`} />
-                {produto.disponivel ? 'Em estoque' : 'Esgotado'}
+          <div className="rounded-2xl bg-white">
+            <div className="px-5 pt-4">
+              <span className="text-xs font-medium uppercase tracking-wider text-gold-text">
+                {MATERIAL_LABEL[produto.material] || produto.material}
               </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1 rounded-2xl bg-bg-alt px-5 py-4">
-            {produto.temDesconto && (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-ink-tertiary line-through">{brl(produto.preco)}</span>
-                <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink">-{produto.percentualDesconto}%</span>
+              <h1 className="mt-1.5 font-serif text-3xl leading-tight text-ink lg:text-[40px]">{produto.nome}</h1>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2.5">
+                {produto.totalAvaliacoes > 0 && (
+                  <>
+                    <span className="flex items-center gap-1 text-sm text-gold-text">{stars(Number(produto.notaMedia))}</span>
+                    <span className="text-sm text-ink-tertiary">({produto.totalAvaliacoes} avaliações)</span>
+                  </>
+                )}
+                <span
+                  className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${
+                    produto.disponivel ? 'bg-success-bg text-success' : 'bg-danger-bg text-danger'
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${produto.disponivel ? 'bg-success' : 'bg-danger'}`} />
+                  {produto.disponivel ? 'Em estoque' : 'Esgotado'}
+                </span>
               </div>
-            )}
-            <span className="text-[36px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
-            {produto.precoPix < produto.precoEfetivo && (
-              <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
-            )}
-            <span className="text-sm text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-1 border-t border-border-subtle px-5 py-4">
+              {produto.temDesconto && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-ink-tertiary line-through">{brl(produto.preco)}</span>
+                  <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink">-{produto.percentualDesconto}%</span>
+                </div>
+              )}
+              <span className="text-[36px] font-medium leading-tight text-ink">{brl(produto.precoEfetivo)}</span>
+              {produto.precoPix < produto.precoEfetivo && (
+                <span className="text-sm font-medium text-gold-text">{brl(produto.precoPix)} no Pix</span>
+              )}
+              <span className="text-sm text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
+            </div>
           </div>
 
           {produto.estoqueBaixo && (
@@ -183,6 +186,8 @@ export default async function ProdutoPage({ params }: Props) {
               </div>
             </div>
           )}
+
+          <ProductSocialProof productId={produto.id} />
 
           <ProductPurchaseBox
             productId={produto.id}
@@ -209,7 +214,7 @@ export default async function ProdutoPage({ params }: Props) {
           </dl>
         </div>
         {produto.cuidados && (
-          <div className="rounded-2xl bg-bg-alt p-6">
+          <div className="rounded-2xl bg-white p-6">
             <h2 className="mb-2 font-serif text-2xl text-ink">Cuidados com a peça</h2>
             <p className="text-sm leading-relaxed text-ink-muted">{produto.cuidados}</p>
           </div>
@@ -218,7 +223,7 @@ export default async function ProdutoPage({ params }: Props) {
 
       <SetSuggestion produto={produto} sugestoes={produto.sugestoesConjunto} />
 
-      <div className="mt-14">
+      <div className="mt-14 rounded-2xl border border-border-subtle bg-white p-5 sm:p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-serif text-2xl text-ink">Avaliações</h2>
           <ReviewForm productId={produto.id} />
@@ -230,7 +235,7 @@ export default async function ProdutoPage({ params }: Props) {
         ) : (
           <div className="flex flex-col gap-3">
             {reviews.map((r: any) => (
-              <div key={r.id} className="rounded-xl bg-white p-4 shadow-xs transition-shadow hover:shadow-sm">
+              <div key={r.id} className="rounded-xl border border-border-subtle p-4 transition-shadow hover:shadow-sm">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gold-text">{stars(r.nota)}</span>
                   <span className="text-sm font-medium text-ink">{r.user?.nome || 'Cliente Zoliê'}</span>

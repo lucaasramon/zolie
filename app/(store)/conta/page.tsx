@@ -57,38 +57,51 @@ export default function MeusDadosPage() {
   }
 
   return (
-    <div className="flex max-w-md flex-col gap-6">
-    <form onSubmit={onSubmit} className="flex flex-col gap-4 rounded-xl shadow-xs p-5">
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-ink-muted">Nome completo</span>
-        <input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-ink-muted">E-mail</span>
-        <input value={user?.email} disabled className="rounded-md border border-border-subtle bg-hoverbg px-3.5 py-2.5 text-ink-tertiary" />
-        {user && !user.emailVerified && (
-          <span className="text-xs text-ink-muted">
-            E-mail ainda não confirmado.{' '}
-            <button type="button" onClick={onResendVerification} disabled={reenviando} className="text-gold-text underline hover:text-gold-text-hover disabled:opacity-50">
-              {reenviando ? 'Enviando...' : 'Reenviar confirmação'}
-            </button>
-          </span>
-        )}
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-ink-muted">CPF</span>
-        <input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: formatarCpf(e.target.value) }))} inputMode="numeric" maxLength={14} placeholder="000.000.000-00" className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
-      </label>
-      <label className="flex flex-col gap-1.5 text-sm">
-        <span className="text-ink-muted">Celular</span>
-        <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
-      </label>
-      <button type="submit" disabled={loading} className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50">
-        Salvar
-      </button>
-    </form>
+    <div className="flex max-w-2xl flex-col gap-6">
+      <form onSubmit={onSubmit} className="flex flex-col gap-5 rounded-xl border border-border-subtle bg-white p-5 sm:p-6">
+        <div>
+          <h3 className="font-sans text-lg font-semibold text-ink">Dados pessoais</h3>
+          <p className="mt-1 text-sm text-ink-muted">Mantenha suas informações atualizadas.</p>
+        </div>
 
-    <PrivacyPanel />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
+            <span className="text-ink-muted">Nome completo</span>
+            <input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
+            <span className="text-ink-muted">E-mail</span>
+            <input value={user?.email} disabled className="rounded-md border border-border-subtle bg-hoverbg px-3.5 py-2.5 text-ink-tertiary" />
+            {user && !user.emailVerified && (
+              <span className="text-xs text-ink-muted">
+                E-mail ainda não confirmado.{' '}
+                <button type="button" onClick={onResendVerification} disabled={reenviando} className="text-gold-text underline hover:text-gold-text-hover disabled:opacity-50">
+                  {reenviando ? 'Enviando...' : 'Reenviar confirmação'}
+                </button>
+              </span>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-ink-muted">CPF</span>
+            <input value={form.cpf} onChange={e => setForm(f => ({ ...f, cpf: formatarCpf(e.target.value) }))} inputMode="numeric" maxLength={14} placeholder="000.000.000-00" className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
+          </label>
+
+          <label className="flex flex-col gap-1.5 text-sm">
+            <span className="text-ink-muted">Celular</span>
+            <input value={form.telefone} onChange={e => setForm(f => ({ ...f, telefone: e.target.value }))} placeholder="(00) 00000-0000" className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold" />
+          </label>
+        </div>
+
+        <div className="border-t border-border-subtle pt-4">
+          <button type="submit" disabled={loading} className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50">
+            {loading ? 'Salvando...' : 'Salvar alterações'}
+          </button>
+        </div>
+      </form>
+
+      <PrivacyPanel />
     </div>
   );
 }

@@ -13,6 +13,13 @@ export const orderRepo = {
       },
       include: { items: true, events: true, endereco: true },
     }),
+  /** Usado para liberar avaliação: só quem já recebeu o produto pode avaliá-lo. */
+  hasDeliveredItem: async (userId: string, productId: string) => {
+    const count = await prisma.orderItem.count({
+      where: { productId, order: { userId, status: 'ENTREGUE' } },
+    });
+    return count > 0;
+  },
   listByUser: async (userId: string, { skip = 0, take = 10 }: { skip?: number; take?: number } = {}) => {
     const [total, items] = await Promise.all([
       prisma.order.count({ where: { userId } }),
@@ -34,8 +41,12 @@ export const orderRepo = {
     ]);
     return { total, items };
   },
-  listAll: async ({ skip = 0, take = 20, status }: { skip?: number; take?: number; status?: string } = {}) => {
-    const where = status ? { status: status as OrderStatus } : {};
+  listAll: async ({ skip = 0, take = 20, status }: { skip?: number; take?: number; status?: string | OrderStatus[] } = {}) => {
+    const where = !status
+      ? {}
+      : Array.isArray(status)
+        ? { status: { in: status } }
+        : { status: status as OrderStatus };
     const [total, items] = await Promise.all([
       prisma.order.count({ where }),
       prisma.order.findMany({
@@ -52,7 +63,10 @@ export const orderRepo = {
     prisma.order.findUnique({
       where: { id },
       include: {
-        items: true,
+        // A imagem do produto não faz parte do snapshot do pedido (que preserva
+        // nome/preço da época da compra) — é buscada ao vivo do produto atual,
+        // então reflete a foto de capa mais recente, não a de quando foi comprado.
+        items: { include: { product: { select: { slug: true, imagens: true } } } },
         events: true,
         endereco: true,
         user: { select: { nome: true, email: true, telefone: true, cpf: true } },

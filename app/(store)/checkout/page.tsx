@@ -466,6 +466,7 @@ export default function CheckoutPage() {
     guestContato.nome.trim().length >= 3 &&
     emailFormatoValido &&
     cpfValido(guestContato.cpf) &&
+    guestContato.telefone.replace(/\D/g, '').length >= 10 &&
     !emailExiste &&
     !verificandoEmail;
 
@@ -529,11 +530,11 @@ export default function CheckoutPage() {
       const contatoTitular =
         modo === 'conta'
           ? { nome: user!.nome, email: user!.email, cpf: user!.cpf || '', telefone: user!.telefone || undefined }
-          : { nome: guestContato.nome, email: guestContato.email, cpf: guestContato.cpf, telefone: guestContato.telefone || undefined };
+          : { nome: guestContato.nome, email: guestContato.email, cpf: guestContato.cpf, telefone: guestContato.telefone };
 
       const guestPayload =
         modo === 'convidado'
-          ? { ...guestContato, ...guestEndereco, telefone: guestContato.telefone || undefined, complemento: guestEndereco.complemento || undefined }
+          ? { ...guestContato, ...guestEndereco, complemento: guestEndereco.complemento || undefined }
           : undefined;
 
       let creditCardToken: string | undefined;
@@ -827,7 +828,7 @@ export default function CheckoutPage() {
                     <p className="text-xs text-success">E-mail confirmado.</p>
                   )}
                 </div>
-                <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} />
+                <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} required />
                 <label className="flex flex-col gap-1.5 text-sm">
                   <span className="text-ink-muted">CPF</span>
                   <input
@@ -836,6 +837,7 @@ export default function CheckoutPage() {
                     inputMode="numeric"
                     maxLength={14}
                     placeholder="000.000.000-00"
+                    required
                     className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold"
                   />
                 </label>

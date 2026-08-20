@@ -18,9 +18,7 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
       <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-5 py-12 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-11 w-11 place-items-center rounded-full bg-ink">
-              <Image src="/images/zolie.png" alt="Zoliê Semijoias" width={30} height={38} className="object-contain" />
-            </span>
+            <Image src="/images/zolie.png" alt="Zoliê Semijoias" width={38} height={48} className="h-11 w-auto object-contain" />
             <span className="font-serif text-2xl tracking-[0.14em] text-ink">ZOLIÊ</span>
           </div>
           <p className="text-sm font-light text-ink-tertiary">Semijoias em prata 925 e banho de ouro 18k para brilhar todos os dias.</p>

@@ -39,6 +39,12 @@ enum UserRole {
   ADMIN
 }
 
+enum NotificationType {
+  ADMIN_MANUAL
+  CONTATO_RESPONDIDO
+  PEDIDO_STATUS
+}
+
 model User {
   id            String    @id @default(uuid())
   nome          String
@@ -61,6 +67,7 @@ model User {
   verificationTokens EmailVerificationToken[]
   returnRequests ReturnRequest[]
   couponRedemptions CouponRedemption[]
+  notifications Notification[]
 
   @@map("users")
 }
@@ -334,6 +341,11 @@ model Order {
   total          Decimal       @db.Decimal(10, 2)
   cupomCodigo    String?       @map("cupom_codigo")
   transportadora String?
+  // Prazo (em dias úteis) informado pela transportadora na cotação escolhida no
+  // checkout — junto com `createdAt`, dá a data prevista de entrega mostrada ao
+  // cliente e ao admin. Não é recalculado depois: reflete a promessa feita na
+  // hora da compra, mesmo que o prazo da transportadora mude posteriormente.
+  prazoDiasEnvio Int?          @map("prazo_dias_envio")
   codigoRastreio String?       @map("codigo_rastreio")
   asaasPaymentId String?       @unique @map("asaas_payment_id")
   asaasStatus    String?       @map("asaas_status")
@@ -480,10 +492,34 @@ model ContactMessage {
   mensagem  String
   pedido    String?
   respondida Boolean  @default(false)
+  // Resposta do admin enviada dentro do sistema (e-mail ao cliente + notificação
+  // in-app se houver conta com esse e-mail). `respondida` continua controlando o
+  // badge/filtro existentes e é setado junto com esta resposta.
+  resposta     String?   @map("resposta")
+  respondidaEm DateTime? @map("respondida_em")
   createdAt DateTime  @default(now()) @map("created_at")
 
   @@index([respondida, createdAt])
   @@map("contact_messages")
+}
+
+// Notificação in-app para clientes logados. Convidados (pedido sem conta) não
+// recebem notificação in-app, só e-mail — ver order.service/contact.service.
+model Notification {
+  id        String            @id @default(uuid())
+  userId    String            @map("user_id")
+  tipo      NotificationType
+  titulo    String
+  mensagem  String
+  link      String?
+  lida      Boolean           @default(false)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, lida])
+  @@index([userId, createdAt])
+  @@map("notifications")
 }
 
 enum ReturnStatus {

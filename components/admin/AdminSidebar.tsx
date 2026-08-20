@@ -5,6 +5,7 @@ import { AdminSidebarShell } from '@/components/admin/AdminSidebarShell';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { reviewRepo } from '@/lib/repositories/review.repo';
 import { prisma } from '@/lib/prisma';
+import packageJson from '@/package.json';
 
 const LIMITE_ESTOQUE_BAIXO = 3;
 
@@ -45,6 +46,7 @@ export async function AdminSidebar() {
         { href: '/admin/cupons', label: 'Cupons' },
         { href: '/admin/banners', label: 'Banners da home' },
         { href: '/admin/avaliacoes', label: 'Avaliações', badge: reviewsPendentes || undefined },
+        { href: '/admin/notificacoes', label: 'Notificações' },
       ],
     },
     {
@@ -75,8 +77,9 @@ export async function AdminSidebar() {
           ))}
         </nav>
 
-        <div className="p-4">
+        <div className="flex flex-col gap-1 p-4">
           <Link href="/" className="text-xs text-[#D4AF37] hover:text-white">Ver a loja ↗</Link>
+          <span className="text-[10px] text-[#8F857C]">Versão {packageJson.version}</span>
         </div>
       </aside>
     </AdminSidebarShell>

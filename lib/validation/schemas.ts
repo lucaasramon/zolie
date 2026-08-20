@@ -16,8 +16,8 @@ export const registerSchema = z.object({
   nome: z.string().min(3),
   email,
   senha,
-  telefone: z.string().min(10).optional(),
-  cpf: cpf.optional(),
+  telefone: z.string().min(10),
+  cpf,
 });
 
 export const loginSchema = z.object({ email, senha: z.string().min(1) });
@@ -52,7 +52,7 @@ const cardSchema = z.object({
 export const guestCheckoutSchema = z.object({
   nome: z.string().trim().min(3),
   email,
-  telefone: z.string().trim().min(10).optional(),
+  telefone: z.string().trim().min(10),
   cpf,
   cep: z.string().regex(/^\d{5}-?\d{3}$/),
   rua: z.string().min(3),
@@ -157,6 +157,23 @@ export const contactSchema = z.object({
   mensagem: z.string().trim().min(10, 'Escreva um pouco mais sobre o que você precisa').max(2000),
   pedido: z.string().trim().max(30).optional().nullable(),
 });
+
+export const contactResponderSchema = z.object({
+  resposta: z.string().trim().min(1, 'Escreva uma resposta').max(4000),
+});
+
+const notificationBase = {
+  titulo: z.string().trim().min(1, 'Informe um título').max(120),
+  mensagem: z.string().trim().min(1, 'Informe a mensagem').max(2000),
+  link: z.string().trim().max(300).optional(),
+};
+
+// `userId` e `broadcast` são mutuamente exclusivos: ou a notificação vai para
+// um cliente específico, ou para todos — nunca os dois nem nenhum dos dois.
+export const notificationCreateSchema = z.union([
+  z.object({ broadcast: z.literal(true), ...notificationBase }),
+  z.object({ userId: z.string().uuid(), ...notificationBase }),
+]);
 
 export const returnRequestSchema = z.object({
   tipo: z.enum(['TROCA', 'DEVOLUCAO']),

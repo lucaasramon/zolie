@@ -1,10 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
+
+type Motivo = 'NOT_LOGGED_IN' | 'REVIEW_EXISTS' | 'REVIEW_REQUIRES_DELIVERY' | null;
+
+const MENSAGEM_INDISPONIVEL: Record<Exclude<Motivo, null>, string> = {
+  NOT_LOGGED_IN: '',
+  REVIEW_EXISTS: 'Você já avaliou esta peça.',
+  REVIEW_REQUIRES_DELIVERY: 'Você poderá avaliar esta peça assim que seu pedido for entregue.',
+};
 
 export function ReviewForm({ productId }: { productId: string }) {
   const { user } = useAuth();
@@ -18,10 +26,26 @@ export function ReviewForm({ productId }: { productId: string }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
   const [enviado, setEnviado] = useState(false);
+  const [elegibilidade, setElegibilidade] = useState<{ podeAvaliar: boolean; motivo: Motivo } | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    api
+      .get<{ podeAvaliar: boolean; motivo: Motivo }>(`/products/${productId}/reviews/elegibilidade`)
+      .then(({ data }) => setElegibilidade(data))
+      .catch(() => setElegibilidade({ podeAvaliar: false, motivo: null }));
+  }, [user, productId]);
 
   if (!user) return null;
   if (enviado) {
     return <p className="text-sm text-success">Obrigada pela sua avaliação! Ela será publicada após moderação.</p>;
+  }
+  // Ainda carregando a checagem de elegibilidade — não mostra nada para não
+  // piscar o botão antes de saber se o cliente pode avaliar.
+  if (!elegibilidade) return null;
+  if (!elegibilidade.podeAvaliar) {
+    const mensagem = elegibilidade.motivo ? MENSAGEM_INDISPONIVEL[elegibilidade.motivo] : '';
+    return mensagem ? <p className="text-xs text-ink-tertiary">{mensagem}</p> : null;
   }
 
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { useCart } from '@/components/providers/CartProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
 import { trackAddToCart } from '@/lib/analytics';
+import { fireGoldConfetti } from '@/components/ui/GoldConfetti';
 
 interface Props {
   productId: string;
@@ -27,6 +28,8 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   const router = useRouter();
   const { refresh } = useCart();
   const { showToast } = useToast();
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const buyButtonRef = useRef<HTMLButtonElement>(null);
 
   async function addToCart(buyNow = false) {
     setLoading(true);
@@ -45,6 +48,8 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
           variante: tamanho || null,
         });
       }
+
+      fireGoldConfetti((buyNow ? buyButtonRef : addButtonRef).current);
 
       if (buyNow) {
         router.push('/checkout');
@@ -115,6 +120,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
 
       <div className="flex flex-col gap-2.5 sm:flex-row">
         <button
+          ref={addButtonRef}
           type="button"
           disabled={loading || estoque === 0}
           onClick={() => addToCart(false)}
@@ -123,6 +129,7 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
           Adicionar à sacola
         </button>
         <button
+          ref={buyButtonRef}
           type="button"
           disabled={loading || estoque === 0}
           onClick={() => addToCart(true)}

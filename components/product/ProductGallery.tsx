@@ -18,6 +18,7 @@ export function ProductGallery({ imagens, nome, slug }: { imagens: string[]; nom
     );
   }
 
+  const [loaded, setLoaded] = useState<Record<number, boolean>>({});
   const active = imagens[activeIndex];
 
   return (
@@ -42,13 +43,19 @@ export function ProductGallery({ imagens, nome, slug }: { imagens: string[]; nom
 
       <div className="group relative flex-1 overflow-hidden rounded-2xl bg-bg-alt shadow-xs">
         <div className="relative aspect-square overflow-hidden">
+          {!loaded[activeIndex] && (
+            <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
+          )}
           <Image
             src={active}
             alt={nome}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+            className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
+              loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
+            }`}
             priority
+            onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
           />
         </div>
 

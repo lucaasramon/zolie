@@ -34,6 +34,8 @@ export default async function AdminMensagensPage() {
               mensagem={m.mensagem}
               pedido={m.pedido}
               respondida={m.respondida}
+              resposta={m.resposta}
+              respondidaEm={m.respondidaEm ? m.respondidaEm.toISOString() : null}
               createdAt={m.createdAt.toISOString()}
             />
           ))}

@@ -1,10 +1,21 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
+
 interface Props {
   href: string;
 }
 
+const ROTAS_PERMITIDAS = ['/contato', '/faq', '/trocas'];
+
 export function WhatsAppButton({ href }: Props) {
+  const pathname = usePathname();
+  const exibir = ROTAS_PERMITIDAS.some(
+    rota => pathname === rota || pathname?.startsWith(`${rota}/`)
+  );
+
+  if (!exibir) return null;
+
   return (
     <a
       href={href}

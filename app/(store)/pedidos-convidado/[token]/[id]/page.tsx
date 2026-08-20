@@ -3,24 +3,36 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 
 interface OrderDetail {
   numero: string;
   status: string;
+  createdAt: string;
   subtotal: number;
   frete: number;
   desconto: number;
   total: number;
   transportadora: string | null;
+  prazoDiasEnvio: number | null;
   codigoRastreio: string | null;
   notaFiscalUrl: string | null;
   notaFiscalNumero: string | null;
   formaPagamento: string;
-  items: { id: string; nomeProduto: string; tamanho: string | null; quantidade: number; precoUnitario: number; subtotal: number }[];
+  items: {
+    id: string;
+    nomeProduto: string;
+    tamanho: string | null;
+    quantidade: number;
+    precoUnitario: number;
+    subtotal: number;
+    product?: { slug: string; imagens: string[] } | null;
+  }[];
   events: { id: string; status: string; descricao: string | null; createdAt: string }[];
 }
 
@@ -115,10 +127,13 @@ export default function DetalhePedidoConvidadoPage() {
       </Link>
 
       <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="font-sans text-2xl font-semibold text-ink">Pedido {order.numero}</h1>
           <span className={`rounded-full border px-3 py-1 text-xs ${style.text} ${style.border} ${style.bg}`}>
             {STATUS_LABEL[order.status]}
+          </span>
+          <span className="text-sm">
+            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} />
           </span>
         </div>
 
@@ -225,9 +240,17 @@ export default function DetalhePedidoConvidadoPage() {
         )}
 
         <div className="flex flex-col gap-3">
-          {order.items.map(item => (
+          {order.items.map(item => {
+            const imagem = item.product?.imagens?.[0];
+            return (
             <div key={item.id} className="flex items-center gap-4 rounded-lg shadow-xs p-3">
-              <div className="img-placeholder h-16 w-16 flex-none rounded-sm" />
+              {imagem ? (
+                <div className="relative h-16 w-16 flex-none overflow-hidden rounded-sm">
+                  <Image src={imagem} alt={item.nomeProduto} fill sizes="64px" className="object-cover" />
+                </div>
+              ) : (
+                <div className="img-placeholder h-16 w-16 flex-none rounded-sm" />
+              )}
               <div className="flex-1">
                 <span className="text-sm font-medium text-ink">{item.nomeProduto}</span>
                 <div className="text-xs text-ink-tertiary">
@@ -236,7 +259,8 @@ export default function DetalhePedidoConvidadoPage() {
               </div>
               <span className="font-medium text-ink">{brl(item.subtotal)}</span>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-1.5 rounded-lg shadow-xs p-4 text-sm">

@@ -36,6 +36,7 @@ interface ZolieCardProps {
 
 export function ZolieCard({ product: p }: ZolieCardProps) {
   const [justWished, setJustWished] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const { user } = useAuth();
   const { isWished, toggle } = useWishlist();
   const { showToast } = useToast();
@@ -88,13 +89,19 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
         className={p.imagens?.[0] ? 'relative block aspect-square overflow-hidden' : 'img-placeholder grid aspect-square place-items-center p-3'}
       >
         {p.imagens?.[0] ? (
-          <Image
-            src={p.imagens[0]}
-            alt={p.nome}
-            fill
-            sizes="(max-width: 768px) 50vw, 300px"
-            className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-          />
+          <>
+            {!imgLoaded && <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />}
+            <Image
+              src={p.imagens[0]}
+              alt={p.nome}
+              fill
+              sizes="(max-width: 768px) 50vw, 300px"
+              className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
+                imgLoaded ? 'opacity-100' : 'opacity-0'
+              }`}
+              onLoad={() => setImgLoaded(true)}
+            />
+          </>
         ) : (
           <span className="text-center font-mono text-[9px] uppercase leading-relaxed tracking-[0.12em] text-ink-tertiary">
             foto do produto

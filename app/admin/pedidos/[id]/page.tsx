@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import Image from 'next/image';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
@@ -6,6 +7,7 @@ import { OrderStatusSelect } from '@/components/admin/OrderStatusSelect';
 import { LabelPanel } from '@/components/admin/LabelPanel';
 import { CancelOrderButton } from '@/components/admin/CancelOrderButton';
 import { InvoicePanel } from '@/components/admin/InvoicePanel';
+import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -21,17 +23,28 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <div className="flex flex-col gap-6 lg:col-span-2">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h2 className="font-sans text-2xl font-semibold text-ink">Pedido {order.numero}</h2>
           <span className={`rounded-full border px-3 py-1 text-xs ${style.text} ${style.border} ${style.bg}`}>
             {STATUS_LABEL[order.status]}
           </span>
+          <span className="text-sm">
+            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} />
+          </span>
         </div>
 
         <div className="flex flex-col gap-3">
-          {order.items.map((item: any) => (
+          {order.items.map((item: any) => {
+            const imagem = item.product?.imagens?.[0];
+            return (
             <div key={item.id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-xs">
-              <div className="img-placeholder h-16 w-16 flex-none rounded-lg" />
+              {imagem ? (
+                <div className="relative h-16 w-16 flex-none overflow-hidden rounded-lg">
+                  <Image src={imagem} alt={item.nomeProduto} fill sizes="64px" className="object-cover" />
+                </div>
+              ) : (
+                <div className="img-placeholder h-16 w-16 flex-none rounded-lg" />
+              )}
               <div className="flex-1">
                 <span className="text-sm font-medium text-ink">{item.nomeProduto}</span>
                 <div className="text-xs text-ink-tertiary">
@@ -40,7 +53,8 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
               </div>
               <span className="font-medium text-ink">{brl(item.subtotal)}</span>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex flex-col gap-1.5 rounded-xl bg-white p-4 text-sm shadow-xs">

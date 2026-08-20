@@ -59,20 +59,19 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
     setErro('');
 
     const cpf = normalizarCpf(cadastroForm.cpf);
-    if (cpf && !cpfValido(cpf)) {
+    if (!cpfValido(cpf)) {
       setErro('CPF inválido. Confira os números digitados.');
       return;
     }
 
     setLoading(true);
     try {
-      // CPF e telefone são opcionais: envia apenas quando preenchidos (string vazia é rejeitada pelo schema).
       await register({
         nome: cadastroForm.nome,
         email: cadastroForm.email,
         senha: cadastroForm.senha,
-        telefone: cadastroForm.telefone || undefined,
-        cpf: cpf || undefined,
+        telefone: cadastroForm.telefone,
+        cpf,
       });
       showToast('Conta criada! Confirme seu e-mail para poder finalizar compras.');
       router.push(next);
@@ -146,13 +145,14 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           <Field label="Nome completo" value={cadastroForm.nome} onChange={v => setCadastroForm(f => ({ ...f, nome: v }))} required />
           <Field label="E-mail" type="email" value={cadastroForm.email} onChange={v => setCadastroForm(f => ({ ...f, email: v }))} required />
           <Field
-            label="CPF (opcional)"
+            label="CPF"
             value={cadastroForm.cpf}
             onChange={v => setCadastroForm(f => ({ ...f, cpf: formatarCpf(v) }))}
             inputMode="numeric"
             maxLength={14}
+            required
           />
-          <Field label="Celular / WhatsApp" value={cadastroForm.telefone} onChange={v => setCadastroForm(f => ({ ...f, telefone: v }))} />
+          <Field label="Celular / WhatsApp" value={cadastroForm.telefone} onChange={v => setCadastroForm(f => ({ ...f, telefone: v }))} required />
           <Field label="Senha" type="password" value={cadastroForm.senha} onChange={v => setCadastroForm(f => ({ ...f, senha: v }))} required />
           <button type="submit" disabled={loading} className="rounded-full bg-gold py-3.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover disabled:opacity-50">
             Criar conta

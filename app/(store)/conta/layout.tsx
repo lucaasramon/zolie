@@ -12,6 +12,7 @@ const NAV = [
   { href: '/conta/enderecos', label: 'Meus endereços' },
   { href: '/conta/favoritos', label: 'Meus favoritos' },
   { href: '/conta/cupons', label: 'Meus cupons' },
+  { href: '/conta/notificacoes', label: 'Notificações' },
 ];
 
 export default function ContaLayout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,7 @@ export default function ContaLayout({ children }: { children: React.ReactNode })
     <div className="mx-auto max-w-[1280px] px-5 py-8">
       <h1 className="mb-6 font-sans text-3xl font-semibold text-ink">Minha conta</h1>
       <div className="flex flex-col gap-8 lg:flex-row">
-        <nav className="flex w-full flex-row gap-1 overflow-x-auto lg:w-[220px] lg:flex-none lg:flex-col">
+        <nav className="flex w-full flex-row gap-1 overflow-x-auto rounded-xl border border-border-subtle bg-white p-2 lg:w-[220px] lg:flex-none lg:flex-col">
           {NAV.map(n => (
             <Link
               key={n.href}

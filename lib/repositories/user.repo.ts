@@ -25,10 +25,19 @@ export const userRepo = {
   consumeVerificationToken: (token: string) =>
     prisma.emailVerificationToken.update({ where: { token }, data: { usedAt: new Date() } }),
   markEmailVerified: (id: string) => prisma.user.update({ where: { id }, data: { emailVerified: true } }),
-  listAll: async ({ skip = 0, take = 20 }: { skip?: number; take?: number } = {}) => {
+  listAll: async ({ skip = 0, take = 20, search }: { skip?: number; take?: number; search?: string } = {}) => {
+    const where = {
+      role: 'CUSTOMER' as const,
+      ...(search && {
+        OR: [
+          { nome: { contains: search, mode: 'insensitive' as const } },
+          { email: { contains: search, mode: 'insensitive' as const } },
+        ],
+      }),
+    };
     const [total, items] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.findMany({ skip, take, orderBy: { createdAt: 'desc' } }),
+      prisma.user.count({ where }),
+      prisma.user.findMany({ where, skip, take, orderBy: { createdAt: 'desc' } }),
     ]);
     return { total, items };
   },

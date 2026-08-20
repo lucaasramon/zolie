@@ -313,6 +313,22 @@ export async function enviarMensagemContato({ nome, email: remetente, assunto, m
   await send(destino, `[Contato] ${assunto} — ${nome}`, html, remetente);
 }
 
+export async function enviarRespostaContato(to: string, nome: string, assuntoOriginal: string, resposta: string) {
+  const html = layout(
+    `Resposta: ${assuntoOriginal}`,
+    `
+      ${badge('Resposta da Zoliê')}
+      ${heading(`Sobre: ${escapar(assuntoOriginal)}`)}
+      ${paragraph(`Olá, ${escapar(nome.split(' ')[0])}! Aqui está nossa resposta para sua mensagem:`)}
+      ${divider()}
+      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6; color: ${COLORS.ink}; white-space: pre-wrap;">${escapar(resposta)}</p>
+      ${divider()}
+      ${paragraph('Se precisar de mais alguma coisa, fale com a gente pelo WhatsApp ou pela página de contato do site.')}
+    `,
+  );
+  await send(to, `Resposta: ${assuntoOriginal} — Zoliê`, html);
+}
+
 export async function enviarConfirmacaoContato(to: string, nome: string) {
   const html = layout(
     'Recebemos sua mensagem',

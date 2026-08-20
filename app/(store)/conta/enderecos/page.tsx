@@ -65,7 +65,7 @@ export default function MeusEnderecosPage() {
   return (
     <div className="flex flex-col gap-4">
       {addresses.map(a => (
-        <div key={a.id} className="flex items-start justify-between gap-4 rounded-lg shadow-xs p-4">
+        <div key={a.id} className="flex items-start justify-between gap-4 rounded-lg border border-border-subtle bg-white p-4 shadow-xs">
           <div className="text-sm">
             <span className="font-medium text-ink">{a.apelido || 'Endereço'}{a.principal ? ' · Principal' : ''}</span>
             <div className="text-ink-muted">
@@ -77,7 +77,7 @@ export default function MeusEnderecosPage() {
       ))}
 
       {showForm ? (
-        <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-xl shadow-xs p-4">
+        <form onSubmit={onSubmit} className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-white p-4 shadow-xs">
           <div className="grid grid-cols-2 gap-3">
             <Field label="Apelido" value={form.apelido} onChange={v => setForm(f => ({ ...f, apelido: v }))} />
             <Field label="CEP" value={form.cep} onChange={v => setForm(f => ({ ...f, cep: v }))} required />

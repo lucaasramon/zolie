@@ -7,6 +7,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { OrderRowSkeleton } from '@/components/ui/Skeleton';
+import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 
 interface Order {
   id: string;
@@ -15,6 +16,7 @@ interface Order {
   formaPagamento: string;
   total: number | string;
   createdAt: string;
+  prazoDiasEnvio: number | null;
   items: { quantidade: number }[];
 }
 
@@ -62,6 +64,9 @@ export default function PedidosConvidadoPage() {
                   <span className="font-medium text-ink">Pedido {o.numero}</span>
                   <div className="text-xs text-ink-tertiary">
                     {new Date(o.createdAt).toLocaleDateString('pt-BR')} · {itens} ite{itens === 1 ? 'm' : 'ns'}
+                  </div>
+                  <div className="mt-0.5 text-xs">
+                    <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} />
                   </div>
                 </div>
                 <span className={`rounded-full border px-3 py-1 text-xs ${style.text} ${style.border} ${style.bg}`}>

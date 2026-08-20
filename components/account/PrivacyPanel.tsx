@@ -47,7 +47,7 @@ export function PrivacyPanel() {
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border-subtle p-5">
+    <div className="flex flex-col gap-4 rounded-xl border border-border-subtle bg-white p-5">
       <div>
         <h3 className="font-sans text-lg font-semibold text-ink">Seus dados</h3>
         <p className="mt-1 text-sm text-ink-muted">

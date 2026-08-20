@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useCart } from '@/components/providers/CartProvider';
+import { useUnreadNotifications } from '@/lib/hooks/useUnreadNotifications';
 import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
-import { SearchIcon, UserIcon, HeartIcon, BagIcon, MenuIcon, TagIcon } from '@/components/layout/HeaderIcons';
+import { SearchIcon, UserIcon, HeartIcon, BagIcon, MenuIcon, TagIcon, BellIcon } from '@/components/layout/HeaderIcons';
 import { CategoryIcon } from '@/components/product/CategoryIcon';
 
 interface Categoria {
@@ -38,6 +39,7 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
   const router = useRouter();
   const { user } = useAuth();
   const { itemCount, totalFmt } = useCart();
+  const { count: unreadCount } = useUnreadNotifications();
   const [bagPulse, setBagPulse] = useState(false);
   const prevItemCount = useRef(itemCount);
   const [scrolled, setScrolled] = useState(false);
@@ -223,6 +225,23 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
               </span>
               <span className="hidden text-xs font-medium tracking-wide text-ink sm:inline">Favoritos</span>
             </Link>
+
+            {user && (
+              <Link
+                href="/conta/notificacoes"
+                className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+              >
+                <span className="relative grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
+                  <BellIcon className="h-[18px] w-[18px]" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 grid min-w-[18px] place-items-center rounded-full bg-gold px-1 text-[10px] font-semibold leading-[18px] text-ink shadow-xs group-hover:bg-ink group-hover:text-white">
+                      {unreadCount}
+                    </span>
+                  )}
+                </span>
+                <span className="hidden text-xs font-medium tracking-wide text-ink sm:inline">Notificações</span>
+              </Link>
+            )}
 
             <Link
               href="/conta/cupons"

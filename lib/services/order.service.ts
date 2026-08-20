@@ -14,6 +14,8 @@ import * as siteConfig from '@/lib/services/site-config.service';
 import * as coupons from '@/lib/services/coupon.service';
 import * as payments from '@/lib/services/payment.service';
 import * as email from '@/lib/services/email.service';
+import * as notifications from '@/lib/services/notification.service';
+import { STATUS_LABEL } from '@/lib/utils/format';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
@@ -175,6 +177,7 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
         total,
         cupomCodigo,
         transportadora: opcao.nome,
+        prazoDiasEnvio: opcao.prazoDias,
         // `contingencia` é um id interno da tabela de fallback, não um serviço do
         // Melhor Envio: gravá-lo faria a compra de etiqueta enviar um id inválido.
         envioServicoId: opcao.id === 'contingencia' ? null : opcao.id,
@@ -476,5 +479,26 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
       });
     }
   }
+
+  // Notificação in-app: só para quem tem conta (convidado já foi avisado pelo
+  // e-mail acima). Best-effort — uma falha aqui não pode derrubar a resposta da API.
+  if (order.userId) {
+    const titulo = motivo === 'PAGAMENTO_CONFIRMADO' ? 'Pagamento confirmado' : (STATUS_LABEL[status] || status);
+    const mensagem =
+      motivo === 'PAGAMENTO_CONFIRMADO'
+        ? `O pagamento do pedido ${order.numero} foi confirmado.`
+        : `O status do pedido ${order.numero} mudou para "${STATUS_LABEL[status] || status}".`;
+    try {
+      await notifications.criar(order.userId, {
+        tipo: 'PEDIDO_STATUS',
+        titulo,
+        mensagem,
+        link: `/conta/pedidos/${order.id}`,
+      });
+    } catch (err) {
+      logger.error('Falha ao criar notificação in-app de status de pedido', err, { orderId: order.id });
+    }
+  }
+
   return order;
 }

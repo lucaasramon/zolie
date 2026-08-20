@@ -86,6 +86,15 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 20 L8.5 15.8 L11.3 21.5 L14 20.2 L11.2 14.6 L17 14.2 Z" fill="%23D4AF37" stroke="%238A6B12" stroke-width="1" stroke-linejoin="round"/></svg>') 4 2, auto;
+}
+
+a,
+button,
+[role="button"],
+input[type="submit"],
+.cursor-pointer {
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 20 L8.5 15.8 L11.3 21.5 L14 20.2 L11.2 14.6 L17 14.2 Z" fill="%23F5E7B8" stroke="%238A6B12" stroke-width="1" stroke-linejoin="round"/></svg>') 4 2, pointer;
 }
 
 a {
@@ -134,6 +143,22 @@ a:hover {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: none; }
 }
+@keyframes zconfetti {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--zc-dx), calc(var(--zc-dy) + 90px)) rotate(var(--zc-rot)) scale(0.4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [style*="zconfetti"] {
+    animation: none !important;
+    display: none;
+  }
+}
 
 .animate-zfade {
   animation: zfade 0.3s ease;
@@ -178,4 +203,37 @@ a:hover {
   background: linear-gradient(90deg, #F2EEE7 0%, #EFE9DC 50%, #F2EEE7 100%);
   background-size: 800px 100%;
   animation: zshimmer 1.4s ease infinite;
+}
+
+/* Skeleton "brilhante": reflexo dourado varrendo a superfície, como luz
+   deslizando sobre metal polido. Usado enquanto a imagem do produto carrega. */
+.img-skeleton-shine {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #F2EEE7 0%, #EAE1CC 50%, #F2EEE7 100%);
+}
+.img-skeleton-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(255, 250, 230, 0.75) 46%,
+    rgba(212, 175, 55, 0.55) 50%,
+    rgba(255, 250, 230, 0.75) 54%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: zgoldshine 1.6s ease-in-out infinite;
+}
+@keyframes zgoldshine {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .img-skeleton-shine::after {
+    animation: none;
+    display: none;
+  }
 }

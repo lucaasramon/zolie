@@ -3,8 +3,7 @@ import { userRepo } from '@/lib/repositories/user.repo';
 export const dynamic = 'force-dynamic';
 
 export default async function AdminClientesPage() {
-  const { items } = await userRepo.listAll({ take: 100 });
-  const clientes = items.filter(u => u.role === 'CUSTOMER');
+  const { items: clientes } = await userRepo.listAll({ take: 100 });
 
   return (
     <div className="overflow-x-auto rounded-xl bg-white shadow-xs">
