@@ -8,6 +8,7 @@ import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { ReturnRequestForm } from '@/components/account/ReturnRequestForm';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
@@ -224,7 +225,7 @@ export default function DetalhePedidoPage() {
               >
                 {carregandoPagamento ? 'Carregando...' : 'Continuar pagamento'}
               </button>
-              {erroPagamento && <p className="text-xs text-danger">{erroPagamento}</p>}
+              {erroPagamento && <ErrorMessage className="text-xs text-danger">{erroPagamento}</ErrorMessage>}
             </>
           ) : (
             <>
@@ -285,7 +286,7 @@ export default function DetalhePedidoPage() {
                     Voltar
                   </button>
                 </div>
-                {erroCancelamento && <p className="text-xs text-danger">{erroCancelamento}</p>}
+                {erroCancelamento && <ErrorMessage className="text-xs text-danger">{erroCancelamento}</ErrorMessage>}
               </div>
             )}
           </div>

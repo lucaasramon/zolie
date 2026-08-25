@@ -8,6 +8,7 @@ import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { OrderRowSkeleton } from '@/components/ui/Skeleton';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 interface Order {
   id: string;
@@ -37,7 +38,7 @@ export default function PedidosConvidadoPage() {
       <h1 className="mb-1 font-serif text-2xl text-ink">Meus pedidos</h1>
       <p className="mb-6 text-sm text-ink-muted">Pedidos feitos como convidado com este e-mail.</p>
 
-      {erro && <p className="text-sm text-danger">{erro}</p>}
+      {erro && <ErrorMessage>{erro}</ErrorMessage>}
 
       {!erro && !orders && (
         <div className="flex flex-col gap-3">

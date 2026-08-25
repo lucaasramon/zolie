@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import { linkWhatsApp } from '@/lib/loja';
 
 export default function NotFound() {
+  const whatsapp = linkWhatsApp('Olá! Não encontrei uma página no site e preciso de ajuda.');
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-5 text-center">
       <span className="font-serif text-8xl text-gold/30">404</span>
@@ -15,6 +18,15 @@ export default function NotFound() {
           Ver ofertas
         </Link>
       </div>
+      {whatsapp && (
+        <p className="mt-2 text-xs text-ink-tertiary">
+          Procurando algo específico?{' '}
+          <a href={whatsapp} target="_blank" rel="noreferrer" className="underline hover:text-ink-muted">
+            Fale com a gente pelo WhatsApp
+          </a>
+          .
+        </p>
+      )}
     </div>
   );
 }

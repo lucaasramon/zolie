@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api-client';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { ZodIssue } from 'zod';
 import { brl, round } from '@/lib/utils/money';
 import { useAuth } from '@/components/providers/AuthProvider';
@@ -624,7 +625,7 @@ export default function CheckoutPage() {
         })}
       </div>
 
-      {erro && <p className="mb-4 text-sm text-danger">{erro}</p>}
+      {erro && <ErrorMessage>{erro}</ErrorMessage>}
 
       <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
         <div className="flex-1">

@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
+import { linkWhatsApp } from '@/lib/loja';
 
 export default function GlobalError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     console.error('[error] Erro global não tratado', error, { digest: error.digest });
   }, [error]);
+
+  const whatsapp = linkWhatsApp('Olá! Encontrei um erro no site e preciso de ajuda.');
 
   return (
     <html lang="pt-BR">
@@ -21,6 +24,15 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
           >
             Tentar novamente
           </button>
+          {whatsapp && (
+            <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#666' }}>
+              Se o problema continuar,{' '}
+              <a href={whatsapp} target="_blank" rel="noreferrer" style={{ color: '#666', textDecoration: 'underline' }}>
+                fale com a gente pelo WhatsApp
+              </a>
+              .
+            </p>
+          )}
         </div>
       </body>
     </html>

@@ -9,6 +9,7 @@ import { brl } from '@/lib/utils/money';
 import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 interface OrderDetail {
   numero: string;
@@ -98,7 +99,7 @@ export default function DetalhePedidoConvidadoPage() {
   if (erro) {
     return (
       <div className="mx-auto max-w-3xl px-5 py-10">
-        <p className="text-sm text-danger">{erro}</p>
+        <ErrorMessage className="text-sm text-danger">{erro}</ErrorMessage>
         <Link href={`/pedidos-convidado/${token}`} className="mt-3 inline-block text-sm text-gold-text hover:text-gold-text-hover">
           Voltar aos meus pedidos
         </Link>
@@ -150,7 +151,7 @@ export default function DetalhePedidoConvidadoPage() {
                 >
                   {carregandoPagamento ? 'Carregando...' : 'Continuar pagamento'}
                 </button>
-                {erroPagamento && <p className="text-xs text-danger">{erroPagamento}</p>}
+                {erroPagamento && <ErrorMessage className="text-xs text-danger">{erroPagamento}</ErrorMessage>}
               </>
             ) : (
               <>
@@ -211,7 +212,7 @@ export default function DetalhePedidoConvidadoPage() {
                       Voltar
                     </button>
                   </div>
-                  {erroCancelamento && <p className="text-xs text-danger">{erroCancelamento}</p>}
+                  {erroCancelamento && <ErrorMessage className="text-xs text-danger">{erroCancelamento}</ErrorMessage>}
                 </div>
               )}
             </div>

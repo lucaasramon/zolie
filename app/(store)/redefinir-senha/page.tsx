@@ -4,6 +4,7 @@ import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api-client';
+import { ErrorMessage } from '@/components/ui/ErrorMessage';
 
 function RedefinirSenhaForm() {
   const router = useRouter();
@@ -57,7 +58,7 @@ function RedefinirSenhaForm() {
   return (
     <div className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 py-14">
       <h1 className="z-title text-3xl">Redefinir senha</h1>
-      {erro && <p className="text-sm text-danger">{erro}</p>}
+      {erro && <ErrorMessage>{erro}</ErrorMessage>}
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-ink-muted">Nova senha</span>

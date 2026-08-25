@@ -3,11 +3,14 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { logger } from '@/lib/logger';
+import { linkWhatsApp } from '@/lib/loja';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
     logger.error('Erro não tratado capturado pelo error boundary', error, { digest: error.digest });
   }, [error]);
+
+  const whatsapp = linkWhatsApp('Olá! Encontrei um erro no site e preciso de ajuda.');
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg px-5 text-center">
@@ -27,6 +30,15 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
           Ir para a home
         </Link>
       </div>
+      {whatsapp && (
+        <p className="mt-2 text-xs text-ink-tertiary">
+          Se o problema continuar,{' '}
+          <a href={whatsapp} target="_blank" rel="noreferrer" className="underline hover:text-ink-muted">
+            fale com a gente pelo WhatsApp
+          </a>
+          .
+        </p>
+      )}
     </div>
   );
 }
