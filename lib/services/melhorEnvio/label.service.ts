@@ -33,6 +33,56 @@ function nomeParts(nome: string) {
 }
 
 /**
+ * Paga e gera a etiqueta de um envio já presente no carrinho do Melhor Envio.
+ * Compartilhada entre a compra nova e a retomada de um envio que ficou
+ * pendente numa tentativa anterior (ex: saldo insuficiente no checkout).
+ */
+async function finalizarEtiqueta(orderId: string, shipmentId: string) {
+  try {
+    await melhorEnvioClient.checkout([shipmentId]);
+  } catch (err) {
+    // Retomada de uma tentativa anterior que já pagou o envio, mas falhou depois
+    // (ex: no generate). O Melhor Envio recusa pagar de novo — nesse caso o erro
+    // é esperado, não uma falha: segue para o generate normalmente.
+    const jaPago = err instanceof AppError && /já foram pagas/i.test(err.message);
+    if (!jaPago) {
+      logger.error('Falha no checkout da etiqueta; envio permanece no carrinho do Melhor Envio', err, {
+        orderId,
+        shipmentId,
+      });
+      throw err;
+    }
+  }
+
+  try {
+    await melhorEnvioClient.generate([shipmentId]);
+  } catch (err) {
+    logger.error('Falha no generate da etiqueta; envio permanece pago mas sem etiqueta gerada', err, {
+      orderId,
+      shipmentId,
+    });
+    throw err;
+  }
+
+  // A impressão é best-effort: a etiqueta já foi paga e gerada, e falhar aqui
+  // só significa que o link do PDF vem depois.
+  let etiquetaUrl: string | null = null;
+  try {
+    const { url } = await melhorEnvioClient.print([shipmentId]);
+    etiquetaUrl = url || null;
+    if (etiquetaUrl) await orderRepo.setEtiquetaUrl(orderId, etiquetaUrl);
+  } catch (err) {
+    logger.warn('Etiqueta comprada, mas não foi possível obter o PDF de impressão', {
+      orderId,
+      shipmentId,
+      erro: String(err),
+    });
+  }
+
+  return { melhorEnvioId: shipmentId, etiquetaUrl };
+}
+
+/**
  * Compra a etiqueta de um pedido: carrinho → checkout (debita saldo) → generate.
  * O código de rastreio **não** sai aqui — o Melhor Envio leva um tempo para
  * emiti-lo, então quem o busca é `sincronizarRastreio`, chamado pelo cron.
@@ -42,7 +92,7 @@ export async function comprarEtiqueta(orderId: string) {
 
   const order = await orderRepo.findById(orderId);
   if (!order) throw notFound('Pedido');
-  if (order.melhorEnvioId) {
+  if (order.melhorEnvioId && order.etiquetaUrl) {
     throw new AppError('Este pedido já tem etiqueta comprada', 422, 'LABEL_ALREADY_BOUGHT');
   }
   if (order.status === 'CANCELADO') {
@@ -50,6 +100,13 @@ export async function comprarEtiqueta(orderId: string) {
   }
   if (order.status === 'AGUARDANDO_PAGAMENTO') {
     throw new AppError('Confirme o pagamento antes de comprar a etiqueta', 422, 'ORDER_NOT_PAID');
+  }
+
+  // Uma tentativa anterior já criou o envio no carrinho do Melhor Envio, mas o
+  // checkout/generate falhou (ex: saldo insuficiente) antes de emitir a etiqueta.
+  // Retoma esse mesmo envio em vez de criar outro item duplicado no carrinho.
+  if (order.melhorEnvioId) {
+    return finalizarEtiqueta(order.id, order.melhorEnvioId);
   }
 
   // Pedido de conta usa o endereço salvo (`order.endereco`); pedido de convidado
@@ -142,33 +199,7 @@ export async function comprarEtiqueta(orderId: string) {
   // etiqueta pode ser retomada pelo painel em vez de virar saldo gasto sem rastro.
   await orderRepo.setMelhorEnvioId(order.id, shipment.id);
 
-  try {
-    await melhorEnvioClient.checkout([shipment.id]);
-    await melhorEnvioClient.generate([shipment.id]);
-  } catch (err) {
-    logger.error('Falha no checkout/generate da etiqueta; envio permanece no carrinho do Melhor Envio', err, {
-      orderId: order.id,
-      shipmentId: shipment.id,
-    });
-    throw err;
-  }
-
-  // A impressão é best-effort: a etiqueta já foi paga e gerada, e falhar aqui
-  // só significa que o link do PDF vem depois.
-  let etiquetaUrl: string | null = null;
-  try {
-    const { url } = await melhorEnvioClient.print([shipment.id]);
-    etiquetaUrl = url || null;
-    if (etiquetaUrl) await orderRepo.setEtiquetaUrl(order.id, etiquetaUrl);
-  } catch (err) {
-    logger.warn('Etiqueta comprada, mas não foi possível obter o PDF de impressão', {
-      orderId: order.id,
-      shipmentId: shipment.id,
-      erro: String(err),
-    });
-  }
-
-  return { melhorEnvioId: shipment.id, etiquetaUrl };
+  return finalizarEtiqueta(order.id, shipment.id);
 }
 
 /**
