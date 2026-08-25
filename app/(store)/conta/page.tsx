@@ -16,19 +16,6 @@ export default function MeusDadosPage() {
     cpf: user?.cpf ? formatarCpf(user.cpf) : '',
   });
   const [loading, setLoading] = useState(false);
-  const [reenviando, setReenviando] = useState(false);
-
-  async function onResendVerification() {
-    setReenviando(true);
-    try {
-      await api.post('/auth/resend-verification', {});
-      showToast('E-mail de confirmação reenviado.');
-    } catch (err) {
-      showToast(err instanceof ApiError ? err.message : 'Não foi possível reenviar o e-mail');
-    } finally {
-      setReenviando(false);
-    }
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -73,14 +60,6 @@ export default function MeusDadosPage() {
           <label className="flex flex-col gap-1.5 text-sm sm:col-span-2">
             <span className="text-ink-muted">E-mail</span>
             <input value={user?.email} disabled className="rounded-md border border-border-subtle bg-hoverbg px-3.5 py-2.5 text-ink-tertiary" />
-            {user && !user.emailVerified && (
-              <span className="text-xs text-ink-muted">
-                E-mail ainda não confirmado.{' '}
-                <button type="button" onClick={onResendVerification} disabled={reenviando} className="text-gold-text underline hover:text-gold-text-hover disabled:opacity-50">
-                  {reenviando ? 'Enviando...' : 'Reenviar confirmação'}
-                </button>
-              </span>
-            )}
           </label>
 
           <label className="flex flex-col gap-1.5 text-sm">

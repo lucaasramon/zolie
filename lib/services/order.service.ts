@@ -4,7 +4,6 @@ import { productRepo } from '@/lib/repositories/product.repo';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { couponRepo } from '@/lib/repositories/coupon.repo';
 import { userRepo } from '@/lib/repositories/user.repo';
-import { guestEmailVerificationRepo } from '@/lib/repositories/guestEmailVerification.repo';
 import { guestOrderAccessRepo } from '@/lib/repositories/guestOrderAccess.repo';
 import { randomUUID } from 'crypto';
 import { AppError, notFound, forbidden } from '@/lib/utils/errors';
@@ -88,9 +87,6 @@ async function resolveContatoEEndereco(
   if (userId) {
     const user = await userRepo.findById(userId);
     if (!user) throw notFound('Usuário');
-    if (!user.emailVerified) {
-      throw new AppError('Confirme seu e-mail antes de finalizar a compra', 422, 'EMAIL_NOT_VERIFIED');
-    }
     if (!user.cpf) throw new AppError('Cadastre seu CPF antes de finalizar a compra', 422, 'CPF_REQUIRED');
     if (!enderecoId) throw new AppError('Selecione um endereço de entrega', 422, 'ENDERECO_REQUIRED');
 
@@ -106,14 +102,6 @@ async function resolveContatoEEndereco(
   }
 
   if (!guest) throw new AppError('Informe seus dados para finalizar a compra', 422, 'GUEST_DATA_REQUIRED');
-
-  // Mesma exigência do fluxo com conta (linha acima), só que via
-  // GuestEmailVerification em vez de User.emailVerified: sem isso, dava pra
-  // finalizar a compra chamando a API direto, pulando a confirmação da etapa 1.
-  const confirmado = await guestEmailVerificationRepo.findLatestConfirmed(guest.email.trim().toLowerCase());
-  if (!confirmado) {
-    throw new AppError('Confirme seu e-mail antes de finalizar a compra', 422, 'GUEST_EMAIL_NOT_VERIFIED');
-  }
 
   return {
     contato: { nome: guest.nome, email: guest.email, cpf: guest.cpf, telefone: guest.telefone },

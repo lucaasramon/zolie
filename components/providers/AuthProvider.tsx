@@ -10,7 +10,6 @@ interface User {
   telefone: string | null;
   cpf: string | null;
   role: 'CUSTOMER' | 'ADMIN';
-  emailVerified: boolean;
   createdAt: string;
 }
 

@@ -230,38 +230,6 @@ export async function enviarMudancaStatus(
   await send(to, `Pedido ${numero}: ${STATUS_LABEL[status] || status} — Zoliê`, html);
 }
 
-export async function enviarVerificacaoEmail(to: string, nome: string, token: string) {
-  const link = `${env.appUrl}/verificar-email?token=${token}`;
-  const html = layout(
-    'Confirme seu e-mail na Zoliê',
-    `
-      ${heading('Confirme seu e-mail')}
-      ${paragraph(`Olá, ${nome}!`)}
-      ${paragraph('Para ativar sua conta na Zoliê, confirme seu endereço de e-mail clicando no botão abaixo.')}
-      ${button('Confirmar meu e-mail', link)}
-      ${paragraph('Se você não criou uma conta na Zoliê, pode ignorar este e-mail com segurança.')}
-      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkTertiary};">Se o botão não funcionar, copie e cole este link no navegador:<br /><a href="${link}" style="color: ${COLORS.goldText};">${link}</a></p>
-    `,
-  );
-  await send(to, 'Confirme seu e-mail — Zoliê', html);
-}
-
-/** Confirmação de e-mail de quem está comprando como convidado, sem conta na Zoliê. */
-export async function enviarConfirmacaoEmailConvidado(to: string, token: string) {
-  const link = `${env.appUrl}/verificar-email-convidado?token=${token}`;
-  const html = layout(
-    'Confirme seu e-mail para continuar a compra',
-    `
-      ${heading('Confirme seu e-mail')}
-      ${paragraph('Para continuar sua compra como convidado na Zoliê, confirme que este e-mail é seu clicando no botão abaixo. Depois, é só voltar para a aba onde estava comprando.')}
-      ${button('Confirmar meu e-mail', link)}
-      ${paragraph('Se você não pediu isso, pode ignorar este e-mail com segurança.')}
-      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkTertiary};">Se o botão não funcionar, copie e cole este link no navegador:<br /><a href="${link}" style="color: ${COLORS.goldText};">${link}</a></p>
-    `,
-  );
-  await send(to, 'Confirme seu e-mail para continuar sua compra — Zoliê', html);
-}
-
 export async function enviarCarrinhoAbandonado(to: string, nome: string, itens: { nomeProduto: string }[]) {
   const listaHtml = itens
     .slice(0, 5)

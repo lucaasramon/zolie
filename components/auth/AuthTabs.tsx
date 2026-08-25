@@ -37,8 +37,10 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
   const [erro, setErro] = useState('');
 
   const [loginForm, setLoginForm] = useState({ email: '', senha: '' });
-  const [cadastroForm, setCadastroForm] = useState({ nome: '', email: '', cpf: '', telefone: '', senha: '' });
+  const [cadastroForm, setCadastroForm] = useState({ nome: '', email: '', confirmarEmail: '', cpf: '', telefone: '', senha: '' });
   const [recuperarEmail, setRecuperarEmail] = useState('');
+
+  const cadastroEmailsConferem = cadastroForm.email.trim().toLowerCase() === cadastroForm.confirmarEmail.trim().toLowerCase();
 
   async function onLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -58,6 +60,11 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
     e.preventDefault();
     setErro('');
 
+    if (!cadastroEmailsConferem) {
+      setErro('Os e-mails digitados não coincidem.');
+      return;
+    }
+
     const cpf = normalizarCpf(cadastroForm.cpf);
     if (!cpfValido(cpf)) {
       setErro('CPF inválido. Confira os números digitados.');
@@ -73,7 +80,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
         telefone: cadastroForm.telefone,
         cpf,
       });
-      showToast('Conta criada! Confirme seu e-mail para poder finalizar compras.');
+      showToast('Conta criada com sucesso!');
       router.push(next);
     } catch (err) {
       setErro(err instanceof ApiError ? err.message : 'Não foi possível criar a conta');
@@ -156,6 +163,12 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           )}
           <Field label="Nome completo" value={cadastroForm.nome} onChange={v => setCadastroForm(f => ({ ...f, nome: v }))} required />
           <Field label="E-mail" type="email" value={cadastroForm.email} onChange={v => setCadastroForm(f => ({ ...f, email: v }))} required />
+          <div className="flex flex-col gap-1.5">
+            <Field label="Confirmar e-mail" type="email" value={cadastroForm.confirmarEmail} onChange={v => setCadastroForm(f => ({ ...f, confirmarEmail: v }))} required />
+            {cadastroForm.confirmarEmail.length > 0 && !cadastroEmailsConferem && (
+              <span className="text-xs text-danger">Os e-mails não coincidem.</span>
+            )}
+          </div>
           <Field
             label="CPF"
             value={cadastroForm.cpf}
@@ -166,7 +179,7 @@ export function AuthTabs({ defaultTab }: { defaultTab: Tab }) {
           />
           <Field label="Celular / WhatsApp" value={cadastroForm.telefone} onChange={v => setCadastroForm(f => ({ ...f, telefone: v }))} required />
           <Field label="Senha" type="password" value={cadastroForm.senha} onChange={v => setCadastroForm(f => ({ ...f, senha: v }))} required />
-          <button type="submit" disabled={loading} className="rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50">
+          <button type="submit" disabled={loading || !cadastroEmailsConferem} className="rounded-full bg-gold py-4 text-xs font-semibold uppercase tracking-[0.14em] text-ink shadow-sm transition-all hover:-translate-y-0.5 hover:bg-gold-hover hover:shadow-md active:translate-y-0 active:scale-[0.98] disabled:opacity-50">
             Criar conta
           </button>
         </form>

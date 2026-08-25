@@ -18,13 +18,6 @@ export const userRepo = {
     prisma.passwordResetToken.findFirst({ where: { token, usedAt: null, expiresAt: { gt: new Date() } } }),
   consumeResetToken: (token: string) =>
     prisma.passwordResetToken.update({ where: { token }, data: { usedAt: new Date() } }),
-  createVerificationToken: (userId: string, token: string, expiresAt: Date) =>
-    prisma.emailVerificationToken.create({ data: { userId, token, expiresAt } }),
-  findVerificationToken: (token: string) =>
-    prisma.emailVerificationToken.findFirst({ where: { token, usedAt: null, expiresAt: { gt: new Date() } } }),
-  consumeVerificationToken: (token: string) =>
-    prisma.emailVerificationToken.update({ where: { token }, data: { usedAt: new Date() } }),
-  markEmailVerified: (id: string) => prisma.user.update({ where: { id }, data: { emailVerified: true } }),
   listAll: async ({ skip = 0, take = 20, search }: { skip?: number; take?: number; search?: string } = {}) => {
     const where = {
       role: 'CUSTOMER' as const,

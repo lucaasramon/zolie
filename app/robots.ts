@@ -27,7 +27,6 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/cadastro',
           '/redefinir-senha',
-          '/verificar-email',
           // Bloqueia a busca interna: gera URLs infinitas de baixo valor.
           '/produtos?q=',
         ],

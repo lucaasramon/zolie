@@ -54,7 +54,6 @@ model User {
   cpf           String?   @unique
   asaasCustomerId String? @unique @map("asaas_customer_id")
   role          UserRole  @default(CUSTOMER)
-  emailVerified Boolean   @default(false) @map("email_verified")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -64,7 +63,6 @@ model User {
   reviews       ProductReview[]
   wishlist      WishlistItem[]
   resetTokens   PasswordResetToken[]
-  verificationTokens EmailVerificationToken[]
   returnRequests ReturnRequest[]
   couponRedemptions CouponRedemption[]
   notifications Notification[]
@@ -83,33 +81,6 @@ model PasswordResetToken {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("password_reset_tokens")
-}
-
-model EmailVerificationToken {
-  id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  token     String    @unique
-  expiresAt DateTime  @map("expires_at")
-  usedAt    DateTime? @map("used_at")
-  createdAt DateTime  @default(now()) @map("created_at")
-
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("email_verification_tokens")
-}
-
-// Confirmação de e-mail para quem compra como convidado (sem conta). Sem relação
-// com User — nesse ponto do checkout ainda não existe usuário, só o e-mail digitado.
-model GuestEmailVerification {
-  id          String    @id @default(uuid())
-  email       String
-  token       String    @unique
-  expiresAt   DateTime  @map("expires_at")
-  confirmedAt DateTime? @map("confirmed_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
-
-  @@index([email])
-  @@map("guest_email_verifications")
 }
 
 // Token permanente (não expira) que dá a um convidado sem conta acesso à lista

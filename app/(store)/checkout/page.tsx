@@ -43,7 +43,7 @@ type Modo = 'escolha' | 'convidado' | 'conta';
 const STEPS = ['Identificação', 'Entrega', 'Pagamento', 'Confirmação'];
 
 const EMPTY_ADDRESS_FORM = { apelido: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', estado: '' };
-const EMPTY_GUEST_CONTATO = { nome: '', email: '', telefone: '', cpf: '' };
+const EMPTY_GUEST_CONTATO = { nome: '', email: '', confirmarEmail: '', telefone: '', cpf: '' };
 
 interface ViaCepResponse {
   logradouro: string;
@@ -72,16 +72,6 @@ function describeError(err: unknown, fallback: string): string {
     return issues.map(i => (i.path?.length ? `${i.path.join('.')}: ${i.message}` : i.message)).join(' · ');
   }
   return err.message || fallback;
-}
-
-/** Dispara o e-mail de confirmação do checkout de convidado. Retorna a mensagem de erro, ou null se deu certo. */
-async function enviarEmailConfirmacaoConvidado(email: string): Promise<string | null> {
-  try {
-    await api.post('/auth/guest-email-verification', { email });
-    return null;
-  } catch (err) {
-    return describeError(err, 'Não foi possível enviar o e-mail de confirmação');
-  }
 }
 
 export default function CheckoutPage() {
@@ -113,22 +103,9 @@ export default function CheckoutPage() {
   const [pagamentoAindaPendente, setPagamentoAindaPendente] = useState(false);
   const [cpfInput, setCpfInput] = useState('');
   const [salvandoCpf, setSalvandoCpf] = useState(false);
-  const [reenviandoEmail, setReenviandoEmail] = useState(false);
-  const [emailReenviado, setEmailReenviado] = useState(false);
   const [cartao, setCartao] = useState({ numero: '', nomeImpresso: '', validadeMes: '', validadeAno: '', cvv: '' });
   const [emailExiste, setEmailExiste] = useState(false);
   const [verificandoEmail, setVerificandoEmail] = useState(false);
-  // Guarda o e-mail confirmado (não um boolean solto) para que trocar de e-mail
-  // já invalide a confirmação automaticamente na re-renderização, sem precisar
-  // de um effect só para "resetar" o estado a cada tecla digitada.
-  const [emailConfirmadoPara, setEmailConfirmadoPara] = useState<string | null>(null);
-  // Controla a troca entre o formulário de identificação e a tela de "confirme
-  // seu e-mail" — ambos ocupam a etapa 1, sem mexer no indicador de progresso.
-  const [aguardandoConfirmacaoEmail, setAguardandoConfirmacaoEmail] = useState(false);
-  const [enviandoConfirmacaoEmail, setEnviandoConfirmacaoEmail] = useState(false);
-  const [confirmacaoEmailEnviada, setConfirmacaoEmailEnviada] = useState(false);
-  const [confirmacaoEmailErro, setConfirmacaoEmailErro] = useState('');
-  const [verificandoConfirmacaoAgora, setVerificandoConfirmacaoAgora] = useState(false);
   const cepContaBuscadoRef = useRef('');
   const cepConvidadoBuscadoRef = useRef('');
   const [buscandoCepConta, setBuscandoCepConta] = useState(false);
@@ -138,10 +115,10 @@ export default function CheckoutPage() {
   const [cupomMsg, setCupomMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
 
-  // Declarados cedo (não junto de `guestContatoValido`, mais abaixo) porque os
-  // effects de verificação de e-mail, logo a seguir, já dependem deles.
+  // Declarado cedo (não junto de `guestContatoValido`, mais abaixo) porque o
+  // effect de verificação de e-mail existente, logo a seguir, já depende dele.
   const emailFormatoValido = /\S+@\S+\.\S+/.test(guestContato.email);
-  const guestEmailConfirmado = emailConfirmadoPara !== null && emailConfirmadoPara === guestContato.email.trim().toLowerCase();
+  const emailsConferem = guestContato.email.trim().toLowerCase() === guestContato.confirmarEmail.trim().toLowerCase();
 
   // Usuário já logado ao entrar no checkout: pula a tela de escolha.
   useEffect(() => {
@@ -211,36 +188,6 @@ export default function CheckoutPage() {
       clearTimeout(timer);
     };
   }, [guestContato.email, modo]);
-
-  // Tela de "confirme seu e-mail" ativa: fica checando (polling) se o link já
-  // foi clicado, para liberar a etapa seguinte automaticamente. A confirmação em
-  // si acontece em outra aba (o convidado abre o e-mail), por isso o polling em
-  // vez de esperar uma resposta direta desta aba. O envio do e-mail em si é
-  // disparado por onIniciarConfirmacaoEmail, ao clicar em "Continuar".
-  useEffect(() => {
-    if (!aguardandoConfirmacaoEmail) return;
-    const emailAtual = guestContato.email.trim().toLowerCase();
-    let cancelado = false;
-
-    const checarConfirmacao = async () => {
-      try {
-        const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
-        if (!cancelado && data.confirmado) {
-          setEmailConfirmadoPara(emailAtual);
-          setAguardandoConfirmacaoEmail(false);
-          setStep(2);
-        }
-      } catch {
-        // Tenta de novo no próximo tick do polling.
-      }
-    };
-
-    const interval = setInterval(checarConfirmacao, 4000);
-    return () => {
-      cancelado = true;
-      clearInterval(interval);
-    };
-  }, [aguardandoConfirmacaoEmail, guestContato.email]);
 
   // Endereço de convidado (etapa 2): preenche rua/bairro/cidade/UF a partir do CEP.
   useEffect(() => {
@@ -357,88 +304,6 @@ export default function CheckoutPage() {
     }
   }
 
-  async function onResendVerification() {
-    setReenviandoEmail(true);
-    setErro('');
-    try {
-      await api.post('/auth/resend-verification', {});
-      setEmailReenviado(true);
-    } catch (err) {
-      setErro(describeError(err, 'Não foi possível reenviar o e-mail de confirmação'));
-    } finally {
-      setReenviandoEmail(false);
-    }
-  }
-
-  // Dispara o e-mail de confirmação ao clicar em "Continuar" na identificação
-  // (não mais ao digitar) e troca para a tela de espera de confirmação.
-  async function onIniciarConfirmacaoEmail() {
-    const emailAtual = guestContato.email.trim().toLowerCase();
-    if (emailAtual === emailConfirmadoPara) {
-      setStep(2);
-      return;
-    }
-    setAguardandoConfirmacaoEmail(true);
-    setEnviandoConfirmacaoEmail(true);
-    setConfirmacaoEmailErro('');
-    setConfirmacaoEmailEnviada(false);
-
-    // Confere primeiro se esse e-mail já foi confirmado antes (ex: convidado
-    // voltou para o checkout depois de já ter clicado no link) — só manda um
-    // e-mail novo se realmente ainda não estiver confirmado.
-    try {
-      const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
-      if (data.confirmado) {
-        setEmailConfirmadoPara(emailAtual);
-        setAguardandoConfirmacaoEmail(false);
-        setEnviandoConfirmacaoEmail(false);
-        setStep(2);
-        return;
-      }
-    } catch {
-      // Segue para o envio normalmente se a checagem falhar.
-    }
-
-    const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
-    if (erro) setConfirmacaoEmailErro(erro);
-    else setConfirmacaoEmailEnviada(true);
-    setEnviandoConfirmacaoEmail(false);
-  }
-
-  async function onReenviarConfirmacaoEmail() {
-    const emailAtual = guestContato.email.trim().toLowerCase();
-    setEnviandoConfirmacaoEmail(true);
-    setConfirmacaoEmailErro('');
-    const erro = await enviarEmailConfirmacaoConvidado(emailAtual);
-    if (erro) setConfirmacaoEmailErro(erro);
-    else setConfirmacaoEmailEnviada(true);
-    setEnviandoConfirmacaoEmail(false);
-  }
-
-  async function onVerificarConfirmacaoAgora() {
-    const emailAtual = guestContato.email.trim().toLowerCase();
-    setVerificandoConfirmacaoAgora(true);
-    try {
-      const { data } = await api.get<{ confirmado: boolean }>(`/auth/guest-email-verification?email=${encodeURIComponent(emailAtual)}`);
-      if (data.confirmado) {
-        setEmailConfirmadoPara(emailAtual);
-        setAguardandoConfirmacaoEmail(false);
-        setStep(2);
-      } else {
-        setConfirmacaoEmailErro('Ainda não recebemos a confirmação. Verifique se clicou no link do e-mail.');
-      }
-    } catch (err) {
-      setConfirmacaoEmailErro(describeError(err, 'Não foi possível verificar agora'));
-    } finally {
-      setVerificandoConfirmacaoAgora(false);
-    }
-  }
-
-  function onVoltarParaIdentificacao() {
-    setAguardandoConfirmacaoEmail(false);
-    setConfirmacaoEmailErro('');
-  }
-
   // Botão "Já fiz o pagamento" na tela de sucesso do Pix/boleto: consulta a
   // mesma rota do polling automático, mas na hora — útil quando o cliente já
   // pagou e não quer esperar o próximo tick (até 5s) para ver a confirmação.
@@ -459,12 +324,10 @@ export default function CheckoutPage() {
     }
   }
 
-  // Não exige mais `guestEmailConfirmado` aqui: o botão "Continuar" é quem
-  // dispara a confirmação de e-mail agora, então só precisa liberar o clique
-  // com os dados básicos preenchidos.
   const guestContatoValido =
     guestContato.nome.trim().length >= 3 &&
     emailFormatoValido &&
+    emailsConferem &&
     cpfValido(guestContato.cpf) &&
     guestContato.telefone.replace(/\D/g, '').length >= 10 &&
     !emailExiste &&
@@ -534,7 +397,7 @@ export default function CheckoutPage() {
 
       const guestPayload =
         modo === 'convidado'
-          ? { ...guestContato, ...guestEndereco, complemento: guestEndereco.complemento || undefined }
+          ? { nome: guestContato.nome, email: guestContato.email, telefone: guestContato.telefone, cpf: guestContato.cpf, ...guestEndereco, complemento: guestEndereco.complemento || undefined }
           : undefined;
 
       let creditCardToken: string | undefined;
@@ -774,26 +637,6 @@ export default function CheckoutPage() {
                 {user.cpf && <div>CPF: {formatarCpf(user.cpf)}</div>}
                 {user.telefone && <div>Celular: {user.telefone}</div>}
               </div>
-              {!user.emailVerified && (
-                <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
-                  <span className="text-xs text-ink-muted">
-                    Confirme seu e-mail para finalizar a compra. Enviamos um link para <strong>{user.email}</strong> — verifique
-                    também a caixa de spam.
-                  </span>
-                  {emailReenviado ? (
-                    <span className="text-xs text-gold-text">E-mail de confirmação reenviado.</span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={onResendVerification}
-                      disabled={reenviandoEmail}
-                      className="self-start rounded-full border border-border-soft px-3 py-2 text-xs font-medium uppercase text-ink-muted hover:border-gold-text disabled:opacity-50"
-                    >
-                      {reenviandoEmail ? 'Enviando...' : 'Reenviar e-mail'}
-                    </button>
-                  )}
-                </div>
-              )}
               {!user.cpf && (
                 <div className="flex flex-col gap-2 rounded-md border border-border-subtle p-3">
                   <span className="text-xs text-ink-muted">Precisamos do seu CPF para processar o pagamento.</span>
@@ -820,7 +663,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => setStep(2)}
-                disabled={!user.cpf || !user.emailVerified}
+                disabled={!user.cpf}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
@@ -828,13 +671,13 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          {step === 1 && modo === 'convidado' && !aguardandoConfirmacaoEmail && (
+          {step === 1 && modo === 'convidado' && (
             <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
               <h2 className="z-title text-2xl">Identificação</h2>
               <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="sm:col-span-2" />
-                <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <div className="flex flex-col gap-1.5">
                   <Field label="E-mail" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} required />
                   {emailFormatoValido && verificandoEmail && <span className="text-xs text-ink-tertiary">Verificando e-mail...</span>}
                   {emailFormatoValido && !verificandoEmail && emailExiste && (
@@ -846,8 +689,11 @@ export default function CheckoutPage() {
                       para continuar com seus dados salvos.
                     </p>
                   )}
-                  {emailFormatoValido && !verificandoEmail && !emailExiste && guestEmailConfirmado && (
-                    <p className="text-xs text-success">E-mail confirmado.</p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Field label="Confirmar e-mail" value={guestContato.confirmarEmail} onChange={v => setGuestContato(c => ({ ...c, confirmarEmail: v }))} required />
+                  {guestContato.confirmarEmail.length > 0 && !emailsConferem && (
+                    <p className="text-xs text-danger">Os e-mails não coincidem.</p>
                   )}
                 </div>
                 <Field label="Celular" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} required />
@@ -866,46 +712,11 @@ export default function CheckoutPage() {
               </div>
               <button
                 type="button"
-                onClick={() => (guestEmailConfirmado ? setStep(2) : onIniciarConfirmacaoEmail())}
+                onClick={() => setStep(2)}
                 disabled={!guestContatoValido}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
-              </button>
-            </div>
-          )}
-
-          {step === 1 && modo === 'convidado' && aguardandoConfirmacaoEmail && (
-            <div className="flex flex-col items-center gap-4 z-card p-5 sm:p-6 py-10 text-center">
-              <h2 className="z-title text-2xl">Confirme seu e-mail</h2>
-              <p className="max-w-sm text-sm text-ink-muted">
-                {enviandoConfirmacaoEmail && !confirmacaoEmailEnviada ? (
-                  'Enviando e-mail de confirmação...'
-                ) : (
-                  <>Enviamos um link de confirmação para <strong>{guestContato.email}</strong>. Abra sua caixa de entrada (e o spam) e clique no link para continuar — esta página avança sozinha assim que você confirmar.</>
-                )}
-              </p>
-              {confirmacaoEmailErro && <p className="text-xs text-danger">{confirmacaoEmailErro}</p>}
-              <div className="flex flex-wrap justify-center gap-3">
-                <button
-                  type="button"
-                  onClick={onVerificarConfirmacaoAgora}
-                  disabled={verificandoConfirmacaoAgora}
-                  className="rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
-                >
-                  {verificandoConfirmacaoAgora ? 'Verificando...' : 'Já confirmei'}
-                </button>
-                <button
-                  type="button"
-                  onClick={onReenviarConfirmacaoEmail}
-                  disabled={enviandoConfirmacaoEmail}
-                  className="rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text disabled:opacity-50"
-                >
-                  {enviandoConfirmacaoEmail ? 'Enviando...' : 'Reenviar e-mail'}
-                </button>
-              </div>
-              <button type="button" onClick={onVoltarParaIdentificacao} className="text-xs text-ink-tertiary underline hover:text-ink-muted">
-                Corrigir e-mail
               </button>
             </div>
           )}

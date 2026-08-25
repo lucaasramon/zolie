@@ -4,11 +4,11 @@ import { userRepo } from '@/lib/repositories/user.repo';
 import { env } from '@/lib/env';
 import { AppError, unauthorized, conflict, notFound } from '@/lib/utils/errors';
 import { signToken } from '@/lib/auth/jwt';
-import { enviarRecuperacaoSenha, enviarVerificacaoEmail } from '@/lib/services/email.service';
+import { enviarRecuperacaoSenha } from '@/lib/services/email.service';
 import { dominioAceitaEmail, ehDescartavel, sugestaoDeDominio } from '@/lib/utils/email';
 
 export function publicUser(u: any) {
-  return { id: u.id, nome: u.nome, email: u.email, telefone: u.telefone, cpf: u.cpf, role: u.role, emailVerified: u.emailVerified, createdAt: u.createdAt };
+  return { id: u.id, nome: u.nome, email: u.email, telefone: u.telefone, cpf: u.cpf, role: u.role, createdAt: u.createdAt };
 }
 
 export async function register({ nome, email, senha, telefone, cpf }: { nome: string; email: string; senha: string; telefone?: string; cpf?: string }) {
@@ -28,32 +28,7 @@ export async function register({ nome, email, senha, telefone, cpf }: { nome: st
   const senhaHash = await bcrypt.hash(senha, env.bcryptRounds);
   const user = await userRepo.create({ nome, email, senhaHash, telefone, cpf });
 
-  const token = randomUUID();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60000);
-  await userRepo.createVerificationToken(user.id, token, expiresAt);
-  await enviarVerificacaoEmail(user.email, user.nome, token);
-
   return { user: publicUser(user), token: signToken(user) };
-}
-
-export async function verifyEmail(token: string) {
-  const record = await userRepo.findVerificationToken(token);
-  if (!record) throw new AppError('Token inválido ou expirado', 410, 'VERIFICATION_TOKEN_INVALID');
-  await userRepo.markEmailVerified(record.userId);
-  await userRepo.consumeVerificationToken(token);
-  return { verificado: true };
-}
-
-export async function resendVerification(userId: string) {
-  const user = await userRepo.findById(userId);
-  if (!user) throw notFound('Usuário');
-  if (user.emailVerified) return { enviado: false, jaVerificado: true };
-
-  const token = randomUUID();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60000);
-  await userRepo.createVerificationToken(user.id, token, expiresAt);
-  await enviarVerificacaoEmail(user.email, user.nome, token);
-  return { enviado: true };
 }
 
 export async function login({ email, senha }: { email: string; senha: string }) {

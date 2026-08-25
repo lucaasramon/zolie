@@ -8,7 +8,7 @@
 - [x] Remover leitura de `document.cookie` em `lib/api-client.ts`
 - [x] Rate limiting em `/auth/login`, `/auth/register`, `/auth/forgot-password`, `/auth/reset-password`, `/payments/webhook`
 - [x] Validar upload de imagem pelos magic bytes reais do arquivo (`lib/utils/fileSignature.ts`)
-- [x] Implementar fluxo de verificação de e-mail (token, rota, página `/verificar-email`)
+- [x] Cadastro exige digitar o e-mail duas vezes (campo de confirmação) em vez de verificação por token/link
 - [x] `timingSafeEqual` na validação do token do webhook Asaas
 
 ## 🟠 Resiliência / Dados — ✅ concluído

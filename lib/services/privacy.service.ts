@@ -38,7 +38,6 @@ export async function exportarDados(userId: string) {
       email: user.email,
       telefone: user.telefone,
       cpf: user.cpf,
-      emailVerificado: user.emailVerified,
       criadoEm: user.createdAt,
     },
     enderecos: user.addresses.map(a => ({
@@ -116,7 +115,6 @@ export async function excluirConta(userId: string) {
     await tx.productReview.deleteMany({ where: { userId } });
     await tx.wishlistItem.deleteMany({ where: { userId } });
     await tx.passwordResetToken.deleteMany({ where: { userId } });
-    await tx.emailVerificationToken.deleteMany({ where: { userId } });
     await tx.cart.deleteMany({ where: { userId } });
 
     // Endereços são anonimizados, não apagados: pedidos antigos os referenciam.
@@ -141,7 +139,6 @@ export async function excluirConta(userId: string) {
         telefone: null,
         senhaHash: randomUUID(),
         asaasCustomerId: null,
-        emailVerified: false,
       },
     });
   });
