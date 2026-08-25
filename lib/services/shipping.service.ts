@@ -19,7 +19,20 @@ interface MelhorEnvioOption {
   name: string;
   price: string;
   delivery_time: number;
+  company?: { id: number; name: string };
   error?: string;
+}
+
+/**
+ * Só essas transportadoras atendem a agência de coleta usada pela loja — as
+ * demais opções que o Melhor Envio retorna são filtradas fora da cotação.
+ */
+const TRANSPORTADORAS_PERMITIDAS = ['correios', 'jadlog', 'loggi', 'latam', 'j&t express'];
+
+function transportadoraPermitida(nome: string | undefined): boolean {
+  if (!nome) return false;
+  const normalizado = nome.trim().toLowerCase();
+  return TRANSPORTADORAS_PERMITIDAS.some(permitida => normalizado.includes(permitida));
 }
 
 export interface OpcaoFrete {
@@ -100,7 +113,7 @@ async function consultarMelhorEnvio(cepDestino: string, pesoKg: number, dimensoe
 
     const data: MelhorEnvioOption[] = await res.json();
     return data
-      .filter(o => !o.error)
+      .filter(o => !o.error && transportadoraPermitida(o.company?.name))
       .map(o => ({
         id: String(o.id),
         nome: o.name,

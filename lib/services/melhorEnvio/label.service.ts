@@ -91,6 +91,7 @@ export async function comprarEtiqueta(orderId: string) {
 
   const shipment = await melhorEnvioClient.addToCart({
     service: Number(order.envioServicoId) || undefined,
+    agency: env.melhorEnvio.agenciaId ? Number(env.melhorEnvio.agenciaId) : undefined,
     from: {
       name: nomeParts(remetente.nome),
       email: remetente.email,

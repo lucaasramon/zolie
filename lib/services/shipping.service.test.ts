@@ -2,8 +2,8 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { cotar, _limparCacheFrete } from './shipping.service';
 
 const OPCOES_OK = [
-  { id: 1, name: 'PAC', price: '25.50', delivery_time: 8 },
-  { id: 2, name: 'SEDEX', price: '45.00', delivery_time: 3 },
+  { id: 1, name: 'PAC', price: '25.50', delivery_time: 8, company: { id: 1, name: 'Correios' } },
+  { id: 2, name: 'SEDEX', price: '45.00', delivery_time: 3, company: { id: 1, name: 'Correios' } },
 ];
 
 function mockFetchOk(opcoes: unknown = OPCOES_OK) {
@@ -67,6 +67,32 @@ describe('cotar — cache', () => {
   });
 });
 
+describe('cotar — filtro de transportadora', () => {
+  it('mantém só as transportadoras que atendem a agência de coleta', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchOk([
+        { id: 1, name: 'PAC', price: '25.50', delivery_time: 8, company: { id: 1, name: 'Correios' } },
+        { id: 2, name: '.Package', price: '30.00', delivery_time: 5, company: { id: 2, name: 'Jadlog' } },
+        { id: 3, name: 'Rodoviário', price: '40.00', delivery_time: 4, company: { id: 3, name: 'Buslog' } },
+      ]),
+    );
+
+    const r = await cotar('61887810');
+    expect(r.opcoes.map(o => o.nome)).toEqual(['PAC', '.Package']);
+  });
+
+  it('descarta opções sem transportadora informada', async () => {
+    vi.stubGlobal(
+      'fetch',
+      mockFetchOk([{ id: 1, name: 'PAC', price: '25.50', delivery_time: 8 }]),
+    );
+
+    const r = await cotar('61887810');
+    expect(r.estimado).toBe(true);
+  });
+});
+
 describe('cotar — resiliência', () => {
   it('cai na contingência quando o provedor responde erro', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503 }));
@@ -95,8 +121,8 @@ describe('cotar — resiliência', () => {
     vi.stubGlobal(
       'fetch',
       mockFetchOk([
-        { id: 1, name: 'PAC', price: '25.50', delivery_time: 8 },
-        { id: 2, name: 'SEDEX', price: '0', delivery_time: 0, error: 'Indisponível para o CEP' },
+        { id: 1, name: 'PAC', price: '25.50', delivery_time: 8, company: { id: 1, name: 'Correios' } },
+        { id: 2, name: 'SEDEX', price: '0', delivery_time: 0, error: 'Indisponível para o CEP', company: { id: 1, name: 'Correios' } },
       ]),
     );
 

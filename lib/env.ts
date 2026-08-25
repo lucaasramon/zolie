@@ -31,6 +31,10 @@ export const env = {
     // Compra de etiqueta debita saldo real da carteira em produção, então fica
     // atrás de um flag e só liga quando o time decide.
     labelsEnabled: process.env.MELHOR_ENVIO_LABELS_ENABLED === 'true',
+    // Ponto de coleta (ex: Pegaki) usado por serviços que exigem uma agência de
+    // postagem — sem isso o Melhor Envio recusa o carrinho com "A agência é
+    // obrigatória ao selecionar este serviço".
+    agenciaId: process.env.MELHOR_ENVIO_AGENCIA_ID || '',
     // Dados do remetente exigidos pelo endpoint de carrinho (não são usados na cotação).
     remetente: {
       nome: process.env.LOJA_REMETENTE_NOME || '',
