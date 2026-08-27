@@ -79,5 +79,12 @@ export const env = {
   // /api/v1/assistant/*. Separada do CRON_SECRET: escopo e motivo de rotação diferentes.
   assistantApiKey: process.env.ASSISTANT_API_KEY || '',
 
+  // Chat de consultoria de estilo (/api/v1/consultoria/chat). Sem chave configurada,
+  // a feature degrada para uma resposta amigável em vez de derrubar o build/rota.
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  },
+
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
 };

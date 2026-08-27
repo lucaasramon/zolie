@@ -216,6 +216,19 @@ export const adminCancelSchema = cancelSchema.extend({
   estornar: z.boolean().default(false),
 });
 
+export const consultoriaChatSchema = z.object({
+  // Histórico completo reenviado a cada chamada — sem sessão persistida no servidor.
+  messages: z
+    .array(
+      z.object({
+        role: z.enum(['user', 'assistant']),
+        content: z.string().trim().min(1).max(2000),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
 export const cepSchema = z.object({ cep: z.string().min(8) });
 export const couponCodeSchema = z.object({ codigo: z.string().min(3), subtotal: z.number().min(0).optional() });
 export const quantitySchema = z.object({ quantidade: z.number().int().min(1).max(20) });

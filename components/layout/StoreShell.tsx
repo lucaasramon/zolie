@@ -3,6 +3,7 @@ import * as siteConfig from '@/lib/services/site-config.service';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton';
+import { ConsultoriaButton } from '@/components/consultoria/ConsultoriaButton';
 import { linkWhatsApp } from '@/lib/loja';
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
@@ -23,6 +24,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1">{children}</main>
       <Footer categorias={categoriasSimple} />
       {whatsappHref && <WhatsAppButton href={whatsappHref} />}
+      <ConsultoriaButton whatsappHref={whatsappHref} />
     </div>
   );
 }
