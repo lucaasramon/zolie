@@ -150,6 +150,12 @@ model Product {
   pedra            String?
   tamanhos         String[]
   imagens          String[]
+  // URL (Vercel Blob) do modelo 3D em .glb da peça, para visualização interativa
+  // na galeria do produto. Opcional — nem todo produto tem modelo 3D disponível.
+  modelo3d         String?         @map("modelo_3d")
+  // Mesma peça em .usdz — formato exigido pelo AR Quick Look do iOS/Safari.
+  // model-viewer usa .glb para o resto (web, Android/Scene Viewer, WebXR).
+  modelo3dIos      String?         @map("modelo_3d_ios")
   destaque         Boolean         @default(false)
   lancamento       Boolean         @default(false)
   ativo            Boolean         @default(true)

@@ -87,4 +87,9 @@ export const env = {
   },
 
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+
+  // Visualizador 3D/AR na galeria do produto (model-viewer). Feature nova e
+  // pesada (carrega .glb/.usdz) — fica atrás de um flag para poder ser
+  // desligada sem deploy caso dê problema em produção.
+  modelo3dEnabled: process.env.MODELO_3D_ENABLED !== 'false',
 };

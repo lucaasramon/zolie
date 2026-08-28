@@ -16,6 +16,7 @@ import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
 import { brl } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
+import { env } from '@/lib/env';
 
 // Revalidação por tempo em vez de `force-dynamic`: a página passa a ser cacheável
 // (melhor para indexação e Core Web Vitals) sem servir preço/estoque defasados.
@@ -136,7 +137,13 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <ProductGallery imagens={produto.imagens || []} nome={produto.nome} slug={produto.slug} />
+        <ProductGallery
+          imagens={produto.imagens || []}
+          nome={produto.nome}
+          slug={produto.slug}
+          modelo3d={env.modelo3dEnabled ? produto.modelo3d : null}
+          modelo3dIos={env.modelo3dEnabled ? produto.modelo3dIos : null}
+        />
 
         <div className="flex flex-col gap-5">
           <div className="rounded-2xl border border-border-subtle bg-white shadow-xs">

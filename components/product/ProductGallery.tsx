@@ -2,9 +2,23 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { ProductModelViewer } from '@/components/product/ProductModelViewer';
 
-export function ProductGallery({ imagens, nome, slug }: { imagens: string[]; nome: string; slug: string }) {
+export function ProductGallery({
+  imagens,
+  nome,
+  slug,
+  modelo3d,
+  modelo3dIos,
+}: {
+  imagens: string[];
+  nome: string;
+  slug: string;
+  modelo3d?: string | null;
+  modelo3dIos?: string | null;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [modo3d, setModo3d] = useState(false);
 
   if (!imagens?.length) {
     return (
@@ -43,23 +57,40 @@ export function ProductGallery({ imagens, nome, slug }: { imagens: string[]; nom
 
       <div className="group relative flex-1 overflow-hidden rounded-2xl bg-bg-alt shadow-xs">
         <div className="relative aspect-square overflow-hidden">
-          {!loaded[activeIndex] && (
-            <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
+          {modo3d && modelo3d ? (
+            <ProductModelViewer src={modelo3d} iosSrc={modelo3dIos} alt={nome} poster={active} />
+          ) : (
+            <>
+              {!loaded[activeIndex] && (
+                <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
+              )}
+              <Image
+                src={active}
+                alt={nome}
+                fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
+                  loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
+                }`}
+                priority
+                onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
+              />
+            </>
           )}
-          <Image
-            src={active}
-            alt={nome}
-            fill
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
-              loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
-            }`}
-            priority
-            onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
-          />
         </div>
 
-        {imagens.length > 1 && (
+        {modelo3d && (
+          <button
+            type="button"
+            onClick={() => setModo3d(v => !v)}
+            aria-pressed={modo3d}
+            className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
+          >
+            {modo3d ? '✕ Fechar 3D' : '⟳ Ver em 3D'}
+          </button>
+        )}
+
+        {!modo3d && imagens.length > 1 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5 sm:hidden">
             {imagens.map((_, i) => (
               <span
