@@ -10,6 +10,7 @@ import { api } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { SearchIcon, UserIcon, HeartIcon, BagIcon, MenuIcon } from '@/components/layout/HeaderIcons';
 import { CategoryIcon } from '@/components/product/CategoryIcon';
+import { MusicToggle } from '@/components/layout/MusicToggle';
 
 interface Categoria {
   nome: string;
@@ -201,6 +202,8 @@ export function Header({ categorias }: { categorias: Categoria[] }) {
           </div>
 
           <div className="flex items-center gap-1">
+            <MusicToggle />
+
             <Link
               href={user ? '/conta' : '/login'}
               className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
