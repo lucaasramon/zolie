@@ -62,6 +62,26 @@ export function BellIcon({ className }: IconProps) {
   );
 }
 
+export function SpeakerOnIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16.3 8.7a5 5 0 0 1 0 6.6" />
+      <path d="M19 6a8.5 8.5 0 0 1 0 12" />
+    </svg>
+  );
+}
+
+export function SpeakerOffIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16 9.5 21 14.5" />
+      <path d="M21 9.5 16 14.5" />
+    </svg>
+  );
+}
+
 export function MenuIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className} aria-hidden="true">
