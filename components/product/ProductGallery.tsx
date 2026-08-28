@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { preload } from 'react-dom';
 import Image from 'next/image';
 import { ProductModelViewer } from '@/components/product/ProductModelViewer';
+
+// Ficheiro pesado (~1.6MB): sem pré-carregar, o model-viewer mostra o objeto
+// com iluminação básica por um instante até o HDRI terminar de baixar — lê
+// como "abre escuro". Iniciando o download assim que a página do produto
+// carrega (não só quando o modal abre), o arquivo já está em cache do
+// navegador no momento do clique.
+const HDRI_STUDIO_URL = '/3d/studio-joia-uniforme.hdr';
 
 // Tela cheia (fixed) em vez de embutido: no celular, arrastar o objeto dentro
 // da galeria competia com o scroll da página (o toque não sabia se era pra
@@ -17,20 +25,25 @@ function Modelo3dModal({ src, alt, poster, onClose }: { src: string; alt: string
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/85 animate-zfade">
-      <div className="flex items-center justify-between px-5 py-4">
-        <span className="text-sm font-medium text-white/90">{alt}</span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Fechar visualização 3D"
-          className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
-        >
-          ✕ Fechar
-        </button>
-      </div>
-      <div className="relative flex-1 touch-none">
-        <ProductModelViewer src={src} alt={alt} poster={poster} />
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/45 p-4 animate-zfade" onClick={onClose}>
+      <div
+        className="flex h-[min(600px,85vh)] w-[min(600px,92vw)] flex-col overflow-hidden rounded-2xl bg-bg-alt shadow-lg"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border-subtle px-5 py-4">
+          <span className="text-sm font-medium text-ink">{alt}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Fechar visualização 3D"
+            className="flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-medium text-ink shadow-sm transition-colors hover:bg-bg"
+          >
+            ✕ Fechar
+          </button>
+        </div>
+        <div className="relative flex-1 touch-none">
+          <ProductModelViewer src={src} alt={alt} poster={poster} />
+        </div>
       </div>
     </div>
   );
@@ -49,6 +62,10 @@ export function ProductGallery({
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [modo3d, setModo3d] = useState(false);
+
+  useEffect(() => {
+    if (modelo3d) preload(HDRI_STUDIO_URL, { as: 'fetch', crossOrigin: 'anonymous' });
+  }, [modelo3d]);
 
   if (!imagens?.length) {
     return (

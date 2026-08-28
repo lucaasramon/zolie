@@ -14,14 +14,17 @@ export function ProductModelViewer({ src, alt, poster }: { src: string; alt: str
       poster={poster}
       camera-controls
       auto-rotate
-      // HDRI de estúdio (Poly Haven, CC0) em vez do preset "neutral" genérico —
-      // reflexos de metal ficam realistas só com um ambiente rico, não com uma
-      // luz chapada. Exposure/sombra mais baixos porque o HDRI já é bem mais
-      // luminoso que o preset anterior.
-      environment-image="/3d/studio-joia.hdr"
-      shadow-intensity="0.6"
+      // Ângulo inicial girado para o reflexo de luz forte do HDRI já ficar
+      // de frente ao abrir, sem precisar arrastar manualmente para achá-lo.
+      camera-orbit="80deg 70deg auto"
+      // HDRI de estúdio (Poly Haven "Studio Small 08", CC0) com luz envolvente
+      // de vários softboxes, em vez de um único ponto de luz forte — assim a
+      // peça fica bem iluminada em qualquer ângulo ao girar, sem precisar
+      // "achar" o ponto de brilho.
+      environment-image="/3d/studio-joia-uniforme.hdr"
+      shadow-intensity="0.35"
       shadow-softness="0.9"
-      exposure="1.5"
+      exposure="4"
       loading="eager"
       reveal="auto"
       className="h-full w-full"
