@@ -1,8 +1,40 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ProductModelViewer } from '@/components/product/ProductModelViewer';
+
+// Tela cheia (fixed) em vez de embutido: no celular, arrastar o objeto dentro
+// da galeria competia com o scroll da página (o toque não sabia se era pra
+// girar o brinco ou rolar a tela). Em modal, o gesto fica isolado.
+function Modelo3dModal({ src, alt, poster, onClose }: { src: string; alt: string; poster?: string; onClose: () => void }) {
+  useEffect(() => {
+    const original = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-black/85 animate-zfade">
+      <div className="flex items-center justify-between px-5 py-4">
+        <span className="text-sm font-medium text-white/90">{alt}</span>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar visualização 3D"
+          className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/20"
+        >
+          ✕ Fechar
+        </button>
+      </div>
+      <div className="relative flex-1 touch-none">
+        <ProductModelViewer src={src} alt={alt} poster={poster} />
+      </div>
+    </div>
+  );
+}
 
 export function ProductGallery({
   imagens,
@@ -55,40 +87,33 @@ export function ProductGallery({
 
       <div className="group relative flex-1 overflow-hidden rounded-2xl bg-bg-alt shadow-xs">
         <div className="relative aspect-square overflow-hidden">
-          {modo3d && modelo3d ? (
-            <ProductModelViewer src={modelo3d} alt={nome} poster={active} />
-          ) : (
-            <>
-              {!loaded[activeIndex] && (
-                <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
-              )}
-              <Image
-                src={active}
-                alt={nome}
-                fill
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
-                  loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
-                }`}
-                priority
-                onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
-              />
-            </>
+          {!loaded[activeIndex] && (
+            <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
           )}
+          <Image
+            src={active}
+            alt={nome}
+            fill
+            sizes="(max-width: 1024px) 100vw, 50vw"
+            className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
+              loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
+            }`}
+            priority
+            onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
+          />
         </div>
 
         {modelo3d && (
           <button
             type="button"
-            onClick={() => setModo3d(v => !v)}
-            aria-pressed={modo3d}
+            onClick={() => setModo3d(true)}
             className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
           >
-            {modo3d ? '✕ Fechar 3D' : '⟳ Ver em 3D'}
+            ⟳ Ver em 3D
           </button>
         )}
 
-        {!modo3d && imagens.length > 1 && (
+        {imagens.length > 1 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5 sm:hidden">
             {imagens.map((_, i) => (
               <span
@@ -99,6 +124,10 @@ export function ProductGallery({
           </div>
         )}
       </div>
+
+      {modo3d && modelo3d && (
+        <Modelo3dModal src={modelo3d} alt={nome} poster={active} onClose={() => setModo3d(false)} />
+      )}
     </div>
   );
 }
