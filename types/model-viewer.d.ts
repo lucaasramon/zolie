@@ -12,6 +12,7 @@ declare module 'react' {
         'camera-controls'?: boolean;
         'auto-rotate'?: boolean;
         'shadow-intensity'?: string | number;
+        'shadow-softness'?: string | number;
         'camera-orbit'?: string;
         'field-of-view'?: string;
         exposure?: string | number;

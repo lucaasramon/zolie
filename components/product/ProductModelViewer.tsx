@@ -2,17 +2,7 @@
 
 import { useEffect } from 'react';
 
-export function ProductModelViewer({
-  src,
-  iosSrc,
-  alt,
-  poster,
-}: {
-  src: string;
-  iosSrc?: string | null;
-  alt: string;
-  poster?: string;
-}) {
+export function ProductModelViewer({ src, alt, poster }: { src: string; alt: string; poster?: string }) {
   useEffect(() => {
     import('@google/model-viewer');
   }, []);
@@ -20,28 +10,21 @@ export function ProductModelViewer({
   return (
     <model-viewer
       src={src}
-      ios-src={iosSrc || undefined}
       alt={alt}
       poster={poster}
       camera-controls
       auto-rotate
-      ar
-      // quick-look (iOS/Safari) só funciona com ios-src (.usdz) presente; sem
-      // ele o Safari tentaria abrir o Quick Look e falharia.
-      ar-modes={iosSrc ? 'webxr scene-viewer quick-look' : 'webxr scene-viewer'}
-      environment-image="neutral"
-      shadow-intensity="1"
-      exposure="1.2"
+      // HDRI de estúdio (Poly Haven, CC0) em vez do preset "neutral" genérico —
+      // reflexos de metal ficam realistas só com um ambiente rico, não com uma
+      // luz chapada. Exposure/sombra mais baixos porque o HDRI já é bem mais
+      // luminoso que o preset anterior.
+      environment-image="/3d/studio-joia.hdr"
+      shadow-intensity="0.6"
+      shadow-softness="0.9"
+      exposure="1.5"
       loading="eager"
       reveal="auto"
       className="h-full w-full"
-    >
-      <button
-        slot="ar-button"
-        className="absolute bottom-3 right-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
-      >
-        📱 Ver em Realidade Aumentada
-      </button>
-    </model-viewer>
+    />
   );
 }

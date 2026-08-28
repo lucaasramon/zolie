@@ -9,13 +9,11 @@ export function ProductGallery({
   nome,
   slug,
   modelo3d,
-  modelo3dIos,
 }: {
   imagens: string[];
   nome: string;
   slug: string;
   modelo3d?: string | null;
-  modelo3dIos?: string | null;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [modo3d, setModo3d] = useState(false);
@@ -58,7 +56,7 @@ export function ProductGallery({
       <div className="group relative flex-1 overflow-hidden rounded-2xl bg-bg-alt shadow-xs">
         <div className="relative aspect-square overflow-hidden">
           {modo3d && modelo3d ? (
-            <ProductModelViewer src={modelo3d} iosSrc={modelo3dIos} alt={nome} poster={active} />
+            <ProductModelViewer src={modelo3d} alt={nome} poster={active} />
           ) : (
             <>
               {!loaded[activeIndex] && (
