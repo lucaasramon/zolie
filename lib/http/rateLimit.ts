@@ -18,8 +18,17 @@ setInterval(() => {
 }, 60_000).unref?.();
 
 function clientKey(req: NextRequest): string {
+  // Na Vercel, o proxy de borda ANEXA o IP real do cliente ao final do
+  // X-Forwarded-For em vez de substituí-lo — as entradas anteriores podem
+  // ser controladas pelo próprio cliente. Por isso usamos a ÚLTIMA entrada
+  // (valor de confiança) em vez da primeira, que é facilmente falsificável
+  // e permitiria burlar o rate limit variando o header a cada requisição.
   const forwarded = req.headers.get('x-forwarded-for');
-  return forwarded?.split(',')[0]?.trim() || 'unknown';
+  if (forwarded) {
+    const parts = forwarded.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0) return parts[parts.length - 1];
+  }
+  return req.headers.get('x-real-ip')?.trim() || 'unknown';
 }
 
 export function assertRateLimit(req: NextRequest, scope: string, { windowMs, max }: { windowMs: number; max: number }) {

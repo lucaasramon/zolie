@@ -142,6 +142,7 @@ export default async function ProdutoPage({ params }: Props) {
           nome={produto.nome}
           slug={produto.slug}
           modelo3d={env.modelo3dEnabled ? produto.modelo3d : null}
+          permiteAR={produto.categoria?.slug === 'brincos'}
         />
 
         <div className="flex flex-col gap-5">

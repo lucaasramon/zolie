@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { preload } from 'react-dom';
 import Image from 'next/image';
 import { ProductModelViewer } from '@/components/product/ProductModelViewer';
+import { EarringARTryOn } from '@/components/product/EarringARTryOn';
 
 // Ficheiro pesado (~1.6MB): sem pré-carregar, o model-viewer mostra o objeto
 // com iluminação básica por um instante até o HDRI terminar de baixar — lê
@@ -54,14 +55,17 @@ export function ProductGallery({
   nome,
   slug,
   modelo3d,
+  permiteAR = false,
 }: {
   imagens: string[];
   nome: string;
   slug: string;
   modelo3d?: string | null;
+  permiteAR?: boolean;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [modo3d, setModo3d] = useState(false);
+  const [modoAR, setModoAR] = useState(false);
 
   useEffect(() => {
     if (modelo3d) preload(HDRI_STUDIO_URL, { as: 'fetch', crossOrigin: 'anonymous' });
@@ -120,14 +124,27 @@ export function ProductGallery({
           />
         </div>
 
-        {modelo3d && (
-          <button
-            type="button"
-            onClick={() => setModo3d(true)}
-            className="absolute right-3 top-3 z-10 flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
-          >
-            ⟳ Ver em 3D
-          </button>
+        {(modelo3d || permiteAR) && (
+          <div className="absolute right-3 top-3 z-10 flex flex-col items-end gap-2">
+            {modelo3d && (
+              <button
+                type="button"
+                onClick={() => setModo3d(true)}
+                className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
+              >
+                ⟳ Ver em 3D
+              </button>
+            )}
+            {permiteAR && (
+              <button
+                type="button"
+                onClick={() => setModoAR(true)}
+                className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-ink shadow-sm backdrop-blur transition-colors hover:bg-white"
+              >
+                📷 Provar com câmera
+              </button>
+            )}
+          </div>
         )}
 
         {imagens.length > 1 && (
@@ -144,6 +161,10 @@ export function ProductGallery({
 
       {modo3d && modelo3d && (
         <Modelo3dModal src={modelo3d} alt={nome} poster={active} onClose={() => setModo3d(false)} />
+      )}
+
+      {modoAR && (
+        <EarringARTryOn nome={nome} onClose={() => setModoAR(false)} />
       )}
     </div>
   );
