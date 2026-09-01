@@ -6,6 +6,7 @@ import { SpeakerOnIcon, SpeakerOffIcon } from '@/components/layout/HeaderIcons';
 const FAIXA_AMBIENTE = '/audio/gymnopedie-no-1.mp3';
 const VOLUME_AMBIENTE = 0.35;
 const DICA_DURACAO_MS = 6000;
+const MARGEM_VIEWPORT = 16;
 
 /**
  * Música ambiente (Satie — Gymnopédie No. 1), tocando por padrão.
@@ -16,7 +17,10 @@ const DICA_DURACAO_MS = 6000;
 export function MusicToggle() {
   const [tocando, setTocando] = useState(false);
   const [mostrarDica, setMostrarDica] = useState(false);
+  const [dicaPos, setDicaPos] = useState<{ top: number; left: number; setaLeft: number } | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const botaoRef = useRef<HTMLButtonElement>(null);
+  const dicaRef = useRef<HTMLDivElement>(null);
 
   function iniciar() {
     const audio = audioRef.current;
@@ -51,6 +55,39 @@ export function MusicToggle() {
     return () => clearTimeout(timer);
   }, [mostrarDica]);
 
+  // Posiciona o balão em `fixed` a partir da posição real do botão na tela,
+  // sempre dentro da viewport — em vez de `absolute` ancorado ao próprio
+  // botão (que vaza para fora da tela quando o botão está perto da borda,
+  // como acontece no Header mobile).
+  useEffect(() => {
+    if (!mostrarDica) return;
+
+    function reposicionar() {
+      const botao = botaoRef.current;
+      if (!botao) return;
+      const rect = botao.getBoundingClientRect();
+      const larguraDica = dicaRef.current?.offsetWidth ?? 220;
+      const centroBotao = rect.left + rect.width / 2;
+
+      let left = centroBotao - larguraDica / 2;
+      left = Math.max(MARGEM_VIEWPORT, Math.min(left, window.innerWidth - larguraDica - MARGEM_VIEWPORT));
+
+      setDicaPos({
+        top: rect.bottom + 8,
+        left,
+        setaLeft: centroBotao - left,
+      });
+    }
+
+    reposicionar();
+    window.addEventListener('resize', reposicionar);
+    window.addEventListener('scroll', reposicionar, true);
+    return () => {
+      window.removeEventListener('resize', reposicionar);
+      window.removeEventListener('scroll', reposicionar, true);
+    };
+  }, [mostrarDica]);
+
   function alternar() {
     const audio = audioRef.current;
     if (!audio) return;
@@ -64,9 +101,10 @@ export function MusicToggle() {
   }
 
   return (
-    <div className="relative">
+    <>
       <audio ref={audioRef} src={FAIXA_AMBIENTE} loop preload="none" onEnded={() => setTocando(false)} />
       <button
+        ref={botaoRef}
         type="button"
         onClick={alternar}
         aria-label={tocando ? 'Pausar música ambiente' : 'Tocar música ambiente'}
@@ -81,12 +119,20 @@ export function MusicToggle() {
 
       {mostrarDica && (
         <div
+          ref={dicaRef}
           role="status"
-          className="absolute right-0 top-full z-50 mt-2 w-max max-w-[220px] animate-zfade rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-lg"
+          style={dicaPos ? { top: dicaPos.top, left: dicaPos.left } : { visibility: 'hidden' }}
+          className="fixed z-50 w-max max-w-[calc(100vw-2rem)] animate-zfade rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-lg"
         >
-          <span className="absolute -top-1.5 right-2.5 h-3 w-3 rotate-45 bg-ink" aria-hidden="true" />
+          {dicaPos && (
+            <span
+              className="absolute -top-1.5 h-3 w-3 -translate-x-1/2 rotate-45 bg-ink"
+              style={{ left: dicaPos.setaLeft }}
+              aria-hidden="true"
+            />
+          )}
           <div className="flex items-start gap-2">
-            <span>🎵 Música ambiente tocando. Clique aqui para pausar.</span>
+            <span className="whitespace-normal">🎵 Música ambiente tocando. Clique aqui para pausar.</span>
             <button
               type="button"
               onClick={() => setMostrarDica(false)}
@@ -98,6 +144,6 @@ export function MusicToggle() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
