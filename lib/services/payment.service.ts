@@ -120,9 +120,18 @@ async function normalizarPagamento(
   return normalized;
 }
 
+export type FormaPagamentoOnline = 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
+
+/** Formas de pagamento cobradas via Asaas — as demais (venda presencial) nunca têm cobrança para consultar. */
+const FORMAS_ONLINE = new Set<string>(['CARTAO_CREDITO', 'PIX', 'BOLETO']);
+
+export function isFormaPagamentoOnline(formaPagamento: string): formaPagamento is FormaPagamentoOnline {
+  return FORMAS_ONLINE.has(formaPagamento);
+}
+
 interface ConsultarCobrancaOpts {
   asaasPaymentId: string;
-  formaPagamento: 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
+  formaPagamento: FormaPagamentoOnline;
   parcelas?: number;
 }
 

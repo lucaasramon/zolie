@@ -38,6 +38,11 @@ export async function retomarPagamento(token: string, orderId: string) {
   if (!order.asaasPaymentId) {
     throw new AppError('Nenhuma cobrança encontrada para este pedido', 404, 'PAYMENT_NOT_FOUND');
   }
+  // Formas de venda presencial não passam pelo Asaas — nunca deveriam chegar aqui
+  // com asaasPaymentId, mas a guarda deixa explícito para o type checker também.
+  if (!payments.isFormaPagamentoOnline(order.formaPagamento)) {
+    throw new AppError('Este pedido não possui cobrança online para retomar', 422, 'PAYMENT_NOT_ONLINE');
+  }
   return payments.consultarCobranca({
     asaasPaymentId: order.asaasPaymentId,
     formaPagamento: order.formaPagamento,
