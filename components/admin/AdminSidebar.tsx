@@ -10,7 +10,7 @@ import packageJson from '@/package.json';
 const LIMITE_ESTOQUE_BAIXO = 3;
 
 export async function AdminSidebar() {
-  const [aguardando, { total: reviewsPendentes }, produtosEmFalta, mensagensPendentes, trocasPendentes] =
+  const [aguardando, { total: reviewsPendentes }, produtosEmFalta, mensagensPendentes, trocasPendentes, esperandoEstoque] =
     await Promise.all([
       orderRepo.listAll({ status: 'AGUARDANDO_PAGAMENTO', take: 1 }),
       reviewRepo.listPending({ take: 1 }),
@@ -19,6 +19,7 @@ export async function AdminSidebar() {
       }),
       prisma.contactMessage.count({ where: { respondida: false } }),
       prisma.returnRequest.count({ where: { status: 'SOLICITADA' } }),
+      prisma.stockNotification.count({ where: { notificadoEm: null } }),
     ]);
 
   const groups = [
@@ -27,6 +28,7 @@ export async function AdminSidebar() {
       items: [
         { href: '/admin/dashboard', label: 'Visão geral' },
         { href: '/admin/pedidos', label: 'Pedidos', badge: aguardando.total || undefined },
+        { href: '/admin/pedidos/nova-venda', label: 'Registrar venda presencial' },
         { href: '/admin/trocas', label: 'Trocas e devoluções', badge: trocasPendentes || undefined },
         { href: '/admin/mensagens', label: 'Mensagens', badge: mensagensPendentes || undefined },
         { href: '/admin/clientes', label: 'Clientes' },
@@ -36,6 +38,7 @@ export async function AdminSidebar() {
       title: 'Catálogo',
       items: [
         { href: '/admin/produtos', label: 'Anúncios', badge: produtosEmFalta || undefined },
+        { href: '/admin/lista-espera', label: 'Lista de espera', badge: esperandoEstoque || undefined },
         { href: '/admin/categorias', label: 'Categorias' },
         { href: '/admin/precificacao', label: 'Precificação' },
       ],

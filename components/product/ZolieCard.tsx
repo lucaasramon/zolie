@@ -25,6 +25,7 @@ export interface DecoratedProduct {
   parcela: number;
   maxParcelas: number;
   estoqueBaixo: boolean;
+  disponivel?: boolean;
   preco: number | string;
   lancamento?: boolean;
   imagens?: string[];
@@ -60,6 +61,7 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
   const router = useRouter();
   const wished = isWished(p.id);
   const segundaImagem = p.imagens?.[1];
+  const esgotado = p.disponivel === false || p.estoque === 0;
 
   async function handleToggleWish() {
     if (!user) {
@@ -77,15 +79,23 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border-subtle bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-border-soft hover:shadow-lg">
       <div className="absolute left-3 top-3 z-[2] flex flex-col items-start gap-1.5">
-        {p.temDesconto && (
-          <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink shadow-xs">
-            -{p.percentualDesconto}%
+        {esgotado ? (
+          <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-xs">
+            Esgotado
           </span>
-        )}
-        {p.lancamento && (
-          <span className="rounded-full border border-gold/40 bg-white/92 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text backdrop-blur-sm">
-            Novo
-          </span>
+        ) : (
+          <>
+            {p.temDesconto && (
+              <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink shadow-xs">
+                -{p.percentualDesconto}%
+              </span>
+            )}
+            {p.lancamento && (
+              <span className="rounded-full border border-gold/40 bg-white/92 px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-gold-text backdrop-blur-sm">
+                Novo
+              </span>
+            )}
+          </>
         )}
       </div>
 
@@ -114,9 +124,10 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
               alt={p.nome}
               fill
               sizes="(max-width: 768px) 50vw, 300px"
+              style={esgotado ? { filter: 'grayscale(0.4)' } : undefined}
               className={`object-cover transition-all duration-700 ease-out ${
                 segundaImagem ? 'group-hover:opacity-0' : 'group-hover:scale-[1.06]'
-              } ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+              } ${imgLoaded ? (esgotado ? 'opacity-70' : 'opacity-100') : 'opacity-0'}`}
               onLoad={() => setImgLoaded(true)}
             />
             {segundaImagem && (
@@ -173,7 +184,7 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
           href={`/produtos/${p.slug}`}
           className="mt-auto rounded-full border border-border-soft bg-white pt-[11px] pb-[10px] text-center text-[10px] font-medium uppercase tracking-[0.16em] text-ink transition-all duration-300 hover:border-gold hover:bg-gold hover:shadow-sm active:scale-95 group-hover:border-gold group-hover:bg-gold"
         >
-          Ver peça
+          {esgotado ? 'Avise-me quando chegar' : 'Ver peça'}
         </Link>
       </div>
     </div>

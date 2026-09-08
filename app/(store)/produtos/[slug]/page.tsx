@@ -9,6 +9,7 @@ import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { SetSuggestion } from '@/components/product/SetSuggestion';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
+import { NotifyStockForm } from '@/components/product/NotifyStockForm';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductSocialProof } from '@/components/product/ProductSocialProof';
 import { ReviewForm } from '@/components/product/ReviewForm';
@@ -199,14 +200,18 @@ export default async function ProdutoPage({ params }: Props) {
 
           <ProductSocialProof productId={produto.id} />
 
-          <ProductPurchaseBox
-            productId={produto.id}
-            tamanhos={produto.tamanhos || []}
-            estoque={produto.estoque}
-            nome={produto.nome}
-            preco={produto.precoEfetivo}
-            categoria={produto.categoria?.nome}
-          />
+          {produto.disponivel ? (
+            <ProductPurchaseBox
+              productId={produto.id}
+              tamanhos={produto.tamanhos || []}
+              estoque={produto.estoque}
+              nome={produto.nome}
+              preco={produto.precoEfetivo}
+              categoria={produto.categoria?.nome}
+            />
+          ) : (
+            <NotifyStockForm productId={produto.id} />
+          )}
         </div>
       </div>
 

@@ -17,47 +17,69 @@ export interface ProductFilters {
   precoMax?: string | number;
 }
 
-const SORTS: Record<string, Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[]> = {
-  menor_preco: { preco: 'asc' },
-  maior_preco: { preco: 'desc' },
-  mais_vendidos: { totalAvaliacoes: 'desc' },
-  lancamentos: { createdAt: 'desc' },
-  melhor_avaliados: { notaMedia: 'desc' },
-  relevancia: [{ destaque: 'desc' }, { totalAvaliacoes: 'desc' }],
+// Segundo critério de ordenação (após "esgotado sempre por último"), aplicado
+// em SQL puro — usado por `search()` na query raw.
+const SORTS_SQL: Record<string, Prisma.Sql> = {
+  menor_preco: Prisma.sql`p.preco ASC`,
+  maior_preco: Prisma.sql`p.preco DESC`,
+  mais_vendidos: Prisma.sql`p.total_avaliacoes DESC`,
+  lancamentos: Prisma.sql`p.created_at DESC`,
+  melhor_avaliados: Prisma.sql`p.nota_media DESC`,
+  relevancia: Prisma.sql`p.destaque DESC, p.total_avaliacoes DESC`,
 };
 
 export const productRepo = {
+  /**
+   * Produtos esgotados (`estoque = 0`) sempre por último, qualquer que seja o
+   * filtro/ordenação escolhidos — por isso a query é montada em SQL puro em vez
+   * do `orderBy` do Prisma Client, que não expressa uma condição (`CASE WHEN`)
+   * como critério de ordenação. Os filtros abaixo espelham exatamente o `where`
+   * que o Prisma Client montaria.
+   */
   search: async (
     filters: ProductFilters = {},
     sort = 'relevancia',
     { skip = 0, take = 12 }: { skip?: number; take?: number } = {},
   ) => {
-    const where: Prisma.ProductWhereInput = { ativo: true };
+    const conditions: Prisma.Sql[] = [Prisma.sql`p.ativo = true`];
     if (filters.q) {
-      where.OR = [
-        { nome: { contains: filters.q, mode: 'insensitive' } },
-        { descricao: { contains: filters.q, mode: 'insensitive' } },
-      ];
+      conditions.push(Prisma.sql`(p.nome ILIKE ${'%' + filters.q + '%'} OR p.descricao ILIKE ${'%' + filters.q + '%'})`);
     }
-    if (filters.categoria) where.categoria = { slug: filters.categoria };
-    if (filters.material) where.material = filters.material as any;
-    if (filters.pedra) where.pedra = filters.pedra;
-    if (filters.tamanho) where.tamanhos = { has: filters.tamanho };
-    if (filters.notaMin) where.notaMedia = { gte: Number(filters.notaMin) };
-    if (filters.destaque) where.destaque = true;
-    if (filters.lancamento) where.lancamento = true;
-    if (filters.promocao) where.precoPromocional = { not: null };
-    if (filters.precoMin != null || filters.precoMax != null) {
-      where.preco = {};
-      if (filters.precoMin != null) (where.preco as any).gte = Number(filters.precoMin);
-      if (filters.precoMax != null) (where.preco as any).lte = Number(filters.precoMax);
-    }
-    const orderBy = SORTS[sort] || [{ destaque: 'desc' }];
+    if (filters.categoria) conditions.push(Prisma.sql`c.slug = ${filters.categoria}`);
+    if (filters.material) conditions.push(Prisma.sql`p.material = ${filters.material}::"Material"`);
+    if (filters.pedra) conditions.push(Prisma.sql`p.pedra = ${filters.pedra}`);
+    if (filters.tamanho) conditions.push(Prisma.sql`${filters.tamanho} = ANY(p.tamanhos)`);
+    if (filters.notaMin) conditions.push(Prisma.sql`p.nota_media >= ${Number(filters.notaMin)}`);
+    if (filters.destaque) conditions.push(Prisma.sql`p.destaque = true`);
+    if (filters.lancamento) conditions.push(Prisma.sql`p.lancamento = true`);
+    if (filters.promocao) conditions.push(Prisma.sql`p.preco_promocional IS NOT NULL`);
+    if (filters.precoMin != null) conditions.push(Prisma.sql`p.preco >= ${Number(filters.precoMin)}`);
+    if (filters.precoMax != null) conditions.push(Prisma.sql`p.preco <= ${Number(filters.precoMax)}`);
 
-    const [total, items] = await Promise.all([
-      prisma.product.count({ where }),
-      prisma.product.findMany({ where, orderBy, skip, take, include: { categoria: true } }),
+    const where = Prisma.join(conditions, ' AND ');
+    const orderBySecundario = SORTS_SQL[sort] || SORTS_SQL.relevancia;
+
+    const [totalRows, rows] = await Promise.all([
+      prisma.$queryRaw<{ total: bigint }[]>`
+        SELECT COUNT(*) AS total FROM "products" p JOIN "categories" c ON c.id = p.categoria_id WHERE ${where}
+      `,
+      prisma.$queryRaw<{ id: string }[]>`
+        SELECT p.id FROM "products" p JOIN "categories" c ON c.id = p.categoria_id WHERE ${where}
+        ORDER BY (CASE WHEN p.estoque > 0 THEN 0 ELSE 1 END), ${orderBySecundario}
+        LIMIT ${take} OFFSET ${skip}
+      `,
     ]);
+
+    const total = Number(totalRows[0]?.total ?? 0);
+    if (rows.length === 0) return { total, items: [] };
+
+    // A ordem de `findMany` com `id IN (...)` não é garantida — busca os dados
+    // completos e reordena pela ordem já decidida pela query raw acima.
+    const ids = rows.map(r => r.id);
+    const produtos = await prisma.product.findMany({ where: { id: { in: ids } }, include: { categoria: true } });
+    const byId = new Map(produtos.map(p => [p.id, p]));
+    const items = ids.map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+
     return { total, items };
   },
   findBySlug: (slug: string) => prisma.product.findFirst({ where: { slug, ativo: true }, include: { categoria: true } }),

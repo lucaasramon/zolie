@@ -423,3 +423,31 @@ export async function enviarCupomVoltei10(to: string, nome: string, codigo: stri
   );
   await send(to, `Você ganhou um cupom de 10% — Zoliê`, html);
 }
+
+export async function enviarConfirmacaoAvisoEstoque(to: string, nomeProduto: string, slugProduto: string) {
+  const html = layout(
+    `Vamos te avisar quando ${nomeProduto} chegar`,
+    `
+      ${badge('Aviso confirmado')}
+      ${heading('Combinado, vamos te avisar!')}
+      ${paragraph(`Assim que <strong style="color:${COLORS.ink};">${escapar(nomeProduto)}</strong> voltar ao estoque, você recebe um e-mail com o link direto para comprar.`)}
+      ${button('Ver outras peças', `${env.appUrl}/produtos`)}
+    `,
+  );
+  await send(to, `Vamos te avisar quando chegar — Zoliê`, html);
+}
+
+export async function enviarProdutoDisponivel(to: string, nomeProduto: string, slugProduto: string) {
+  const link = `${env.appUrl}/produtos/${slugProduto}`;
+  const html = layout(
+    `${nomeProduto} já está disponível`,
+    `
+      ${badge('Chegou!', 'success')}
+      ${heading('A peça que você esperava está de volta')}
+      ${paragraph(`Boa notícia! <strong style="color:${COLORS.ink};">${escapar(nomeProduto)}</strong> já está disponível no estoque.`)}
+      ${button('Comprar agora', link)}
+      ${paragraph('O estoque é limitado e pode acabar de novo — corre!')}
+    `,
+  );
+  await send(to, `${nomeProduto} chegou — Zoliê`, html);
+}

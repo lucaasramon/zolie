@@ -26,6 +26,20 @@ enum PaymentMethod {
   CARTAO_CREDITO
   PIX
   BOLETO
+  // Formas usadas apenas em venda presencial (registrada pelo admin, sem
+  // passar pelo checkout nem pelo Asaas) — ver `origem` em `Order`.
+  DINHEIRO
+  PIX_PRESENCIAL
+  DEBITO_MAQUININHA
+  CREDITO_MAQUININHA
+}
+
+/// De onde veio o pedido. `SITE` é o checkout normal; `PRESENCIAL` é a venda
+/// feita pessoalmente e registrada a mão no admin — sem cobrança no gateway,
+/// sem frete e sem e-mail transacional.
+enum OrderOrigin {
+  SITE
+  PRESENCIAL
 }
 
 enum DiscountType {
@@ -181,6 +195,7 @@ model Product {
   wishlist         WishlistItem[]
   productSupplies  ProductSupply[]
   slugHistory      ProductSlugHistory[]
+  stockNotifications StockNotification[]
 
   @@index([categoriaId])
   @@index([material])
@@ -310,6 +325,12 @@ model Order {
   userId         String?       @map("user_id")
   enderecoId     String?       @map("endereco_id")
   status         OrderStatus   @default(AGUARDANDO_PAGAMENTO)
+  // Venda presencial registrada pelo admin x checkout do site. O padrão `SITE`
+  // vale para todos os pedidos já existentes, que só podiam vir do checkout.
+  origem         OrderOrigin   @default(SITE)
+  // Anotação livre do admin sobre a venda presencial (ex: "feira de artesanato",
+  // "encomenda da vizinha"). Nunca exibida ao cliente.
+  observacao     String?
   formaPagamento PaymentMethod @map("forma_pagamento")
   parcelas       Int           @default(1)
   subtotal       Decimal       @db.Decimal(10, 2)
@@ -457,6 +478,23 @@ model WishlistItem {
 
   @@unique([userId, productId])
   @@map("wishlist_items")
+}
+
+// Pedido de aviso de reposição de estoque ("avise-me quando chegar"), feito por
+// e-mail sem exigir conta. `notificadoEm` marca quando o e-mail de "voltou ao
+// estoque" foi disparado — null significa que ainda está aguardando a reposição.
+model StockNotification {
+  id           String    @id @default(uuid())
+  productId    String    @map("product_id")
+  email        String
+  notificadoEm DateTime? @map("notificado_em")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  product      Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, email])
+  @@index([productId, notificadoEm])
+  @@map("stock_notifications")
 }
 
 // Mensagens do formulário de contato. Guardadas além do e-mail para nada se

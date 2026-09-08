@@ -14,19 +14,23 @@ import { logger } from '@/lib/logger';
  * normal do webhook de confirmação. Cancelar antes disso arriscaria derrubar um
  * pedido que o cliente acabou de pagar.
  */
-export const PRAZO_HORAS: Record<PaymentMethod, number> = {
+export const PRAZO_HORAS: Partial<Record<PaymentMethod, number>> = {
   PIX: 36,
   BOLETO: 96,
   CARTAO_CREDITO: 36,
+  // As formas presenciais (dinheiro, maquininha, Pix na mão) ficam de fora de
+  // propósito: a venda já nasce paga e nunca fica AGUARDANDO_PAGAMENTO, então
+  // não há o que expirar — e um prazo aqui só criaria risco de cancelar uma
+  // venda que já aconteceu.
 };
 
 const HORA_MS = 60 * 60 * 1000;
 
 /** Data de corte por forma de pagamento — pura, para poder ser testada sem banco. */
 export function calcularLimites(agora: Date) {
-  return (Object.keys(PRAZO_HORAS) as PaymentMethod[]).map(formaPagamento => ({
+  return (Object.entries(PRAZO_HORAS) as [PaymentMethod, number][]).map(([formaPagamento, horas]) => ({
     formaPagamento,
-    antesDe: new Date(agora.getTime() - PRAZO_HORAS[formaPagamento] * HORA_MS),
+    antesDe: new Date(agora.getTime() - horas * HORA_MS),
   }));
 }
 

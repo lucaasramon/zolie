@@ -7,6 +7,7 @@ import { env } from '@/lib/env';
 import { round } from '@/lib/utils/money';
 import * as siteConfig from '@/lib/services/site-config.service';
 import { slugify } from '@/lib/utils/slug';
+import { notificarReposicao } from '@/lib/services/stockNotification.service';
 
 // Campos de custo/margem — informação interna de negócio, nunca exposta pela
 // API pública. `decorate` os descarta; `decorateAdmin` os inclui para as telas /admin/*.
@@ -167,18 +168,25 @@ export const create = async (data: any) => {
 };
 
 export const update = async (id: string, data: any) => {
+  // Busca o estado anterior quando o slug ou o estoque mudam: o slug precisa do
+  // valor antigo para o redirect, e o estoque para saber se a peça acabou de sair
+  // de "esgotado" para "disponível" (dispara os avisos da lista de espera).
+  const precisaEstadoAnterior = data.slug != null || data.estoque != null;
+  const atual = precisaEstadoAnterior ? await productRepo.findById(id) : null;
+
   // Slug mudando: preserva o antigo para redirect (link já compartilhado/indexado
   // não pode virar 404). `.catch` absorve uma colisão rara de oldSlug sem travar
   // a atualização do produto em si.
-  if (data.slug) {
-    const atual = await productRepo.findById(id);
-    if (atual && atual.slug !== data.slug) {
-      await prisma.productSlugHistory.create({ data: { productId: id, oldSlug: atual.slug } }).catch(() => {});
-    }
+  if (data.slug && atual && atual.slug !== data.slug) {
+    await prisma.productSlugHistory.create({ data: { productId: id, oldSlug: atual.slug } }).catch(() => {});
   }
 
   const p = await productRepo.update(id, data);
   if (!p) throw notFound('Produto');
+
+  if (atual && atual.estoque === 0 && data.estoque > 0) {
+    await notificarReposicao(id);
+  }
 
   return decorate(p);
 };

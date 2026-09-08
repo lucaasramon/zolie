@@ -15,6 +15,7 @@ import * as payments from '@/lib/services/payment.service';
 import * as email from '@/lib/services/email.service';
 import * as notifications from '@/lib/services/notification.service';
 import { STATUS_LABEL } from '@/lib/utils/format';
+import { round } from '@/lib/utils/money';
 import { logger } from '@/lib/logger';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
@@ -489,4 +490,101 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
   }
 
   return order;
+}
+
+interface VendaPresencialItemInput {
+  productId: string;
+  quantidade: number;
+  precoUnitario?: number | null;
+}
+
+export interface VendaPresencialInput {
+  items: VendaPresencialItemInput[];
+  formaPagamento: 'DINHEIRO' | 'PIX_PRESENCIAL' | 'DEBITO_MAQUININHA' | 'CREDITO_MAQUININHA' | 'CARTAO_CREDITO' | 'PIX';
+  desconto?: number;
+  compradorNome?: string;
+  observacao?: string;
+  data?: string;
+}
+
+/**
+ * Registra uma venda feita pessoalmente (feira, balcão, encomenda de conhecido).
+ *
+ * Diferente de `create`, aqui a venda já aconteceu e já foi paga: não há carrinho,
+ * endereço, frete, cobrança no Asaas nem e-mail para o comprador. O pedido nasce
+ * direto como ENTREGUE, e a única coisa que precisa acontecer de verdade é a baixa
+ * de estoque — feita na mesma transação da criação, exatamente como no checkout,
+ * para que uma venda presencial e uma compra no site nunca vendam a mesma peça.
+ */
+export async function registrarVendaPresencial({
+  items,
+  formaPagamento,
+  desconto = 0,
+  compradorNome,
+  observacao,
+  data,
+}: VendaPresencialInput) {
+  const produtos = await Promise.all(items.map(i => productRepo.findById(i.productId)));
+
+  const linhas = items.map((i, idx) => {
+    const produto = produtos[idx];
+    if (!produto) throw notFound('Produto');
+    if (produto.estoque < i.quantidade) {
+      throw new AppError(`Estoque insuficiente: ${produto.nome} (disponível: ${produto.estoque})`, 422, 'OUT_OF_STOCK');
+    }
+    // Preço do formulário só é usado quando informado: venda de balcão costuma
+    // ter desconto na hora. Sem ele, vale o preço vigente no catálogo.
+    const precoUnitario =
+      i.precoUnitario != null ? round(i.precoUnitario) : pricing.precoEfetivo(produto);
+    return { produto, quantidade: i.quantidade, precoUnitario, subtotal: round(precoUnitario * i.quantidade) };
+  });
+
+  const subtotal = round(linhas.reduce((a, l) => a + l.subtotal, 0));
+  const descontoFinal = round(Math.min(desconto, subtotal));
+  const total = round(subtotal - descontoFinal);
+
+  const numero = await orderRepo.nextNumber();
+
+  return prisma.$transaction(async tx => {
+    const created = await orderRepo.create(
+      {
+        numero,
+        userId: null,
+        enderecoId: null,
+        origem: 'PRESENCIAL',
+        // A venda presencial já está paga e entregue em mãos: qualquer status
+        // anterior a ENTREGUE descreveria um processo de envio que não existe.
+        status: 'ENTREGUE',
+        formaPagamento,
+        parcelas: 1,
+        subtotal,
+        frete: 0,
+        desconto: descontoFinal,
+        total,
+        observacao: observacao || null,
+        // Sem conta e sem entrega: só o nome de quem levou, quando informado.
+        guestNome: compradorNome || null,
+        ...(data && { createdAt: new Date(data) }),
+      },
+      linhas.map(l => ({
+        productId: l.produto.id,
+        nomeProduto: l.produto.nome,
+        precoUnitario: l.precoUnitario,
+        quantidade: l.quantidade,
+        subtotal: l.subtotal,
+      })),
+      tx,
+    );
+
+    for (const l of linhas) {
+      // Mesma proteção do checkout: a checagem `< 0` após o decremento é o que
+      // impede vender uma peça que o site vendeu entre a validação e esta transação.
+      const updated = await productRepo.decrementStock(l.produto.id, l.quantidade, tx);
+      if (updated.estoque < 0) {
+        throw new AppError(`Estoque insuficiente: ${l.produto.nome}`, 422, 'OUT_OF_STOCK');
+      }
+    }
+
+    return created;
+  });
 }

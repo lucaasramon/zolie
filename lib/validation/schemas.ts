@@ -84,6 +84,32 @@ export const orderSchema = z
     }
   });
 
+/**
+ * Venda presencial registrada pelo admin. Difere do checkout: não há endereço,
+ * frete nem cobrança no gateway — a venda já aconteceu e já foi paga, então o
+ * que se registra aqui é um fato consumado. O preço de cada item é aceito do
+ * formulário (e não lido do catálogo) porque venda de balcão comporta desconto
+ * na hora; `null` significa "usar o preço atual do produto".
+ */
+export const vendaPresencialSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        productId: z.string().min(1),
+        quantidade: z.number().int().min(1).max(999),
+        precoUnitario: z.number().min(0).nullable().optional(),
+      }),
+    )
+    .min(1, 'Adicione ao menos um produto'),
+  formaPagamento: z.enum(['DINHEIRO', 'PIX_PRESENCIAL', 'DEBITO_MAQUININHA', 'CREDITO_MAQUININHA', 'CARTAO_CREDITO', 'PIX']),
+  desconto: z.number().min(0).optional(),
+  compradorNome: z.string().trim().max(120).optional(),
+  observacao: z.string().trim().max(500).optional(),
+  // Permite lançar uma venda de dias atrás sem que ela apareça como de hoje nos
+  // relatórios. Vazio = agora.
+  data: z.string().datetime().optional(),
+});
+
 export const asaasCustomerSchema = z
   .object({
     enderecoId: z.string().min(1).optional(),
@@ -113,6 +139,8 @@ export const productSchema = z.object({
   lancamento: z.boolean().optional(),
   ativo: z.boolean().optional(),
 });
+
+export const stockNotificationSchema = z.object({ email });
 
 export const reviewSchema = z.object({
   nota: z.number().int().min(1).max(5),
