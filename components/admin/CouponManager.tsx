@@ -29,9 +29,24 @@ function regraTexto(c: Coupon) {
   return partes.join(' · ');
 }
 
+const EMPTY_FORM = { codigo: '', tipoDesconto: 'PERCENT' as Coupon['tipoDesconto'], valor: '', minimoPedido: '', usoMaximo: '', validade: '', restricaoCompra: '' as '' | 'PRIMEIRA' | 'SEGUNDA' };
+
+function toForm(c: Coupon): typeof EMPTY_FORM {
+  return {
+    codigo: c.codigo,
+    tipoDesconto: c.tipoDesconto,
+    valor: c.tipoDesconto === 'FREE_SHIPPING' ? '' : String(Number(c.valor)),
+    minimoPedido: c.minimoPedido != null ? String(Number(c.minimoPedido)) : '',
+    usoMaximo: c.usoMaximo != null ? String(c.usoMaximo) : '',
+    validade: c.validade ? c.validade.slice(0, 10) : '',
+    restricaoCompra: c.restricaoCompra || '',
+  };
+}
+
 export function CouponManager({ coupons }: { coupons: Coupon[] }) {
   const router = useRouter();
-  const [form, setForm] = useState({ codigo: '', tipoDesconto: 'PERCENT' as Coupon['tipoDesconto'], valor: '', minimoPedido: '', usoMaximo: '', validade: '', restricaoCompra: '' as '' | 'PRIMEIRA' | 'SEGUNDA' });
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [erro, setErro] = useState('');
 
   async function toggleAtivo(c: Coupon) {
@@ -41,26 +56,45 @@ export function CouponManager({ coupons }: { coupons: Coupon[] }) {
 
   async function remover(id: string) {
     await api.delete(`/coupons/${id}`);
+    if (editandoId === id) cancelarEdicao();
     router.refresh();
   }
 
-  async function criar(e: React.FormEvent) {
+  function editar(c: Coupon) {
+    setEditandoId(c.id);
+    setForm(toForm(c));
+    setErro('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setForm(EMPTY_FORM);
+    setErro('');
+  }
+
+  async function salvar(e: React.FormEvent) {
     e.preventDefault();
     setErro('');
+    const payload = {
+      codigo: form.codigo,
+      tipoDesconto: form.tipoDesconto,
+      valor: form.tipoDesconto === 'FREE_SHIPPING' ? 0 : Number(form.valor) || 0,
+      minimoPedido: form.minimoPedido ? Number(form.minimoPedido) : null,
+      usoMaximo: form.usoMaximo ? Number(form.usoMaximo) : null,
+      validade: form.validade || null,
+      restricaoCompra: form.restricaoCompra || null,
+    };
     try {
-      await api.post('/coupons', {
-        codigo: form.codigo,
-        tipoDesconto: form.tipoDesconto,
-        valor: Number(form.valor) || 0,
-        minimoPedido: form.minimoPedido ? Number(form.minimoPedido) : null,
-        usoMaximo: form.usoMaximo ? Number(form.usoMaximo) : null,
-        validade: form.validade || null,
-        restricaoCompra: form.restricaoCompra || null,
-      });
-      setForm({ codigo: '', tipoDesconto: 'PERCENT', valor: '', minimoPedido: '', usoMaximo: '', validade: '', restricaoCompra: '' });
+      if (editandoId) {
+        await api.put(`/coupons/${editandoId}`, payload);
+      } else {
+        await api.post('/coupons', payload);
+      }
+      cancelarEdicao();
       router.refresh();
     } catch (err) {
-      setErro(err instanceof ApiError ? err.message : 'Não foi possível criar o cupom');
+      setErro(err instanceof ApiError ? err.message : `Não foi possível ${editandoId ? 'salvar' : 'criar'} o cupom`);
     }
   }
 
@@ -84,14 +118,15 @@ export function CouponManager({ coupons }: { coupons: Coupon[] }) {
               >
                 {c.ativo ? 'Ativo' : 'Pausado'}
               </button>
+              <button type="button" onClick={() => editar(c)} className="text-xs text-gold-text hover:underline">Editar</button>
               <button type="button" onClick={() => remover(c.id)} className="text-xs text-danger hover:underline">Excluir</button>
             </div>
           </div>
         ))}
       </div>
 
-      <form onSubmit={criar} className="flex flex-col gap-3 rounded-xl bg-white p-5 shadow-xs">
-        <h2 className="font-sans text-lg font-semibold text-ink">Novo cupom</h2>
+      <form onSubmit={salvar} className="flex flex-col gap-3 rounded-xl bg-white p-5 shadow-xs">
+        <h2 className="font-sans text-lg font-semibold text-ink">{editandoId ? 'Editar cupom' : 'Novo cupom'}</h2>
         {erro && <p className="text-sm text-danger">{erro}</p>}
         <Field label="Código" value={form.codigo} onChange={v => setForm(f => ({ ...f, codigo: v.toUpperCase() }))} />
         <label className="flex flex-col gap-1.5 text-sm">
@@ -114,7 +149,16 @@ export function CouponManager({ coupons }: { coupons: Coupon[] }) {
             <option value="SEGUNDA">Só na segunda compra</option>
           </select>
         </label>
-        <button type="submit" className="rounded-full bg-gold py-2.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover">Criar cupom</button>
+        <div className="flex gap-2">
+          <button type="submit" className="flex-1 rounded-full bg-gold py-2.5 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover">
+            {editandoId ? 'Salvar alterações' : 'Criar cupom'}
+          </button>
+          {editandoId && (
+            <button type="button" onClick={cancelarEdicao} className="rounded-full border border-border-soft px-4 py-2.5 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text">
+              Cancelar
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

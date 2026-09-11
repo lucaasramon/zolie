@@ -29,7 +29,7 @@ interface Address {
 interface CartData {
   items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null }[];
   resumo: { subtotal: number; frete: number; desconto: number; total: number; totalPix: number };
-  cupom: { codigo: string; descricao: string } | null;
+  cupom: { codigo: string; descricao: string; freteGratis: boolean } | null;
 }
 
 interface ShippingOption {
@@ -112,7 +112,7 @@ export default function CheckoutPage() {
   const [buscandoCepConta, setBuscandoCepConta] = useState(false);
   const [buscandoCepConvidado, setBuscandoCepConvidado] = useState(false);
   const [cupomInput, setCupomInput] = useState('');
-  const [cupomAplicado, setCupomAplicado] = useState<{ codigo: string; descricao: string } | null>(null);
+  const [cupomAplicado, setCupomAplicado] = useState<{ codigo: string; descricao: string; freteGratis: boolean } | null>(null);
   const [cupomMsg, setCupomMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
 
@@ -588,7 +588,11 @@ export default function CheckoutPage() {
   // antes do cliente escolher uma opção de envio é enganoso. Em vez de confiar nesses
   // campos, o frete exibido fica null até haver uma opção selecionada, e o total é
   // recalculado no cliente somando subtotal, desconto e o valor da opção escolhida.
-  const freteSelecionado = shippingOptions.length > 0 ? shippingOptions.find(o => o.id === envioId)?.valor ?? null : null;
+  const freteSelecionadoBruto = shippingOptions.length > 0 ? shippingOptions.find(o => o.id === envioId)?.valor ?? null : null;
+  // Cupom de frete grátis zera o frete cobrado — sem isso o total exibido/cobrado
+  // no client incluía o valor do frete mesmo com o cupom aplicado, já que a cotação
+  // de frete (etapa 3) não sabe nada sobre o cupom.
+  const freteSelecionado = cupomAplicado?.freteGratis ? (freteSelecionadoBruto === null ? null : 0) : freteSelecionadoBruto;
   // Proporção do desconto Pix já aplicada pelo backend sobre subtotal-desconto (sem
   // frete); reaplicá-la sobre o total com frete evita duplicar a regra de desconto no client.
   const pixRatio = resumo.total > 0 ? resumo.totalPix / resumo.total : 1;
@@ -809,7 +813,7 @@ export default function CheckoutPage() {
                     <input type="radio" checked={envioId === o.id} onChange={() => setEnvioId(o.id)} />
                     {o.nome} · até {o.prazoDias} dias úteis
                   </span>
-                  <span className="font-medium text-ink">{o.valor === 0 ? 'Grátis' : brl(o.valor)}</span>
+                  <span className="font-medium text-ink">{o.valor === 0 || cupomAplicado?.freteGratis ? 'Grátis' : brl(o.valor)}</span>
                 </label>
               ))}
               {freteEstimado && (

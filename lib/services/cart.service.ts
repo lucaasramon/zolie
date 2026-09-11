@@ -31,7 +31,7 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
     const r = await coupons.validar(cupom, { subtotal: subtotalBruto, userId: 'userId' in owner ? owner.userId : null, frete });
     desconto = r.desconto;
     if (r.freteGratis) frete = 0;
-    cupomAplicado = { codigo: r.cupom.codigo, descricao: r.cupom.descricao };
+    cupomAplicado = { codigo: r.cupom.codigo, descricao: r.cupom.descricao, freteGratis: r.freteGratis };
   }
   return {
     id: cart.id,
