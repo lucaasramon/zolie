@@ -20,7 +20,7 @@ interface InitialData {
   preco: number | string;
   precoPromocional?: number | string | null;
   precoCusto?: number | string | null;
-  material: 'PRATA_925' | 'BANHADO_OURO';
+  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO';
   categoriaId: string;
   estoque: number;
   pesoGramas?: number | string | null;
@@ -186,6 +186,7 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
               <span className="text-ink-muted">Material*</span>
               <select value={form.material} onChange={e => setForm(f => ({ ...f, material: e.target.value as any }))} className="rounded-md border border-border-subtle px-3 py-2 outline-none transition-colors focus:border-gold">
                 <option value="PRATA_925">Prata 925</option>
+                <option value="PRATA_750">Prata 750</option>
                 <option value="BANHADO_OURO">Banhado a Ouro 18k</option>
               </select>
             </label>

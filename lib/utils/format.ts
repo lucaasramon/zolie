@@ -9,6 +9,7 @@ export function stars(nota: number): string {
 
 export const MATERIAL_LABEL: Record<string, string> = {
   PRATA_925: 'Prata 925',
+  PRATA_750: 'Prata 750',
   BANHADO_OURO: 'Banhado a Ouro 18k',
 };
 

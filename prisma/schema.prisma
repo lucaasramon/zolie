@@ -10,6 +10,7 @@ datasource db {
 
 enum Material {
   PRATA_925
+  PRATA_750
   BANHADO_OURO
 }
 

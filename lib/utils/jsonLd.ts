@@ -22,6 +22,7 @@ interface ProdutoJsonLd {
 
 const MATERIAL_JSONLD: Record<string, string> = {
   PRATA_925: 'Prata 925',
+  PRATA_750: 'Prata 750',
   BANHADO_OURO: 'Banhado a ouro 18k',
 };
 

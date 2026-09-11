@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
+import { MATERIAL_LABEL } from '@/lib/utils/format';
 import { calcularPreco } from '@/lib/pricing-calc';
 
 type SupplyCategoria = 'EMBALAGEM' | 'BRINDE';
@@ -23,7 +24,7 @@ interface Produto {
   id: string;
   nome: string;
   imagem: string | null;
-  material: 'PRATA_925' | 'BANHADO_OURO';
+  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO';
   preco: number;
   precoCusto: number | null;
   custoSemijoia: number | null;
@@ -349,7 +350,7 @@ function ProductCalculator({
               </span>
               <span className="flex flex-col">
                 <span className="text-ink">{p.nome}</span>
-                <span className="text-xs text-ink-tertiary">{p.material === 'PRATA_925' ? 'Prata 925' : 'Banhado a ouro'} · {brl(p.preco)}</span>
+                <span className="text-xs text-ink-tertiary">{MATERIAL_LABEL[p.material] || p.material} · {brl(p.preco)}</span>
               </span>
             </button>
           ))}
