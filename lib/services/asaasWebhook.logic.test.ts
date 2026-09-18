@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isValidWebhookToken, decideWebhookAction } from './asaasWebhook.logic';
+import { isValidWebhookToken, decideWebhookAction, extractPaymentEvent } from './asaasWebhook.logic';
 
 describe('isValidWebhookToken', () => {
   it('rejeita quando o token esperado não está configurado', () => {
@@ -81,5 +81,42 @@ describe('decideWebhookAction', () => {
       order: { asaasStatus: 'CREATED', status: 'AGUARDANDO_PAGAMENTO' },
     });
     expect(decision.action).toBe('sync_status_only');
+  });
+});
+
+describe('extractPaymentEvent', () => {
+  it('ignora ACCESS_TOKEN_CREATED (evento real que derrubou o webhook com 500)', () => {
+    const payload = {
+      id: 'evt_848100dd833f724812f6d2c02262b1b1&1482909985',
+      event: 'ACCESS_TOKEN_CREATED',
+      dateCreated: '2026-08-25 11:22:18',
+      account: { id: 'be487f65-ab9f-4ae9-b5b4-cc9b4daa0ade', ownerId: null },
+      accessToken: { id: '88870cad-e2ae-48ab-a9a0-2e6d0125c46e', name: 'zolieOficial', enabled: true },
+    };
+    expect(extractPaymentEvent(payload)).toBeNull();
+  });
+
+  it('ignora corpos que não são objetos', () => {
+    expect(extractPaymentEvent(null)).toBeNull();
+    expect(extractPaymentEvent(undefined)).toBeNull();
+    expect(extractPaymentEvent('texto')).toBeNull();
+    expect(extractPaymentEvent(42)).toBeNull();
+  });
+
+  it('ignora evento de cobrança com payment incompleto', () => {
+    expect(extractPaymentEvent({ event: 'PAYMENT_CONFIRMED' })).toBeNull();
+    expect(extractPaymentEvent({ event: 'PAYMENT_CONFIRMED', payment: null })).toBeNull();
+    expect(extractPaymentEvent({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1' } })).toBeNull();
+    expect(extractPaymentEvent({ event: 'PAYMENT_CONFIRMED', payment: { status: 'CONFIRMED' } })).toBeNull();
+    expect(extractPaymentEvent({ payment: { id: 'pay_1', status: 'CONFIRMED' } })).toBeNull();
+  });
+
+  it('extrai apenas os campos usados de um evento de cobrança válido', () => {
+    const extracted = extractPaymentEvent({
+      id: 'evt_1',
+      event: 'PAYMENT_CONFIRMED',
+      payment: { id: 'pay_1', status: 'CONFIRMED', value: 100, customer: 'cus_1' },
+    });
+    expect(extracted).toEqual({ event: 'PAYMENT_CONFIRMED', payment: { id: 'pay_1', status: 'CONFIRMED' } });
   });
 });

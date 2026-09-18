@@ -17,6 +17,7 @@ import * as notifications from '@/lib/services/notification.service';
 import { STATUS_LABEL } from '@/lib/utils/format';
 import { round } from '@/lib/utils/money';
 import { logger } from '@/lib/logger';
+import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 
@@ -455,6 +456,16 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
   if (emailStatus) {
     if (motivo === 'PAGAMENTO_CONFIRMADO') {
       await email.enviarConfirmacaoPagamento(emailStatus, nomeStatus, order.numero);
+
+      // Notifica a equipe da loja a cada venda confirmada. Best-effort: não pode
+      // derrubar a confirmação do webhook do Asaas se o e-mail interno falhar.
+      await email.enviarNotificacaoNovaVenda(
+        env.loja.emailsNotificacaoVenda,
+        nomeStatus,
+        order.numero,
+        order.items,
+        order.total,
+      );
 
       // Se esta confirmação tornou este o 1º pedido pago do cliente, envia o
       // cupom de "volte na 2ª compra" — convidado (sem userId) fica de fora,

@@ -410,6 +410,53 @@ export async function enviarConfirmacaoPagamento(to: string, nome: string, numer
   await send(to, `Pagamento confirmado: pedido ${numero} — Zoliê`, html);
 }
 
+/**
+ * Avisa a equipe da loja (destinatários internos) que um pagamento acabou de ser
+ * confirmado. Envia um e-mail por destinatário — falha em um não deve impedir os demais.
+ */
+export async function enviarNotificacaoNovaVenda(
+  destinatarios: string[],
+  nomeCliente: string,
+  numero: string,
+  items: OrderItemInfo[],
+  total: unknown,
+) {
+  if (destinatarios.length === 0) return;
+
+  const itensHtml = items
+    .map(
+      i => `
+        <tr>
+          <td style="padding: 10px 0; border-bottom: 1px solid ${COLORS.borderSubtle}; font-family: Arial, sans-serif; font-size: 13px; color: ${COLORS.ink};">
+            ${i.quantidade}x ${escapar(i.nomeProduto)}
+          </td>
+          <td style="padding: 10px 0; border-bottom: 1px solid ${COLORS.borderSubtle}; font-family: Arial, sans-serif; font-size: 13px; color: ${COLORS.ink}; text-align: right;">
+            ${brl(i.subtotal as number)}
+          </td>
+        </tr>`,
+    )
+    .join('');
+
+  const html = layout(
+    `Novo pagamento confirmado — pedido ${numero}`,
+    `
+      ${badge('Pagamento confirmado', 'success')}
+      ${heading('Nova venda confirmada!')}
+      ${paragraph(`O pagamento do pedido <strong style="color:${COLORS.ink};">${escapar(numero)}</strong>, de <strong style="color:${COLORS.ink};">${escapar(nomeCliente)}</strong>, foi confirmado.`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+        ${itensHtml}
+        <tr>
+          <td style="padding-top: 14px; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: ${COLORS.ink};">Total</td>
+          <td style="padding-top: 14px; font-family: Arial, sans-serif; font-size: 15px; font-weight: bold; color: ${COLORS.ink}; text-align: right;">${brl(total as number)}</td>
+        </tr>
+      </table>
+      ${button('Ver pedido no painel', `${env.appUrl}/admin/pedidos`)}
+    `,
+  );
+
+  await Promise.all(destinatarios.map(to => send(to, `Nova venda confirmada — pedido ${numero}`, html)));
+}
+
 export async function enviarCupomVoltei10(to: string, nome: string, codigo: string) {
   const html = layout(
     `Você ganhou ${codigo} para a próxima compra`,

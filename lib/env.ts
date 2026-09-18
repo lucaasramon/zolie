@@ -8,6 +8,22 @@ function required(name: string): string {
   return value;
 }
 
+/**
+ * Em produção, cair num default silencioso é pior do que falhar o build: um webhook
+ * sem token é rejeitado com 401 até o Asaas interromper a fila — exatamente o que
+ * fez uma confirmação de pagamento se perder. O throw acontece na avaliação do
+ * módulo, ou seja, durante o `next build` na Vercel: o deploy falha e o anterior
+ * continua no ar. Fora de produção o fallback vale, para não atrapalhar o dev local.
+ */
+function requiredInProduction(name: string, fallback: string): string {
+  const value = process.env[name];
+  if (value) return value;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(`Variável de ambiente obrigatória em produção ausente: ${name}`);
+  }
+  return fallback;
+}
+
 export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
 
@@ -52,8 +68,13 @@ export const env = {
 
   asaas: {
     apiKey: process.env.ASAAS_API_KEY || process.env.ASAAS_API || '',
-    baseUrl: process.env.ASAAS_BASE_URL || 'https://sandbox.asaas.com/api/v3',
-    webhookToken: process.env.ASAAS_WEBHOOK_TOKEN || '',
+    // Sem a variável, cada ambiente cai no Asaas correspondente: produção fala com a
+    // API real (nunca com o sandbox), dev/preview continuam no sandbox. Não lança
+    // erro porque um throw aqui derrubaria o build inteiro, não só a integração.
+    baseUrl:
+      process.env.ASAAS_BASE_URL ||
+      (process.env.NODE_ENV === 'production' ? 'https://api.asaas.com/v3' : 'https://sandbox.asaas.com/api/v3'),
+    webhookToken: requiredInProduction('ASAAS_WEBHOOK_TOKEN', ''),
   },
 
   resend: {
@@ -71,6 +92,11 @@ export const env = {
     // Para onde vão as mensagens do formulário de contato.
     emailContato: process.env.LOJA_EMAIL_CONTATO || '',
     instagram: process.env.LOJA_INSTAGRAM || '',
+    // Destinatários avisados a cada venda com pagamento confirmado (separado por vírgula).
+    emailsNotificacaoVenda: (process.env.LOJA_EMAILS_NOTIFICACAO_VENDA || '')
+      .split(',')
+      .map(e => e.trim())
+      .filter(Boolean),
   },
 
   cronSecret: process.env.CRON_SECRET || '',

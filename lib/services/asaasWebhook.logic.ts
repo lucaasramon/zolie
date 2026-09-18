@@ -12,6 +12,32 @@ export function isValidWebhookToken(expectedToken: string, received: string | nu
   return timingSafeEqual(expected, actual);
 }
 
+export interface AsaasPaymentEvent {
+  event: string;
+  payment: { id: string; status: string };
+}
+
+/**
+ * Extrai um evento de cobrança do corpo bruto enviado pelo Asaas, ou `null` quando o
+ * corpo não é um evento de cobrança.
+ *
+ * O Asaas envia pela MESMA URL eventos que não têm o objeto `payment` (ex:
+ * ACCESS_TOKEN_CREATED, TRANSFER_*, INVOICE_*, ...). Antes desta validação a rota
+ * acessava `payload.payment.status` cegamente e estourava com 500. Como a fila do
+ * Asaas é sequencial, um único evento desses travado no início da fila bloqueava a
+ * entrega de TODAS as confirmações de pagamento seguintes.
+ */
+export function extractPaymentEvent(payload: unknown): AsaasPaymentEvent | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const { event, payment } = payload as { event?: unknown; payment?: unknown };
+  if (typeof event !== 'string' || !event) return null;
+  if (!payment || typeof payment !== 'object') return null;
+  const { id, status } = payment as { id?: unknown; status?: unknown };
+  if (typeof id !== 'string' || !id) return null;
+  if (typeof status !== 'string' || !status) return null;
+  return { event, payment: { id, status } };
+}
+
 export interface WebhookDecisionInput {
   event: string;
   paymentStatus: string;
