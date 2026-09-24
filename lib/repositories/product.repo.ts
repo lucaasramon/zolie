@@ -40,8 +40,12 @@ export const productRepo = {
     filters: ProductFilters = {},
     sort = 'relevancia',
     { skip = 0, take = 12 }: { skip?: number; take?: number } = {},
+    { incluirInativos = false }: { incluirInativos?: boolean } = {},
   ) => {
-    const conditions: Prisma.Sql[] = [Prisma.sql`p.ativo = true`];
+    // `TRUE` como base quando inclui inativos: mantém a query válida (Prisma.join
+    // de uma lista vazia geraria `WHERE ` sem nada depois) sem reintroduzir o filtro
+    // de ativo que este modo existe justamente para pular.
+    const conditions: Prisma.Sql[] = incluirInativos ? [Prisma.sql`TRUE`] : [Prisma.sql`p.ativo = true`];
     if (filters.q) {
       conditions.push(Prisma.sql`(p.nome ILIKE ${'%' + filters.q + '%'} OR p.descricao ILIKE ${'%' + filters.q + '%'})`);
     }

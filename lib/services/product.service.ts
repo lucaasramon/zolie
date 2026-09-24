@@ -70,9 +70,9 @@ export async function list(filters: ProductFilters, sort: string, pagination: { 
   return { total, items: items.map(decorate) };
 }
 
-/** Igual a `list`, mas com custos visíveis — uso restrito à listagem em /admin/produtos. */
+/** Igual a `list`, mas com custos visíveis e incluindo produtos pausados — uso restrito à listagem em /admin/produtos. */
 export async function listAdmin(filters: ProductFilters, sort: string, pagination: { skip?: number; take?: number }) {
-  const { total, items } = await productRepo.search(filters, sort, pagination);
+  const { total, items } = await productRepo.search(filters, sort, pagination, { incluirInativos: true });
   return { total, items: items.map(decorateAdmin) };
 }
 
