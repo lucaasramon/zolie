@@ -8,7 +8,7 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
 import { trackAddToCart } from '@/lib/analytics';
 import { fireGoldConfetti } from '@/components/ui/GoldConfetti';
-import { CORRENTES_PADRAO } from '@/lib/personalizacao';
+import { CORRENTES_PADRAO, OpcaoPersonalizacao, precoPersonalizado } from '@/lib/personalizacao';
 import {
   PersonalizacaoForm,
   PersonalizacaoState,
@@ -22,16 +22,38 @@ interface Props {
   estoque: number;
   /** Peça personalizada: mostra as perguntas de personalização e o tamanho vira o da corrente. */
   personalizado?: boolean;
+  /** Modelos com preço próprio do anúncio personalizado (vazio = usa o preço do produto). */
+  opcoesPersonalizacao?: OpcaoPersonalizacao[];
+  valorGravacaoVerso?: number | null;
   /** Dados usados só para os eventos de analytics. */
   nome?: string;
   preco?: number;
   categoria?: string | null;
 }
 
-export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoque, personalizado = false, nome, preco, categoria }: Props) {
+export function ProductPurchaseBox({
+  productId,
+  tamanhos: tamanhosProduto,
+  estoque,
+  personalizado = false,
+  opcoesPersonalizacao = [],
+  valorGravacaoVerso = null,
+  nome,
+  preco,
+  categoria,
+}: Props) {
   const tamanhos = personalizado && tamanhosProduto.length === 0 ? CORRENTES_PADRAO : tamanhosProduto;
   const [tamanho, setTamanho] = useState(tamanhos[0] || '');
-  const [personalizacao, setPersonalizacao] = useState<PersonalizacaoState>(PERSONALIZACAO_INICIAL);
+  // Com um único modelo não há o que escolher: já vem marcado.
+  const inicial: PersonalizacaoState = {
+    ...PERSONALIZACAO_INICIAL,
+    modeloId: opcoesPersonalizacao.length === 1 ? opcoesPersonalizacao[0].id : null,
+  };
+  const [personalizacao, setPersonalizacao] = useState<PersonalizacaoState>(inicial);
+  // Mesmo cálculo do servidor (lib/personalizacao), só para exibição: quem cobra é o backend.
+  const precoPeca = personalizado
+    ? precoPersonalizado({ precoBase: preco ?? 0, opcoes: opcoesPersonalizacao, valorGravacaoVerso }, personalizacao)
+    : null;
   const [erroPersonalizacao, setErroPersonalizacao] = useState<string | null>(null);
   const [quantidade, setQuantidade] = useState(1);
   const [cep, setCep] = useState('');
@@ -45,7 +67,7 @@ export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoq
 
   async function addToCart(buyNow = false) {
     if (personalizado) {
-      const erro = validarPersonalizacao(personalizacao);
+      const erro = validarPersonalizacao(personalizacao, opcoesPersonalizacao);
       setErroPersonalizacao(erro);
       if (erro) {
         showToast(erro);
@@ -61,6 +83,7 @@ export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoq
         tamanho: tamanho || null,
         ...(personalizado && {
           personalizacao: {
+            modeloId: personalizacao.modeloId,
             imagens: personalizacao.imagens,
             verso: personalizacao.verso,
             textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
@@ -71,14 +94,14 @@ export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoq
       });
       await refresh();
       // Cada peça personalizada é única: o formulário volta ao início para a próxima.
-      if (personalizado) setPersonalizacao(PERSONALIZACAO_INICIAL);
+      if (personalizado) setPersonalizacao(inicial);
 
       // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
       if (nome && preco != null) {
         trackAddToCart({
           id: productId,
           nome,
-          preco,
+          preco: precoPeca ?? preco,
           quantidade,
           categoria,
           variante: tamanho || null,
@@ -113,6 +136,8 @@ export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoq
     <div className="flex flex-col gap-5 rounded-2xl border border-border-subtle bg-white p-5 shadow-sm sm:p-6">
       {personalizado && (
         <PersonalizacaoForm
+          opcoes={opcoesPersonalizacao}
+          valorGravacaoVerso={valorGravacaoVerso}
           value={personalizacao}
           onChange={p => {
             setPersonalizacao(p);
@@ -123,6 +148,13 @@ export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoq
           onCorrenteChange={setTamanho}
           erro={erroPersonalizacao}
         />
+      )}
+
+      {personalizado && (
+        <div className="flex items-baseline justify-between rounded-lg bg-bg-alt px-4 py-3">
+          <span className="text-xs font-medium uppercase tracking-wider text-ink">Valor desta peça</span>
+          <span className="text-lg font-medium text-ink">{precoPeca != null ? brl(precoPeca * quantidade) : 'Escolha o modelo'}</span>
+        </div>
       )}
 
       {!personalizado && tamanhos.length > 0 && tamanhos[0] !== 'Único' && (

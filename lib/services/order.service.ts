@@ -123,6 +123,13 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
     if (i.product.estoque < i.quantidade) {
       throw new AppError(`Estoque insuficiente: ${i.product.nome}`, 422, 'OUT_OF_STOCK');
     }
+    if (pricing.precoItemOuNull(i) == null) {
+      throw new AppError(
+        `O modelo escolhido de ${i.product.nome} não está mais disponível. Remova a peça da sacola e escolha de novo.`,
+        422,
+        'PERSONALIZATION_OPTION_UNAVAILABLE',
+      );
+    }
   }
 
   const base = pricing.resumo(items);
@@ -187,11 +194,11 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
       items.map(i => ({
         productId: i.productId,
         nomeProduto: i.product.nome,
-        precoUnitario: pricing.precoEfetivo(i.product),
+        precoUnitario: pricing.precoItem(i),
         quantidade: i.quantidade,
         tamanho: i.tamanho,
         personalizacao: i.personalizacao ?? undefined,
-        subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
+        subtotal: pricing.precoItem(i) * i.quantidade,
       })),
       tx,
     );

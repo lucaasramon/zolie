@@ -3,9 +3,17 @@
 import { useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { useToast } from '@/components/providers/ToastProvider';
-import { FONTES_PERSONALIZACAO, LIMITE_IMAGENS_PERSONALIZACAO, PERGUNTAS_PERSONALIZACAO } from '@/lib/personalizacao';
+import { brl } from '@/lib/utils/money';
+import {
+  FONTES_PERSONALIZACAO,
+  LIMITE_IMAGENS_PERSONALIZACAO,
+  OpcaoPersonalizacao,
+  PERGUNTAS_PERSONALIZACAO,
+  rotuloOpcao,
+} from '@/lib/personalizacao';
 
 export interface PersonalizacaoState {
+  modeloId: string | null;
   imagens: string[];
   /** null = ainda não respondido (a pergunta é obrigatória). */
   verso: boolean | null;
@@ -15,6 +23,7 @@ export interface PersonalizacaoState {
 }
 
 export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
+  modeloId: null,
   imagens: [],
   verso: null,
   textoVerso: '',
@@ -23,7 +32,8 @@ export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
 };
 
 /** Mensagem do primeiro problema encontrado, ou null se dá para enviar. */
-export function validarPersonalizacao(p: PersonalizacaoState): string | null {
+export function validarPersonalizacao(p: PersonalizacaoState, opcoes: OpcaoPersonalizacao[]): string | null {
+  if (opcoes.length > 0 && !opcoes.some(o => o.id === p.modeloId)) return 'Escolha o modelo da peça';
   if (p.verso === null) return 'Informe se deseja personalização no verso';
   if (p.verso && !p.textoVerso.trim()) return 'Escreva a personalização do verso';
   return null;
@@ -34,6 +44,8 @@ const inputClass =
   'w-full rounded-lg border border-border-subtle bg-white px-4 py-3 text-sm text-ink outline-none transition-colors focus:border-gold-soft';
 
 interface Props {
+  opcoes: OpcaoPersonalizacao[];
+  valorGravacaoVerso: number | null;
   value: PersonalizacaoState;
   onChange: (next: PersonalizacaoState) => void;
   correntes: string[];
@@ -42,7 +54,7 @@ interface Props {
   erro?: string | null;
 }
 
-export function PersonalizacaoForm({ value, onChange, correntes, corrente, onCorrenteChange, erro }: Props) {
+export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange, correntes, corrente, onCorrenteChange, erro }: Props) {
   const [enviando, setEnviando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -76,6 +88,33 @@ export function PersonalizacaoForm({ value, onChange, correntes, corrente, onCor
 
   return (
     <div className="flex flex-col gap-6">
+      {opcoes.length > 0 && (
+        <fieldset className="flex flex-col gap-2">
+          <legend className={`${labelClass} mb-2`}>{PERGUNTAS_PERSONALIZACAO.modelo}</legend>
+          {opcoes.map(o => {
+            const ativo = value.modeloId === o.id;
+            return (
+              <label
+                key={o.id}
+                className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm transition-colors ${
+                  ativo ? 'border-gold bg-gold/10' : 'border-border-subtle hover:border-gold-soft'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="modelo-personalizacao"
+                  checked={ativo}
+                  onChange={() => set({ modeloId: o.id })}
+                  className="h-5 w-5 accent-gold"
+                />
+                <span className="flex-1 font-medium text-ink">{rotuloOpcao(o)}</span>
+                <span className="font-medium text-gold-text">{brl(o.preco)}</span>
+              </label>
+            );
+          })}
+        </fieldset>
+      )}
+
       <div className="flex flex-col gap-3">
         <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={onFiles} />
         <button
@@ -113,7 +152,10 @@ export function PersonalizacaoForm({ value, onChange, correntes, corrente, onCor
       </div>
 
       <fieldset className="flex flex-col gap-2">
-        <legend className={`${labelClass} mb-2`}>{PERGUNTAS_PERSONALIZACAO.verso}</legend>
+        <legend className={`${labelClass} mb-2`}>
+          {PERGUNTAS_PERSONALIZACAO.verso}
+          {valorGravacaoVerso ? <span className="ml-1 font-normal text-gold-text">(+ {brl(valorGravacaoVerso)})</span> : null}
+        </legend>
         {[
           { label: 'sim', v: true },
           { label: 'não', v: false },

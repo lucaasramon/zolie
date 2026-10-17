@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { categoryRepo } from '@/lib/repositories/category.repo';
 import { ProductForm } from '@/components/admin/ProductForm';
+import { lerOpcoes } from '@/lib/personalizacao';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,6 +38,8 @@ export default async function EditarProdutoPage({ params }: Props) {
         lancamento: produto.lancamento,
         ativo: produto.ativo,
         personalizado: produto.personalizado,
+        opcoesPersonalizacao: lerOpcoes(produto.opcoesPersonalizacao),
+        valorGravacaoVerso: produto.valorGravacaoVerso != null ? Number(produto.valorGravacaoVerso) : null,
       }}
     />
   );

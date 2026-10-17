@@ -18,6 +18,7 @@ import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
 import { brl } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
 import { env } from '@/lib/env';
+import { lerOpcoes } from '@/lib/personalizacao';
 
 // Revalidação por tempo em vez de `force-dynamic`: a página passa a ser cacheável
 // (melhor para indexação e Core Web Vitals) sem servir preço/estoque defasados.
@@ -99,6 +100,7 @@ export default async function ProdutoPage({ params }: Props) {
   if (!produto) return notFound();
 
   const { items: reviews } = await listReviews(produto.id, { skip: 0, take: 5 });
+  const opcoes = produto.personalizado ? lerOpcoes(produto.opcoesPersonalizacao) : [];
 
   const trilha = [
     { nome: 'Início', url: '/' },
@@ -178,6 +180,7 @@ export default async function ProdutoPage({ params }: Props) {
                   <span className="rounded-full bg-gold px-2.5 py-0.5 text-[11px] font-semibold text-ink shadow-xs">-{produto.percentualDesconto}%</span>
                 </div>
               )}
+              {produto.precoVariavel && <span className="text-xs font-light uppercase tracking-wider text-ink-tertiary">A partir de</span>}
               <span className="text-[38px] font-medium leading-tight tracking-tight text-ink">{brl(produto.precoEfetivo)}</span>
               {produto.precoPix < produto.precoEfetivo && (
                 <span className="flex items-center gap-1.5 text-sm font-medium text-gold-text">
@@ -206,6 +209,8 @@ export default async function ProdutoPage({ params }: Props) {
               tamanhos={produto.tamanhos || []}
               estoque={produto.estoque}
               personalizado={produto.personalizado}
+              opcoesPersonalizacao={opcoes}
+              valorGravacaoVerso={produto.valorGravacaoVerso}
               nome={produto.nome}
               preco={produto.precoEfetivo}
               categoria={produto.categoria?.nome}

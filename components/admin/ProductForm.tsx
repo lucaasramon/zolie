@@ -5,7 +5,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
-import { CORRENTES_PADRAO } from '@/lib/personalizacao';
+import {
+  CORRENTES_DISPONIVEIS,
+  CORRENTES_PADRAO,
+  MODELOS_SUGERIDOS,
+  OpcaoPersonalizacao,
+  TAMANHOS_MODELO,
+} from '@/lib/personalizacao';
 
 interface Categoria {
   id: string;
@@ -32,6 +38,20 @@ interface InitialData {
   lancamento?: boolean;
   ativo?: boolean;
   personalizado?: boolean;
+  opcoesPersonalizacao?: OpcaoPersonalizacao[];
+  valorGravacaoVerso?: number | string | null;
+}
+
+/** Linha editável de modelo: o preço fica como texto enquanto é digitado. */
+interface ModeloForm {
+  id: string;
+  modelo: string;
+  tamanho: string;
+  preco: string;
+}
+
+function novoModelo(): ModeloForm {
+  return { id: crypto.randomUUID(), modelo: '', tamanho: '', preco: '' };
 }
 
 const EMPTY: InitialData = {
@@ -53,12 +73,20 @@ const EMPTY: InitialData = {
   lancamento: false,
   ativo: true,
   personalizado: false,
+  opcoesPersonalizacao: [],
+  valorGravacaoVerso: '',
 };
 
 export function ProductForm({ categorias, initialData }: { categorias: Categoria[]; initialData?: InitialData }) {
   const isEdit = Boolean(initialData?.id);
   const [form, setForm] = useState<InitialData>(initialData || EMPTY);
   const [tamanhosInput, setTamanhosInput] = useState((initialData?.tamanhos || []).join(', '));
+  const [correntes, setCorrentes] = useState<string[]>(
+    (initialData?.tamanhos || []).filter(t => CORRENTES_DISPONIVEIS.includes(t)),
+  );
+  const [modelos, setModelos] = useState<ModeloForm[]>(
+    (initialData?.opcoesPersonalizacao || []).map(o => ({ id: o.id, modelo: o.modelo, tamanho: o.tamanho || '', preco: String(o.preco) })),
+  );
   const [imagens, setImagens] = useState<string[]>(initialData?.imagens || []);
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [erro, setErro] = useState('');
@@ -108,14 +136,30 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
     setImagens(prev => prev.filter((_, i) => i !== index));
   }
 
-  const preco = Number(form.preco) || 0;
-  const precoPromocional = form.precoPromocional ? Number(form.precoPromocional) : null;
+  const usaModelos = Boolean(form.personalizado) && modelos.length > 0;
+  const precosModelos = modelos.map(m => Number(m.preco)).filter(n => n > 0);
+  // Com modelos, o preço do anúncio é o menor deles (o servidor aplica a mesma regra).
+  const preco = usaModelos ? (precosModelos.length ? Math.min(...precosModelos) : 0) : Number(form.preco) || 0;
+  const precoPromocional = !usaModelos && form.precoPromocional ? Number(form.precoPromocional) : null;
   const precoEfetivo = precoPromocional || preco;
   const precoPix = precoEfetivo * 0.9;
+
+  function updateModelo(id: string, patch: Partial<ModeloForm>) {
+    setModelos(ms => ms.map(m => (m.id === id ? { ...m, ...patch } : m)));
+  }
+
+  function toggleCorrente(c: string) {
+    // Mantém a ordem da lista padrão: a primeira marcada vem pré-selecionada na loja.
+    setCorrentes(cs => (cs.includes(c) ? cs.filter(x => x !== c) : CORRENTES_DISPONIVEIS.filter(x => cs.includes(x) || x === c)));
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErro('');
+    if (usaModelos && modelos.some(m => !m.modelo.trim() || !(Number(m.preco) > 0))) {
+      setErro('Preencha nome e preço de todos os modelos (ou remova os vazios).');
+      return;
+    }
     if (!form.nome || !form.categoriaId || !preco) {
       setErro('Nome, categoria e preço são obrigatórios.');
       return;
@@ -143,12 +187,16 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
       estoque: Number(form.estoque) || 0,
       pesoGramas: form.pesoGramas ? Number(form.pesoGramas) : undefined,
       pedra: form.pedra || null,
-      tamanhos: tamanhosInput.split(',').map(t => t.trim()).filter(Boolean),
+      tamanhos: form.personalizado ? correntes : tamanhosInput.split(',').map(t => t.trim()).filter(Boolean),
       imagens,
       destaque: form.destaque,
       lancamento: form.lancamento,
       ativo: form.ativo,
       personalizado: form.personalizado ?? false,
+      opcoesPersonalizacao: form.personalizado
+        ? modelos.map(m => ({ id: m.id, modelo: m.modelo.trim(), tamanho: m.tamanho || null, preco: Number(m.preco) }))
+        : [],
+      valorGravacaoVerso: form.personalizado && form.valorGravacaoVerso ? Number(form.valorGravacaoVerso) : null,
     };
 
     try {
@@ -258,11 +306,97 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
             onChange={v => setForm(f => ({ ...f, personalizado: v }))}
           />
           {form.personalizado ? (
-            <div className="rounded-lg bg-bg-alt p-3 text-xs leading-relaxed text-ink-muted">
-              Na página do produto a cliente vai responder: envio de até 2 imagens, personalização no verso (sim/não + texto),
-              pingente zircônia de coração (com/sem), letra usada (01 verdana a 06 savoyeLetPlain) e tamanho da corrente.
-              As respostas aparecem no pedido, aqui no admin.
-            </div>
+            <>
+              <div className="rounded-lg bg-bg-alt p-3 text-xs leading-relaxed text-ink-muted">
+                Na página do produto a cliente escolhe o modelo e responde: envio de até 2 imagens, gravação no verso (sim/não + texto),
+                pingente zircônia de coração (com/sem), letra usada (01 verdana a 06 savoyeLetPlain) e tamanho da corrente.
+                As respostas aparecem no pedido, aqui no admin.
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <span className="text-sm text-ink-muted">Modelos e preços</span>
+                <datalist id="modelos-sugeridos">
+                  {MODELOS_SUGERIDOS.map(m => <option key={m} value={m} />)}
+                </datalist>
+                {modelos.map(m => (
+                  <div key={m.id} className="grid grid-cols-[1fr_110px_110px_auto] items-center gap-2">
+                    <input
+                      list="modelos-sugeridos"
+                      placeholder="Modelo (ex.: Medalha redonda)"
+                      value={m.modelo}
+                      onChange={e => updateModelo(m.id, { modelo: e.target.value })}
+                      className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none transition-colors focus:border-gold"
+                    />
+                    <select
+                      value={m.tamanho}
+                      onChange={e => updateModelo(m.id, { tamanho: e.target.value })}
+                      className="rounded-md border border-border-subtle px-2 py-2 text-sm outline-none transition-colors focus:border-gold"
+                    >
+                      <option value="">Sem tamanho</option>
+                      {TAMANHOS_MODELO.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="Preço"
+                      value={m.preco}
+                      onChange={e => updateModelo(m.id, { preco: e.target.value })}
+                      className="rounded-md border border-border-subtle px-3 py-2 text-sm outline-none transition-colors focus:border-gold"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setModelos(ms => ms.filter(x => x.id !== m.id))}
+                      className="px-2 text-xs text-ink-tertiary hover:text-danger"
+                    >
+                      Remover
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setModelos(ms => [...ms, novoModelo()])}
+                  className="self-start rounded-full border border-border-soft px-4 py-1.5 text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold-text"
+                >
+                  + Adicionar modelo
+                </button>
+                <p className="text-xs text-ink-tertiary">
+                  {modelos.length > 0
+                    ? 'O preço da peça passa a ser o do modelo escolhido; na vitrine aparece o menor valor ("a partir de").'
+                    : 'Sem modelos, a peça usa o preço cheio/promocional informado abaixo.'}
+                </p>
+              </div>
+
+              <Field
+                label="Acréscimo pela gravação no verso (R$)"
+                type="number"
+                value={String(form.valorGravacaoVerso ?? '')}
+                onChange={v => setForm(f => ({ ...f, valorGravacaoVerso: v }))}
+              />
+
+              <div className="flex flex-col gap-2">
+                <span className="text-sm text-ink-muted">Tamanhos de corrente disponíveis</span>
+                <div className="flex flex-wrap gap-2">
+                  {CORRENTES_DISPONIVEIS.map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => toggleCorrente(c)}
+                      className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                        correntes.includes(c) ? 'border-gold bg-gold text-ink' : 'border-border-soft text-ink-muted hover:border-gold'
+                      }`}
+                    >
+                      {c.replace('Corrente ', '')}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-ink-tertiary">
+                  {correntes.length === 0
+                    ? `Nenhum marcado: a cliente verá apenas ${CORRENTES_PADRAO.join(', ')}.`
+                    : `A cliente escolhe entre: ${correntes.join(', ')} (o primeiro vem selecionado).`}
+                </p>
+              </div>
+            </>
           ) : (
             <p className="text-xs text-ink-tertiary">Marque para peças feitas sob encomenda com foto/escrita da cliente.</p>
           )}
@@ -270,21 +404,24 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
 
         <Section title="Preço e estoque">
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Preço cheio*" type="number" value={String(form.preco)} onChange={v => setForm(f => ({ ...f, preco: v }))} />
-            <Field label="Preço promocional" type="number" value={String(form.precoPromocional || '')} onChange={v => setForm(f => ({ ...f, precoPromocional: v }))} />
+            {usaModelos ? (
+              <div className="col-span-2 rounded-md bg-bg-alt px-3 py-2 text-sm text-ink-muted">
+                Preço definido pelos modelos da personalização — a partir de <strong className="text-ink">{brl(preco)}</strong>
+              </div>
+            ) : (
+              <>
+                <Field label="Preço cheio*" type="number" value={String(form.preco)} onChange={v => setForm(f => ({ ...f, preco: v }))} />
+                <Field label="Preço promocional" type="number" value={String(form.precoPromocional || '')} onChange={v => setForm(f => ({ ...f, precoPromocional: v }))} />
+              </>
+            )}
             <Field label="Preço de custo (visível só no admin)" type="number" value={String(form.precoCusto || '')} onChange={v => setForm(f => ({ ...f, precoCusto: v }))} />
             <Field label={isEdit ? 'Estoque' : 'Estoque inicial*'} type="number" value={String(form.estoque)} onChange={v => setForm(f => ({ ...f, estoque: Number(v) }))} />
             <Field label="Peso (g)" type="number" value={String(form.pesoGramas || '')} onChange={v => setForm(f => ({ ...f, pesoGramas: v }))} />
           </div>
-          <Field
-            label={form.personalizado ? 'Tamanhos de corrente (separados por vírgula)' : 'Tamanhos disponíveis (separados por vírgula)'}
-            value={tamanhosInput}
-            onChange={setTamanhosInput}
-          />
-          {form.personalizado && !tamanhosInput.trim() && (
-            <p className="text-xs text-ink-tertiary">Sem tamanhos informados, a cliente verá apenas: {CORRENTES_PADRAO.join(', ')}.</p>
+          {!form.personalizado && (
+            <Field label="Tamanhos disponíveis (separados por vírgula)" value={tamanhosInput} onChange={setTamanhosInput} />
           )}
-          {tamanhosInput && (
+          {!form.personalizado && tamanhosInput && (
             <div className="flex flex-wrap gap-2">
               {tamanhosInput.split(',').map(t => t.trim()).filter(Boolean).map(t => (
                 <span key={t} className="rounded-full bg-bg-alt px-2.5 py-1 text-xs text-ink-muted">{t}</span>

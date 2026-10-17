@@ -5,7 +5,7 @@ import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
 import * as coupons from '@/lib/services/coupon.service';
 import * as siteConfig from '@/lib/services/site-config.service';
-import { CORRENTES_PADRAO, lerPersonalizacao, personalizacaoSchema } from '@/lib/personalizacao';
+import { CORRENTES_PADRAO, lerOpcoes, lerPersonalizacao, Personalizacao, personalizacaoSchema, rotuloOpcao } from '@/lib/personalizacao';
 
 interface CartOpts {
   cep?: string;
@@ -48,8 +48,8 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
       quantidade: i.quantidade,
       // Exposto para o cálculo de peso do frete (ver shipping.logic).
       pesoGramas: i.product.pesoGramas != null ? Number(i.product.pesoGramas) : null,
-      precoUnitario: pricing.precoEfetivo(i.product),
-      subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
+      precoUnitario: pricing.precoItem(i),
+      subtotal: pricing.precoItem(i) * i.quantidade,
     })),
     cotacaoFrete: cotacao,
     cupom: cupomAplicado,
@@ -67,13 +67,23 @@ export async function addItem(
 
   // Produto personalizado só entra na sacola com as escolhas da cliente — sem elas
   // a peça não tem como ser produzida. Nos demais, qualquer personalização é ignorada.
-  let personalizacao = null;
+  let personalizacao: Personalizacao | null = null;
   const tamanho = payload.tamanho ?? null;
   if (product.personalizado) {
     if (payload.personalizacao == null) {
       throw new AppError('Preencha a personalização da peça na página do produto', 422, 'PERSONALIZATION_REQUIRED');
     }
     personalizacao = personalizacaoSchema.parse(payload.personalizacao);
+    const opcoes = lerOpcoes(product.opcoesPersonalizacao);
+    if (opcoes.length > 0) {
+      const modeloId = personalizacao.modeloId;
+      const opcao = opcoes.find(o => o.id === modeloId);
+      if (!opcao) throw new AppError('Escolha o modelo da peça', 422, 'INVALID_PERSONALIZATION_OPTION');
+      // O nome vem do anúncio, não da requisição — o cliente só informa o id.
+      personalizacao = { ...personalizacao, modelo: rotuloOpcao(opcao) };
+    } else {
+      personalizacao = { ...personalizacao, modeloId: null, modelo: null };
+    }
     const correntes = product.tamanhos.length > 0 ? product.tamanhos : CORRENTES_PADRAO;
     if (!tamanho || !correntes.includes(tamanho)) {
       throw new AppError('Escolha o tamanho da corrente', 422, 'INVALID_SIZE');

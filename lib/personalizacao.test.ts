@@ -1,5 +1,35 @@
 import { describe, expect, it } from 'vitest';
-import { lerPersonalizacao, personalizacaoSchema, resumoPersonalizacao } from './personalizacao';
+import { lerOpcoes, lerPersonalizacao, personalizacaoSchema, precoPersonalizado, resumoPersonalizacao, rotuloOpcao } from './personalizacao';
+
+const OPCOES = [
+  { id: 'esc', modelo: 'Escapulário', tamanho: null, preco: 89.9 },
+  { id: 'red12', modelo: 'Medalha redonda', tamanho: '12mm', preco: 129.9 },
+];
+
+describe('precoPersonalizado', () => {
+  const produto = { precoBase: 79.9, opcoes: OPCOES, valorGravacaoVerso: 5 };
+
+  it('usa o preço do modelo escolhido', () => {
+    expect(precoPersonalizado(produto, { modeloId: 'red12', verso: false })).toBe(129.9);
+  });
+
+  it('soma a gravação no verso', () => {
+    expect(precoPersonalizado(produto, { modeloId: 'esc', verso: true })).toBe(94.9);
+  });
+
+  it('retorna null para modelo inexistente', () => {
+    expect(precoPersonalizado(produto, { modeloId: 'sumiu', verso: false })).toBeNull();
+  });
+
+  it('sem modelos cadastrados usa o preço do produto', () => {
+    expect(precoPersonalizado({ precoBase: 79.9, opcoes: [], valorGravacaoVerso: null }, { modeloId: null, verso: true })).toBe(79.9);
+  });
+
+  it('lê opções e monta o rótulo', () => {
+    expect(lerOpcoes('lixo')).toEqual([]);
+    expect(lerOpcoes(OPCOES).map(rotuloOpcao)).toEqual(['Escapulário', 'Medalha redonda 12mm']);
+  });
+});
 
 describe('personalizacaoSchema', () => {
   it('aceita personalização completa', () => {
@@ -10,7 +40,15 @@ describe('personalizacaoSchema', () => {
       pingente: false,
       fonte: '03 georgia',
     });
-    expect(p).toEqual({ imagens: ['/uploads/a.png'], verso: true, textoVerso: 'Te amo', pingente: false, fonte: '03 georgia' });
+    expect(p).toEqual({
+      modeloId: null,
+      modelo: null,
+      imagens: ['/uploads/a.png'],
+      verso: true,
+      textoVerso: 'Te amo',
+      pingente: false,
+      fonte: '03 georgia',
+    });
   });
 
   it('exige texto quando pediu verso', () => {
@@ -41,9 +79,10 @@ describe('lerPersonalizacao / resumoPersonalizacao', () => {
   });
 
   it('monta o resumo para exibição', () => {
-    const p = lerPersonalizacao({ verso: true, textoVerso: 'Ana', pingente: true, fonte: null, imagens: ['x'] })!;
+    const p = lerPersonalizacao({ modelo: 'Escapulário', verso: true, textoVerso: 'Ana', pingente: true, fonte: null, imagens: ['x'] })!;
     expect(resumoPersonalizacao(p)).toEqual([
-      { rotulo: 'Verso', valor: 'Sim — "Ana"' },
+      { rotulo: 'Modelo', valor: 'Escapulário' },
+      { rotulo: 'Gravação no verso', valor: 'Sim — "Ana"' },
       { rotulo: 'Pingente de coração', valor: 'Com pingente' },
       { rotulo: 'Letra', valor: 'Não escolhida' },
       { rotulo: 'Imagens', valor: '1 enviada(s)' },

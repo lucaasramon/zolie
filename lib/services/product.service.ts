@@ -8,6 +8,7 @@ import { round } from '@/lib/utils/money';
 import * as siteConfig from '@/lib/services/site-config.service';
 import { slugify } from '@/lib/utils/slug';
 import { notificarReposicao } from '@/lib/services/stockNotification.service';
+import { lerOpcoes } from '@/lib/personalizacao';
 
 // Campos de custo/margem — informação interna de negócio, nunca exposta pela
 // API pública. `decorate` os descarta; `decorateAdmin` os inclui para as telas /admin/*.
@@ -24,6 +25,7 @@ export function decorate(p: any) {
     preco: Number(p.preco),
     precoPromocional: p.precoPromocional != null ? Number(p.precoPromocional) : null,
     pesoGramas: p.pesoGramas != null ? Number(p.pesoGramas) : null,
+    valorGravacaoVerso: p.valorGravacaoVerso != null ? Number(p.valorGravacaoVerso) : null,
     notaMedia: Number(p.notaMedia),
     createdAt: p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt,
     updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt,
@@ -39,6 +41,11 @@ export function decorate(p: any) {
     precoPix: round(preco * (1 - (siteConfig.get().descontoPixAtivo ? env.business.pixDiscountPercent : 0) / 100)),
     parcela: round(preco / env.business.maxInstallments),
     maxParcelas: env.business.maxInstallments,
+    // Peça personalizada cujo preço depende do modelo/gravação escolhidos: a
+    // vitrine mostra o menor valor como "a partir de".
+    precoVariavel: Boolean(
+      p.personalizado && (lerOpcoes(p.opcoesPersonalizacao).length > 1 || Number(p.valorGravacaoVerso ?? 0) > 0),
+    ),
     estoqueBaixo: p.estoque > 0 && p.estoque <= 8,
     disponivel: p.estoque > 0,
   };
@@ -161,9 +168,22 @@ async function uniqueSlug(nome: string, ignoreId?: string): Promise<string> {
   return slug;
 }
 
+/**
+ * Anúncio personalizado com modelos: o preço de cada peça vem do modelo, então
+ * `preco` vira o menor deles (o "a partir de" do catálogo, filtros e ordenação)
+ * e preço promocional não se aplica — a promoção é feita no preço do modelo.
+ */
+function aplicarRegrasPersonalizacao<T extends { personalizado?: boolean; opcoesPersonalizacao?: { preco: number }[] }>(data: T) {
+  const opcoes = data.opcoesPersonalizacao;
+  if (data.personalizado && opcoes && opcoes.length > 0) {
+    return { ...data, preco: Math.min(...opcoes.map(o => o.preco)), precoPromocional: null };
+  }
+  return data;
+}
+
 export const create = async (data: any) => {
   const slug = data.slug || (await uniqueSlug(data.nome));
-  const produto = await productRepo.create({ ...data, slug });
+  const produto = await productRepo.create({ ...aplicarRegrasPersonalizacao(data), slug });
   return decorate(produto);
 };
 
@@ -181,7 +201,7 @@ export const update = async (id: string, data: any) => {
     await prisma.productSlugHistory.create({ data: { productId: id, oldSlug: atual.slug } }).catch(() => {});
   }
 
-  const p = await productRepo.update(id, data);
+  const p = await productRepo.update(id, aplicarRegrasPersonalizacao(data));
   if (!p) throw notFound('Produto');
 
   if (atual && atual.estoque === 0 && data.estoque > 0) {

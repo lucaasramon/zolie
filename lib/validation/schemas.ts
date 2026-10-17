@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { opcaoPersonalizacaoSchema } from '@/lib/personalizacao';
 import { cpfValido, normalizarCpf } from '@/lib/utils/cpf';
 
 const senha = z.string().min(8, 'A senha precisa de ao menos 8 caracteres');
@@ -140,6 +141,8 @@ export const productSchema = z.object({
   lancamento: z.boolean().optional(),
   ativo: z.boolean().optional(),
   personalizado: z.boolean().optional(),
+  opcoesPersonalizacao: z.array(opcaoPersonalizacaoSchema).max(30).optional(),
+  valorGravacaoVerso: z.number().min(0).nullable().optional(),
 });
 
 export const stockNotificationSchema = z.object({ email });

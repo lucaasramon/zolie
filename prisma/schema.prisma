@@ -176,6 +176,12 @@ model Product {
   // passa a pedir as escolhas de personalização (ver lib/personalizacao.ts), que
   // seguem gravadas no item do carrinho e depois no item do pedido.
   personalizado    Boolean         @default(false)
+  // Modelos vendidos no produto personalizado, cada um com preço próprio
+  // (ex.: [{ id, modelo: "Medalha redonda", tamanho: "12mm", preco: 129.9 }]).
+  // Com modelos cadastrados, `preco` passa a ser o menor deles ("a partir de").
+  opcoesPersonalizacao Json      @default("[]") @map("opcoes_personalizacao")
+  // Acréscimo cobrado quando a cliente pede gravação no verso; null = sem acréscimo.
+  valorGravacaoVerso Decimal?    @db.Decimal(10, 2) @map("valor_gravacao_verso")
   destaque         Boolean         @default(false)
   lancamento       Boolean         @default(false)
   ativo            Boolean         @default(true)
