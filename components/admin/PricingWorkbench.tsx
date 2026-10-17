@@ -24,7 +24,7 @@ interface Produto {
   id: string;
   nome: string;
   imagem: string | null;
-  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO';
+  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO' | 'ACO';
   preco: number;
   precoCusto: number | null;
   custoSemijoia: number | null;

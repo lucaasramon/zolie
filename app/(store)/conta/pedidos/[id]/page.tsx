@@ -12,6 +12,7 @@ import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { ReturnRequestForm } from '@/components/account/ReturnRequestForm';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
+import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
 
 interface OrderDetail {
   numero: string;
@@ -34,6 +35,7 @@ interface OrderDetail {
     nomeProduto: string;
     tamanho: string | null;
     acabamento: string | null;
+    personalizacao?: unknown;
     quantidade: number;
     precoUnitario: number;
     subtotal: number;
@@ -358,6 +360,7 @@ export default function DetalhePedidoPage() {
                       {[item.tamanho, item.acabamento].filter(Boolean).length > 0 && ' · '}
                       {item.quantidade}x {brl(item.precoUnitario)}
                     </div>
+                    <PersonalizacaoResumo valor={item.personalizacao} />
                   </div>
                   <span className="font-medium text-ink">{brl(item.subtotal)}</span>
                 </div>

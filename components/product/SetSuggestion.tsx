@@ -25,6 +25,7 @@ export interface SetPiece {
   estoqueBaixo: boolean;
   lancamento?: boolean;
   imagens?: string[];
+  personalizado?: boolean;
 }
 
 /** Card de peça dentro da sugestão de conjunto: mesma linguagem visual do
@@ -120,12 +121,15 @@ function SetPieceCard({ piece, destaque = false }: { piece: SetPiece; destaque?:
   );
 }
 
-export function SetSuggestion({ produto, sugestoes }: { produto: SetPiece; sugestoes: SetPiece[] }) {
+export function SetSuggestion({ produto, sugestoes: todasSugestoes }: { produto: SetPiece; sugestoes: SetPiece[] }) {
   const [addingAll, setAddingAll] = useState(false);
   const { refresh } = useCart();
   const { showToast } = useToast();
 
-  if (sugestoes.length === 0) return null;
+  // Aqui as peças vão direto para a sacola, sem passar pelas perguntas de
+  // personalização — então peça personalizada não entra no conjunto.
+  const sugestoes = todasSugestoes.filter(s => !s.personalizado);
+  if (produto.personalizado || sugestoes.length === 0) return null;
 
   const pecas = [produto, ...sugestoes];
   const total = pecas.reduce((acc, p) => acc + p.precoEfetivo, 0);

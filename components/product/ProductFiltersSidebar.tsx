@@ -27,6 +27,7 @@ const MATERIAIS = [
   { value: 'PRATA_925', label: 'Prata 925' },
   { value: 'PRATA_750', label: 'Prata 750' },
   { value: 'BANHADO_OURO', label: 'Banhado a Ouro 18k' },
+  { value: 'ACO', label: 'Aço' },
 ];
 
 const PEDRAS = [

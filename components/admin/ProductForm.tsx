@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
+import { CORRENTES_PADRAO } from '@/lib/personalizacao';
 
 interface Categoria {
   id: string;
@@ -20,7 +21,7 @@ interface InitialData {
   preco: number | string;
   precoPromocional?: number | string | null;
   precoCusto?: number | string | null;
-  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO';
+  material: 'PRATA_925' | 'PRATA_750' | 'BANHADO_OURO' | 'ACO';
   categoriaId: string;
   estoque: number;
   pesoGramas?: number | string | null;
@@ -30,6 +31,7 @@ interface InitialData {
   destaque?: boolean;
   lancamento?: boolean;
   ativo?: boolean;
+  personalizado?: boolean;
 }
 
 const EMPTY: InitialData = {
@@ -50,6 +52,7 @@ const EMPTY: InitialData = {
   destaque: false,
   lancamento: false,
   ativo: true,
+  personalizado: false,
 };
 
 export function ProductForm({ categorias, initialData }: { categorias: Categoria[]; initialData?: InitialData }) {
@@ -145,6 +148,7 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
       destaque: form.destaque,
       lancamento: form.lancamento,
       ativo: form.ativo,
+      personalizado: form.personalizado ?? false,
     };
 
     try {
@@ -188,6 +192,7 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
                 <option value="PRATA_925">Prata 925</option>
                 <option value="PRATA_750">Prata 750</option>
                 <option value="BANHADO_OURO">Banhado a Ouro 18k</option>
+                <option value="ACO">Aço</option>
               </select>
             </label>
           </div>
@@ -246,6 +251,23 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
           <p className="text-xs text-ink-tertiary">A primeira é a foto de capa · 1000×1000px</p>
         </Section>
 
+        <Section title="Personalização">
+          <Checkbox
+            label="Produto personalizado"
+            checked={form.personalizado ?? false}
+            onChange={v => setForm(f => ({ ...f, personalizado: v }))}
+          />
+          {form.personalizado ? (
+            <div className="rounded-lg bg-bg-alt p-3 text-xs leading-relaxed text-ink-muted">
+              Na página do produto a cliente vai responder: envio de até 2 imagens, personalização no verso (sim/não + texto),
+              pingente zircônia de coração (com/sem), letra usada (01 verdana a 06 savoyeLetPlain) e tamanho da corrente.
+              As respostas aparecem no pedido, aqui no admin.
+            </div>
+          ) : (
+            <p className="text-xs text-ink-tertiary">Marque para peças feitas sob encomenda com foto/escrita da cliente.</p>
+          )}
+        </Section>
+
         <Section title="Preço e estoque">
           <div className="grid grid-cols-2 gap-4">
             <Field label="Preço cheio*" type="number" value={String(form.preco)} onChange={v => setForm(f => ({ ...f, preco: v }))} />
@@ -254,7 +276,14 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
             <Field label={isEdit ? 'Estoque' : 'Estoque inicial*'} type="number" value={String(form.estoque)} onChange={v => setForm(f => ({ ...f, estoque: Number(v) }))} />
             <Field label="Peso (g)" type="number" value={String(form.pesoGramas || '')} onChange={v => setForm(f => ({ ...f, pesoGramas: v }))} />
           </div>
-          <Field label="Tamanhos disponíveis (separados por vírgula)" value={tamanhosInput} onChange={setTamanhosInput} />
+          <Field
+            label={form.personalizado ? 'Tamanhos de corrente (separados por vírgula)' : 'Tamanhos disponíveis (separados por vírgula)'}
+            value={tamanhosInput}
+            onChange={setTamanhosInput}
+          />
+          {form.personalizado && !tamanhosInput.trim() && (
+            <p className="text-xs text-ink-tertiary">Sem tamanhos informados, a cliente verá apenas: {CORRENTES_PADRAO.join(', ')}.</p>
+          )}
           {tamanhosInput && (
             <div className="flex flex-wrap gap-2">
               {tamanhosInput.split(',').map(t => t.trim()).filter(Boolean).map(t => (

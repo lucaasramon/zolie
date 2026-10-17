@@ -190,6 +190,7 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
         precoUnitario: pricing.precoEfetivo(i.product),
         quantidade: i.quantidade,
         tamanho: i.tamanho,
+        personalizacao: i.personalizacao ?? undefined,
         subtotal: pricing.precoEfetivo(i.product) * i.quantidade,
       })),
       tx,
@@ -235,7 +236,13 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
       // sem o pedido ter ido pra frente.
       await cartRepo.restoreItems(
         cartOwner,
-        items.map(i => ({ productId: i.productId, quantidade: i.quantidade, tamanho: i.tamanho })),
+        items.map(i => ({
+          productId: i.productId,
+          quantidade: i.quantidade,
+          tamanho: i.tamanho,
+          personalizacao: i.personalizacao,
+          personalizacaoKey: i.personalizacaoKey,
+        })),
         tx,
       );
       // Mesmo raciocínio do carrinho: o cupom já foi marcado como "usado" na

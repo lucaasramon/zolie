@@ -9,6 +9,7 @@ import { brl } from '@/lib/utils/money';
 import { useCart } from '@/components/providers/CartProvider';
 import { useToast } from '@/components/providers/ToastProvider';
 import { CartItemSkeleton, Skeleton } from '@/components/ui/Skeleton';
+import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
 
 interface CartItem {
   id: string;
@@ -18,6 +19,7 @@ interface CartItem {
   imagem: string | null;
   material: string;
   tamanho: string | null;
+  personalizacao?: unknown;
   quantidade: number;
   precoUnitario: number;
   subtotal: number;
@@ -164,6 +166,7 @@ export default function CarrinhoPage() {
                   <span className="text-xs font-light text-ink-tertiary">
                     {item.tamanho || 'Tamanho único'}
                   </span>
+                  <PersonalizacaoResumo valor={item.personalizacao} />
                   <div className="mt-auto flex items-center gap-4 pt-2">
                     <div className="flex items-center rounded-full border border-border-soft bg-bg-alt">
                       <button type="button" onClick={() => updateQty(item.id, item.quantidade - 1)} className="grid h-8 w-8 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90">−</button>

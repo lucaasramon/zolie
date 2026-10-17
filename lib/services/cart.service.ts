@@ -5,6 +5,7 @@ import * as pricing from '@/lib/services/pricing.service';
 import * as shipping from '@/lib/services/shipping.service';
 import * as coupons from '@/lib/services/coupon.service';
 import * as siteConfig from '@/lib/services/site-config.service';
+import { CORRENTES_PADRAO, lerPersonalizacao, personalizacaoSchema } from '@/lib/personalizacao';
 
 interface CartOpts {
   cep?: string;
@@ -43,6 +44,7 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
       imagem: (i.product.imagens || [])[0] || null,
       material: i.product.material,
       tamanho: i.tamanho,
+      personalizacao: lerPersonalizacao(i.personalizacao),
       quantidade: i.quantidade,
       // Exposto para o cálculo de peso do frete (ver shipping.logic).
       pesoGramas: i.product.pesoGramas != null ? Number(i.product.pesoGramas) : null,
@@ -55,12 +57,30 @@ export async function get(owner: CartOwner, { cep, cupom }: CartOpts = {}) {
   };
 }
 
-export async function addItem(owner: CartOwner, payload: { productId: string; quantidade: number; tamanho?: string | null }) {
+export async function addItem(
+  owner: CartOwner,
+  payload: { productId: string; quantidade: number; tamanho?: string | null; personalizacao?: unknown },
+) {
   const product = await productRepo.findById(payload.productId);
   if (!product) throw notFound('Produto');
   if (product.estoque < payload.quantidade) throw new AppError('Estoque insuficiente para esta peça', 422, 'OUT_OF_STOCK');
 
-  await cartRepo.addItem(owner, payload);
+  // Produto personalizado só entra na sacola com as escolhas da cliente — sem elas
+  // a peça não tem como ser produzida. Nos demais, qualquer personalização é ignorada.
+  let personalizacao = null;
+  const tamanho = payload.tamanho ?? null;
+  if (product.personalizado) {
+    if (payload.personalizacao == null) {
+      throw new AppError('Preencha a personalização da peça na página do produto', 422, 'PERSONALIZATION_REQUIRED');
+    }
+    personalizacao = personalizacaoSchema.parse(payload.personalizacao);
+    const correntes = product.tamanhos.length > 0 ? product.tamanhos : CORRENTES_PADRAO;
+    if (!tamanho || !correntes.includes(tamanho)) {
+      throw new AppError('Escolha o tamanho da corrente', 422, 'INVALID_SIZE');
+    }
+  }
+
+  await cartRepo.addItem(owner, { productId: payload.productId, quantidade: payload.quantidade, tamanho, personalizacao });
   return get(owner);
 }
 

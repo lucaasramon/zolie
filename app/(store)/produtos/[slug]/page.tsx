@@ -205,6 +205,7 @@ export default async function ProdutoPage({ params }: Props) {
               productId={produto.id}
               tamanhos={produto.tamanhos || []}
               estoque={produto.estoque}
+              personalizado={produto.personalizado}
               nome={produto.nome}
               preco={produto.precoEfetivo}
               categoria={produto.categoria?.nome}

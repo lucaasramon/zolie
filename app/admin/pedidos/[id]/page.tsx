@@ -8,6 +8,7 @@ import { LabelPanel } from '@/components/admin/LabelPanel';
 import { CancelOrderButton } from '@/components/admin/CancelOrderButton';
 import { InvoicePanel } from '@/components/admin/InvoicePanel';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
+import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -37,7 +38,7 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
           {order.items.map((item: any) => {
             const imagem = item.product?.imagens?.[0];
             return (
-            <div key={item.id} className="flex items-center gap-4 rounded-xl bg-white p-3 shadow-xs">
+            <div key={item.id} className="flex items-start gap-4 rounded-xl bg-white p-3 shadow-xs">
               {imagem ? (
                 <div className="relative h-16 w-16 flex-none overflow-hidden rounded-lg">
                   <Image src={imagem} alt={item.nomeProduto} fill sizes="64px" className="object-cover" />
@@ -50,6 +51,7 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
                 <div className="text-xs text-ink-tertiary">
                   {[item.tamanho, item.acabamento].filter(Boolean).join(' · ')} · {item.quantidade}x {brl(item.precoUnitario)}
                 </div>
+                <PersonalizacaoResumo valor={item.personalizacao} comImagens />
               </div>
               <span className="font-medium text-ink">{brl(item.subtotal)}</span>
             </div>

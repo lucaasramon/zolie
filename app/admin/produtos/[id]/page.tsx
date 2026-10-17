@@ -36,6 +36,7 @@ export default async function EditarProdutoPage({ params }: Props) {
         destaque: produto.destaque,
         lancamento: produto.lancamento,
         ativo: produto.ativo,
+        personalizado: produto.personalizado,
       }}
     />
   );

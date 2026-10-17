@@ -38,6 +38,7 @@ export const cartItemSchema = z.object({
   productId: z.string().min(1),
   quantidade: z.number().int().min(1).max(20).default(1),
   tamanho: z.string().optional().nullable(),
+  personalizacao: z.unknown().optional(),
 });
 
 const cardSchema = z.object({
@@ -128,7 +129,7 @@ export const productSchema = z.object({
   precoCusto: z.number().positive().nullable().optional(),
   preco: z.number().positive(),
   precoPromocional: z.number().positive().nullable().optional(),
-  material: z.enum(['PRATA_925', 'PRATA_750', 'BANHADO_OURO']),
+  material: z.enum(['PRATA_925', 'PRATA_750', 'BANHADO_OURO', 'ACO']),
   categoriaId: z.string().min(1),
   estoque: z.number().int().min(0),
   pesoGramas: z.number().positive().optional(),
@@ -138,6 +139,7 @@ export const productSchema = z.object({
   destaque: z.boolean().optional(),
   lancamento: z.boolean().optional(),
   ativo: z.boolean().optional(),
+  personalizado: z.boolean().optional(),
 });
 
 export const stockNotificationSchema = z.object({ email });

@@ -39,6 +39,8 @@ const PISTAS_MATERIAL: Record<string, string> = {
   dourado: 'BANHADO_OURO',
   ouro: 'BANHADO_OURO',
   dourada: 'BANHADO_OURO',
+  aço: 'ACO',
+  aco: 'ACO',
 };
 
 function extrairSinais(messages: ChatMessage[]) {

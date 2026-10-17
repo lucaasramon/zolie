@@ -8,19 +8,31 @@ import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
 import { trackAddToCart } from '@/lib/analytics';
 import { fireGoldConfetti } from '@/components/ui/GoldConfetti';
+import { CORRENTES_PADRAO } from '@/lib/personalizacao';
+import {
+  PersonalizacaoForm,
+  PersonalizacaoState,
+  PERSONALIZACAO_INICIAL,
+  validarPersonalizacao,
+} from '@/components/product/PersonalizacaoForm';
 
 interface Props {
   productId: string;
   tamanhos: string[];
   estoque: number;
+  /** Peça personalizada: mostra as perguntas de personalização e o tamanho vira o da corrente. */
+  personalizado?: boolean;
   /** Dados usados só para os eventos de analytics. */
   nome?: string;
   preco?: number;
   categoria?: string | null;
 }
 
-export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, categoria }: Props) {
+export function ProductPurchaseBox({ productId, tamanhos: tamanhosProduto, estoque, personalizado = false, nome, preco, categoria }: Props) {
+  const tamanhos = personalizado && tamanhosProduto.length === 0 ? CORRENTES_PADRAO : tamanhosProduto;
   const [tamanho, setTamanho] = useState(tamanhos[0] || '');
+  const [personalizacao, setPersonalizacao] = useState<PersonalizacaoState>(PERSONALIZACAO_INICIAL);
+  const [erroPersonalizacao, setErroPersonalizacao] = useState<string | null>(null);
   const [quantidade, setQuantidade] = useState(1);
   const [cep, setCep] = useState('');
   const [frete, setFrete] = useState<{ opcoes: { nome: string; prazoDias: number; valor: number }[] } | null>(null);
@@ -32,10 +44,34 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
   const buyButtonRef = useRef<HTMLButtonElement>(null);
 
   async function addToCart(buyNow = false) {
+    if (personalizado) {
+      const erro = validarPersonalizacao(personalizacao);
+      setErroPersonalizacao(erro);
+      if (erro) {
+        showToast(erro);
+        return;
+      }
+    }
+
     setLoading(true);
     try {
-      await api.post('/cart/items', { productId, quantidade, tamanho: tamanho || null });
+      await api.post('/cart/items', {
+        productId,
+        quantidade,
+        tamanho: tamanho || null,
+        ...(personalizado && {
+          personalizacao: {
+            imagens: personalizacao.imagens,
+            verso: personalizacao.verso,
+            textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
+            pingente: personalizacao.pingente,
+            fonte: personalizacao.fonte,
+          },
+        }),
+      });
       await refresh();
+      // Cada peça personalizada é única: o formulário volta ao início para a próxima.
+      if (personalizado) setPersonalizacao(PERSONALIZACAO_INICIAL);
 
       // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
       if (nome && preco != null) {
@@ -75,7 +111,21 @@ export function ProductPurchaseBox({ productId, tamanhos, estoque, nome, preco, 
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border-subtle bg-white p-5 shadow-sm sm:p-6">
-      {tamanhos.length > 0 && tamanhos[0] !== 'Único' && (
+      {personalizado && (
+        <PersonalizacaoForm
+          value={personalizacao}
+          onChange={p => {
+            setPersonalizacao(p);
+            setErroPersonalizacao(null);
+          }}
+          correntes={tamanhos}
+          corrente={tamanho}
+          onCorrenteChange={setTamanho}
+          erro={erroPersonalizacao}
+        />
+      )}
+
+      {!personalizado && tamanhos.length > 0 && tamanhos[0] !== 'Único' && (
         <div className="flex flex-col gap-2.5">
           <span className="text-xs font-medium uppercase tracking-wider text-ink">Tamanho</span>
           <div className="flex flex-wrap gap-2">

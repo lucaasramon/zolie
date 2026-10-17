@@ -12,6 +12,7 @@ enum Material {
   PRATA_925
   PRATA_750
   BANHADO_OURO
+  ACO
 }
 
 enum OrderStatus {
@@ -171,6 +172,10 @@ model Product {
   // Mesma peça em .usdz — formato exigido pelo AR Quick Look do iOS/Safari.
   // model-viewer usa .glb para o resto (web, Android/Scene Viewer, WebXR).
   modelo3dIos      String?         @map("modelo_3d_ios")
+  // Peça personalizada (ex.: pingente com foto/escrita): a página do produto
+  // passa a pedir as escolhas de personalização (ver lib/personalizacao.ts), que
+  // seguem gravadas no item do carrinho e depois no item do pedido.
+  personalizado    Boolean         @default(false)
   destaque         Boolean         @default(false)
   lancamento       Boolean         @default(false)
   ativo            Boolean         @default(true)
@@ -312,11 +317,17 @@ model CartItem {
   productId  String  @map("product_id")
   quantidade Int     @default(1)
   tamanho    String?
+  // Escolhas de personalização (só em produto `personalizado`). Cada peça
+  // personalizada vira uma linha própria na sacola: `personalizacaoKey` recebe
+  // um id único nesses casos (e '' nos demais), para o upsert por produto+tamanho
+  // não somar duas personalizações diferentes na mesma linha.
+  personalizacao    Json?
+  personalizacaoKey String  @default("") @map("personalizacao_key")
 
   cart       Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product    Product @relation(fields: [productId], references: [id])
 
-  @@unique([cartId, productId, tamanho])
+  @@unique([cartId, productId, tamanho, personalizacaoKey])
   @@map("cart_items")
 }
 
@@ -399,6 +410,8 @@ model OrderItem {
   quantidade    Int
   tamanho       String?
   acabamento    String?
+  // Snapshot das escolhas de personalização feitas na compra (ver CartItem).
+  personalizacao Json?
   subtotal      Decimal @db.Decimal(10, 2)
 
   order         Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)

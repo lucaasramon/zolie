@@ -10,6 +10,7 @@ import { STATUS_LABEL, STATUS_STYLE } from '@/lib/utils/format';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
+import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
 
 interface OrderDetail {
   numero: string;
@@ -29,6 +30,7 @@ interface OrderDetail {
     id: string;
     nomeProduto: string;
     tamanho: string | null;
+    personalizacao?: unknown;
     quantidade: number;
     precoUnitario: number;
     subtotal: number;
@@ -257,6 +259,7 @@ export default function DetalhePedidoConvidadoPage() {
                 <div className="text-xs text-ink-tertiary">
                   {[item.tamanho].filter(Boolean).join(' · ')} · {item.quantidade}x {brl(item.precoUnitario)}
                 </div>
+                <PersonalizacaoResumo valor={item.personalizacao} />
               </div>
               <span className="font-medium text-ink">{brl(item.subtotal)}</span>
             </div>
