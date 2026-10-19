@@ -40,8 +40,8 @@ export const PERGUNTAS_PERSONALIZACAO = {
   modelo: 'Escolha o modelo',
   imagens: 'Sua personalização tem imagens',
   imagensAjuda: `Inserir imagem (fique tranquilo, enviaremos a prévia para aprovação em 2 dias no seu WhatsApp) (Limite de ${LIMITE_IMAGENS_PERSONALIZACAO} arquivos)`,
-  verso: 'Personalização no verso?',
-  textoVerso: 'Deseja personalização no verso? Escreva aqui',
+  verso: 'Deseja gravação no verso da peça?',
+  textoVerso: 'O que você quer gravar no verso?',
   pingente: 'Pingente zircônia de coração (cor aleatória - grátis)',
   fonte: 'Escolha a letra usada (caso possua escrita) - Verifique as opções na imagem do produto',
   corrente: 'Escolha o tamanho da corrente',
@@ -94,7 +94,7 @@ export const personalizacaoSchema = z
     // pedido continuar legível mesmo se o modelo for removido do anúncio depois).
     modelo: z.string().max(120).nullable().optional().transform(v => v ?? null),
     imagens: z.array(urlStorage).max(LIMITE_IMAGENS_PERSONALIZACAO).default([]),
-    verso: z.boolean({ required_error: 'Informe se deseja personalização no verso' }),
+    verso: z.boolean({ required_error: 'Escolha se deseja gravação no verso' }),
     textoVerso: z.string().trim().max(200).nullable().optional().transform(v => (v ? v : null)),
     pingente: z.boolean().default(true),
     fonte: z.enum(FONTES_PERSONALIZACAO).nullable().optional().transform(v => v ?? null),
@@ -107,7 +107,7 @@ export const personalizacaoSchema = z
   })
   .superRefine((p, ctx) => {
     if (p.verso && !p.textoVerso) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['textoVerso'], message: 'Escreva a personalização do verso' });
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['textoVerso'], message: 'Escreva o que quer gravar no verso' });
     }
   })
   // Sem verso, um texto digitado antes de trocar para "não" não deve ir para a produção.

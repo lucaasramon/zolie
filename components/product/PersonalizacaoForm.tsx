@@ -34,8 +34,8 @@ export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
 /** Mensagem do primeiro problema encontrado, ou null se dá para enviar. */
 export function validarPersonalizacao(p: PersonalizacaoState, opcoes: OpcaoPersonalizacao[]): string | null {
   if (opcoes.length > 0 && !opcoes.some(o => o.id === p.modeloId)) return 'Escolha o modelo da peça';
-  if (p.verso === null) return 'Informe se deseja personalização no verso';
-  if (p.verso && !p.textoVerso.trim()) return 'Escreva a personalização do verso';
+  if (p.verso === null) return 'Escolha se deseja gravação no verso';
+  if (p.verso && !p.textoVerso.trim()) return 'Escreva o que quer gravar no verso';
   return null;
 }
 
@@ -151,37 +151,36 @@ export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange
         )}
       </div>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className={`${labelClass} mb-2`}>
-          {PERGUNTAS_PERSONALIZACAO.verso}
-          {valorGravacaoVerso ? <span className="ml-1 font-normal text-gold-text">(+ {brl(valorGravacaoVerso)})</span> : null}
-        </legend>
-        {[
-          { label: 'sim', v: true },
-          { label: 'não', v: false },
-        ].map(o => (
-          <label key={o.label} className="flex cursor-pointer items-center gap-3 text-sm font-medium text-ink">
-            <input
-              type="checkbox"
-              checked={value.verso === o.v}
-              onChange={() => set({ verso: value.verso === o.v ? null : o.v })}
-              className="h-6 w-6 rounded-md accent-gold"
-            />
-            {o.label}
-          </label>
-        ))}
-      </fieldset>
-
       <label className="flex flex-col gap-2">
-        <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.textoVerso}</span>
-        <input
-          value={value.textoVerso}
-          onChange={e => set({ textoVerso: e.target.value })}
-          maxLength={200}
-          disabled={value.verso === false}
-          className={`${inputClass} disabled:bg-bg-alt disabled:opacity-60`}
-        />
+        <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.verso}</span>
+        <select
+          value={value.verso === null ? '' : value.verso ? 'sim' : 'nao'}
+          onChange={e => set({ verso: e.target.value === '' ? null : e.target.value === 'sim' })}
+          className={inputClass}
+        >
+          <option value="" disabled>
+            Selecione
+          </option>
+          <option value="sim">Sim, quero gravar no verso{valorGravacaoVerso ? ` (+ ${brl(valorGravacaoVerso)})` : ''}</option>
+          <option value="nao">Não, verso sem gravação</option>
+        </select>
       </label>
+
+      {/* Só aparece quando a cliente pede gravação no verso. */}
+      {value.verso === true && (
+        <label className="flex flex-col gap-2 animate-zfade">
+          <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.textoVerso}</span>
+          <input
+            value={value.textoVerso}
+            onChange={e => set({ textoVerso: e.target.value })}
+            maxLength={200}
+            autoFocus
+            placeholder="Ex.: Helena ♥ 12/03/2024"
+            className={inputClass}
+          />
+          <span className="text-xs text-ink-tertiary">Escreva exatamente como quer gravar: nomes, datas ou uma frase curta.</span>
+        </label>
+      )}
 
       <label className="flex flex-col gap-2">
         <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.pingente}</span>

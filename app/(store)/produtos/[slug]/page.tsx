@@ -140,13 +140,19 @@ export default async function ProdutoPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <ProductGallery
-          imagens={produto.imagens || []}
-          nome={produto.nome}
-          slug={produto.slug}
-          modelo3d={env.modelo3dEnabled ? produto.modelo3d : null}
-          permiteAR={produto.categoria?.slug === 'brincos'}
-        />
+        {/* No desktop a galeria acompanha o scroll enquanto a coluna da direita
+            (opções/personalização, que pode ser longa) ainda está passando: o
+            sticky fica preso à linha do grid, então para onde a direita termina.
+            top-36 deixa a galeria abaixo do cabeçalho fixo (logo + categorias). */}
+        <div className="lg:sticky lg:top-36 lg:self-start">
+          <ProductGallery
+            imagens={produto.imagens || []}
+            nome={produto.nome}
+            slug={produto.slug}
+            modelo3d={env.modelo3dEnabled ? produto.modelo3d : null}
+            permiteAR={produto.categoria?.slug === 'brincos'}
+          />
+        </div>
 
         <div className="flex flex-col gap-5">
           <div className="rounded-2xl border border-border-subtle bg-white shadow-xs">
