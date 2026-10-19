@@ -45,11 +45,6 @@ describe('resumo', () => {
     expect(r.total).toBe(0);
   });
 
-  it('aplica o desconto do Pix sobre o total, não sobre o subtotal', () => {
-    const r = resumo([item(100, 1)]);
-    expect(r.totalPix).toBeLessThan(r.total);
-  });
-
   it('divide o total em parcelas iguais até o máximo configurado', () => {
     const r = resumo([item(120, 1)]);
     expect(r.parcelamento.valorParcela * r.parcelamento.maxParcelas).toBeCloseTo(r.total, 1);

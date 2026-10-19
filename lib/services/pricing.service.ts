@@ -61,8 +61,6 @@ export function resumo(items: ResumoItem[], { frete = 0, desconto = 0, formaPaga
   const freteGratisAtivo = config.freteGratisAtivo && subtotal >= env.business.freeShippingThreshold;
   const freteFinal = freteGratisAtivo ? 0 : round(frete);
   const total = round(Math.max(0, subtotal - desconto + freteFinal));
-  const pixDiscountPercent = config.descontoPixAtivo ? env.business.pixDiscountPercent : 0;
-  const pix = round(total * (1 - pixDiscountPercent / 100));
   return {
     subtotal,
     frete: freteFinal,
@@ -70,7 +68,6 @@ export function resumo(items: ResumoItem[], { frete = 0, desconto = 0, formaPaga
     faltaParaFreteGratis: config.freteGratisAtivo ? round(Math.max(0, env.business.freeShippingThreshold - subtotal)) : 0,
     desconto: round(desconto),
     total,
-    totalPix: pix,
     formaPagamento,
     parcelamento: {
       maxParcelas: env.business.maxInstallments,

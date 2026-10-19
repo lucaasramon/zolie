@@ -182,12 +182,6 @@ export default async function ProdutoPage({ params }: Props) {
               )}
               {produto.precoVariavel && <span className="text-xs font-light uppercase tracking-wider text-ink-tertiary">A partir de</span>}
               <span className="text-[38px] font-medium leading-tight tracking-tight text-ink">{brl(produto.precoEfetivo)}</span>
-              {produto.precoPix < produto.precoEfetivo && (
-                <span className="flex items-center gap-1.5 text-sm font-medium text-gold-text">
-                  {brl(produto.precoPix)} no Pix
-                  <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">economize</span>
-                </span>
-              )}
               <span className="text-sm font-light text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
             </div>
           </div>

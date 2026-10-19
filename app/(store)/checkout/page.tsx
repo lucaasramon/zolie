@@ -28,7 +28,7 @@ interface Address {
 
 interface CartData {
   items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null }[];
-  resumo: { subtotal: number; frete: number; desconto: number; total: number; totalPix: number };
+  resumo: { subtotal: number; frete: number; desconto: number; total: number };
   cupom: { codigo: string; descricao: string; freteGratis: boolean } | null;
 }
 
@@ -444,7 +444,7 @@ export default function CheckoutPage() {
       if (cart) {
         trackPurchase({
           numero: data.order.numero,
-          total: formaPagamento === 'PIX' ? totalPixComFrete : totalComFrete,
+          total: totalComFrete,
           frete: freteSelecionado ?? 0,
           itens: cart.items.map(i => ({
             id: i.id,
@@ -593,11 +593,7 @@ export default function CheckoutPage() {
   // no client incluía o valor do frete mesmo com o cupom aplicado, já que a cotação
   // de frete (etapa 3) não sabe nada sobre o cupom.
   const freteSelecionado = cupomAplicado?.freteGratis ? (freteSelecionadoBruto === null ? null : 0) : freteSelecionadoBruto;
-  // Proporção do desconto Pix já aplicada pelo backend sobre subtotal-desconto (sem
-  // frete); reaplicá-la sobre o total com frete evita duplicar a regra de desconto no client.
-  const pixRatio = resumo.total > 0 ? resumo.totalPix / resumo.total : 1;
   const totalComFrete = round(resumo.subtotal - resumo.desconto + (freteSelecionado ?? 0));
-  const totalPixComFrete = round(totalComFrete * pixRatio);
 
   return (
     <div className="mx-auto max-w-[1280px] px-4 py-6 sm:px-5 sm:py-8">
@@ -873,7 +869,7 @@ export default function CheckoutPage() {
               )}
               {formaPagamento === 'PIX' && (
                 <p className="text-sm text-gold-text">
-                  {brl(totalPixComFrete)} no Pix{totalPixComFrete < totalComFrete ? ' (com desconto)' : ''}, QR gerado após confirmar.
+                  {brl(totalComFrete)} no Pix, QR gerado após confirmar.
                 </p>
               )}
               {formaPagamento === 'BOLETO' && <p className="text-sm text-ink-muted">Vencimento em 3 dias úteis após a confirmação.</p>}

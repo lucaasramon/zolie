@@ -4,10 +4,9 @@ const CACHE_TTL_MS = 30 * 1000;
 
 interface Config {
   freteGratisAtivo: boolean;
-  descontoPixAtivo: boolean;
 }
 
-const PADRAO: Config = { freteGratisAtivo: true, descontoPixAtivo: true };
+const PADRAO: Config = { freteGratisAtivo: true };
 
 /**
  * Cache em memória do processo. `resumo()`/`decorate()` são chamadas de forma
@@ -25,7 +24,7 @@ async function carregar() {
     update: {},
     create: { id: 'default' },
   });
-  cache = { freteGratisAtivo: row.freteGratisAtivo, descontoPixAtivo: row.descontoPixAtivo };
+  cache = { freteGratisAtivo: row.freteGratisAtivo };
   expiraEm = Date.now() + CACHE_TTL_MS;
 }
 
@@ -56,7 +55,7 @@ export async function atualizar(data: Partial<Config>) {
     update: data,
     create: { id: 'default', ...data },
   });
-  cache = { freteGratisAtivo: row.freteGratisAtivo, descontoPixAtivo: row.descontoPixAtivo };
+  cache = { freteGratisAtivo: row.freteGratisAtivo };
   expiraEm = Date.now() + CACHE_TTL_MS;
   return cache;
 }

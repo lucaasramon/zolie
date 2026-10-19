@@ -37,7 +37,7 @@ const base: PedidoParaAviso = {
       personalizacao: {
         modeloId: 'r12',
         modelo: 'Medalha redonda 12mm',
-        imagens: ['https://blob/a.jpg', 'https://blob/b.png'],
+        imagens: ['https://abc.public.blob.vercel-storage.com/a.jpg', 'https://abc.public.blob.vercel-storage.com/b.png'],
         verso: true,
         textoVerso: 'Te amo',
         pingente: true,
@@ -73,8 +73,8 @@ describe('mensagemVendaConfirmada', () => {
 describe('imagensPersonalizacao', () => {
   it('lista as imagens com legenda por peça', () => {
     expect(imagensPersonalizacao(base)).toEqual([
-      { url: 'https://blob/a.jpg', legenda: '📎 Pedido *ZOL-0042* — Colar Personalizado (Medalha redonda 12mm) — imagem 1/2' },
-      { url: 'https://blob/b.png', legenda: '📎 Pedido *ZOL-0042* — Colar Personalizado (Medalha redonda 12mm) — imagem 2/2' },
+      { url: 'https://abc.public.blob.vercel-storage.com/a.jpg', legenda: '📎 Pedido *ZOL-0042* — Colar Personalizado (Medalha redonda 12mm) — imagem 1/2' },
+      { url: 'https://abc.public.blob.vercel-storage.com/b.png', legenda: '📎 Pedido *ZOL-0042* — Colar Personalizado (Medalha redonda 12mm) — imagem 2/2' },
     ]);
   });
 });

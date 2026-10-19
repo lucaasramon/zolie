@@ -44,6 +44,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     return [
       ...estaticas,
+      { url: `${base}/produtos?categoria=personalizados`, lastModified: new Date(), changeFrequency: 'weekly' as const, priority: 0.8 },
       ...categorias.map(c => ({
         url: `${base}/produtos?categoria=${c.slug}`,
         lastModified: new Date(),

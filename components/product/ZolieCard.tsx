@@ -21,7 +21,6 @@ export interface DecoratedProduct {
   precoEfetivo: number;
   temDesconto: boolean;
   percentualDesconto: number;
-  precoPix: number;
   parcela: number;
   maxParcelas: number;
   estoqueBaixo: boolean;
@@ -172,9 +171,6 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
           )}
           {p.precoVariavel && <span className="text-[10px] font-light uppercase tracking-wider text-ink-tertiary">A partir de</span>}
           <span className="text-lg font-medium leading-tight tracking-tight text-ink">{brl(p.precoEfetivo)}</span>
-          {p.precoPix < p.precoEfetivo && (
-            <span className="text-[10.5px] font-medium text-gold-text">{brl(p.precoPix)} no Pix</span>
-          )}
           <span className="text-[10.5px] font-light text-ink-tertiary">
             ou {p.maxParcelas}x de {brl(p.parcela)}
           </span>

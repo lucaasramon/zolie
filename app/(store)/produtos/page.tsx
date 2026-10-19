@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { list as listProducts } from '@/lib/services/product.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
+import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductFiltersSidebar } from '@/components/product/ProductFiltersSidebar';
 import { ProductSortSelect } from '@/components/product/ProductSortSelect';
@@ -16,6 +17,15 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   // dilui a relevância e desperdiça crawl budget.
   const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'sort', 'page'];
   const temFiltroSecundario = filtrosSecundarios.some(f => sp[f]);
+
+  if (sp.categoria === SLUG_PERSONALIZADOS) {
+    return {
+      title: 'Personalizados',
+      description: 'Semijoias personalizadas com foto, nome ou data gravados a laser. Simule sua peça com IA antes de comprar.',
+      alternates: { canonical: `/produtos?categoria=${SLUG_PERSONALIZADOS}` },
+      ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
+    };
+  }
 
   if (sp.categoria) {
     const categoria = await categoryRepo.findBySlug(sp.categoria);
@@ -61,7 +71,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
 
   const [{ total, items }, categorias] = await Promise.all([
     listProducts(filters, sort, { skip: (page - 1) * perPage, take: perPage }),
-    categoryRepo.list(),
+    listParaLoja(),
   ]);
 
   const categoriaAtual = categorias.find(c => c.slug === sp.categoria);

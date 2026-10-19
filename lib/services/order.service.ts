@@ -181,7 +181,7 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
   }
 
   const resumo = pricing.resumo(items, { frete, desconto, formaPagamento });
-  const total = formaPagamento === 'PIX' ? resumo.totalPix : resumo.total;
+  const total = resumo.total;
 
   const numero = await orderRepo.nextNumber();
 

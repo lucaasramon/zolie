@@ -13,6 +13,7 @@ export interface ProductFilters {
   destaque?: boolean;
   lancamento?: boolean;
   promocao?: boolean;
+  personalizado?: boolean;
   precoMin?: string | number;
   precoMax?: string | number;
 }
@@ -49,7 +50,11 @@ export const productRepo = {
     if (filters.q) {
       conditions.push(Prisma.sql`(p.nome ILIKE ${'%' + filters.q + '%'} OR p.descricao ILIKE ${'%' + filters.q + '%'})`);
     }
-    if (filters.categoria) conditions.push(Prisma.sql`c.slug = ${filters.categoria}`);
+    // "personalizados" é a categoria virtual da vitrine (ver category.service):
+    // filtra pela flag do produto, não pela categoria do banco.
+    if (filters.categoria === 'personalizados') conditions.push(Prisma.sql`p.personalizado = true`);
+    else if (filters.categoria) conditions.push(Prisma.sql`c.slug = ${filters.categoria}`);
+    if (filters.personalizado) conditions.push(Prisma.sql`p.personalizado = true`);
     if (filters.material) conditions.push(Prisma.sql`p.material = ${filters.material}::"Material"`);
     if (filters.pedra) conditions.push(Prisma.sql`p.pedra = ${filters.pedra}`);
     if (filters.tamanho) conditions.push(Prisma.sql`${filters.tamanho} = ANY(p.tamanhos)`);

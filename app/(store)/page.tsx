@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { organizationJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
 import { list as listProducts } from '@/lib/services/product.service';
 import { list as listBanners } from '@/lib/services/banner.service';
-import { categoryRepo } from '@/lib/repositories/category.repo';
+import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
 import * as siteConfig from '@/lib/services/site-config.service';
 import { ZolieCard, DecoratedProduct } from '@/components/product/ZolieCard';
 import { CategoryIcon } from '@/components/product/CategoryIcon';
@@ -13,12 +13,10 @@ import { Reveal } from '@/components/layout/Reveal';
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
-  await siteConfig.preparar();
-  const { descontoPixAtivo } = siteConfig.get();
   return {
     // A home usa o title padrão (sem o sufixo do template) por ser a raiz da marca.
     title: 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k',
-    description: `Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil${descontoPixAtivo ? ' e 10% de desconto no Pix' : ''}.`,
+    description: `Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil.`,
     alternates: { canonical: '/' },
   };
 }
@@ -77,9 +75,10 @@ const DEPOIMENTOS = [
 export default async function HomePage() {
   await siteConfig.preparar();
   const { freteGratisAtivo } = siteConfig.get();
-  const [categorias, banners, ofertas, maisAmadas, lancamentos] = await Promise.all([
-    categoryRepo.list(),
+  const [categorias, banners, personalizados, ofertas, maisAmadas, lancamentos] = await Promise.all([
+    listParaLoja(),
     listBanners(),
+    listProducts({ personalizado: true }, 'relevancia', { skip: 0, take: 4 }),
     listProducts({ promocao: true }, 'relevancia', { skip: 0, take: 4 }),
     listProducts({ destaque: true }, 'mais_vendidos', { skip: 0, take: 4 }),
     listProducts({ lancamento: true }, 'lancamentos', { skip: 0, take: 4 }),
@@ -102,7 +101,7 @@ export default async function HomePage() {
             <span className="z-eyebrow">Navegue pelo universo Zoliê</span>
             <h2 className="z-title text-[28px] sm:text-3xl">Escolha por categoria</h2>
           </div>
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
+          <div className="grid grid-cols-4 gap-2 sm:grid-cols-7 sm:gap-3">
             {categorias.map(c => (
               <Link
                 key={c.id}
@@ -118,6 +117,12 @@ export default async function HomePage() {
           </div>
         </section>
       </Reveal>
+
+      {personalizados.items.length > 0 && (
+        <Reveal>
+          <SecaoPersonalizados products={personalizados.items} />
+        </Reveal>
+      )}
 
       {ofertas.items.length > 0 && (
         <Reveal>
@@ -227,6 +232,39 @@ export default async function HomePage() {
         </section>
       </Reveal>
     </div>
+  );
+}
+
+/** Vitrine dos personalizados: destaque próprio, com o convite para gravar e simular. */
+function SecaoPersonalizados({ products }: { products: DecoratedProduct[] }) {
+  const href = `/produtos?categoria=${SLUG_PERSONALIZADOS}`;
+  return (
+    <section className="mt-12 border-y border-gold-soft/40 bg-gradient-to-b from-gold/10 via-white to-white">
+      <div className="mx-auto max-w-[1280px] px-5 py-10">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <div className="flex max-w-xl flex-col gap-1.5">
+            <span className="z-eyebrow">Feitas só para você</span>
+            <h2 className="z-title text-[28px] sm:text-3xl">Personalizados</h2>
+            <p className="text-sm font-light leading-relaxed text-ink-muted">
+              Grave uma foto, um nome ou uma data especial a laser na sua peça.{' '}
+              <span className="font-medium text-gold-text">✨ Veja como vai ficar com a nossa simulação por IA</span> antes de comprar.
+            </p>
+          </div>
+          <Link
+            href={href}
+            className="group mb-1 flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-gold-text transition-colors hover:text-gold-text-hover"
+          >
+            Ver todos
+            <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          {products.map(p => (
+            <ZolieCard key={p.id} product={p} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 

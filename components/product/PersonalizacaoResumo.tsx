@@ -18,6 +18,20 @@ export function PersonalizacaoResumo({ valor, comImagens = false }: { valor: unk
           <span className="text-ink-tertiary">{l.rotulo}:</span> {l.valor}
         </span>
       ))}
+      {comImagens && p.simulacao && (
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-ink-tertiary">Simulação IA:</span>
+          {[
+            { url: p.simulacao.frente, rotulo: 'frente' },
+            { url: p.simulacao.verso, rotulo: 'verso' },
+          ].map(s => (
+            <a key={s.url} href={s.url} target="_blank" rel="noopener noreferrer" title={`Abrir simulação (${s.rotulo})`}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- simulação gerada por IA */}
+              <img src={s.url} alt={`Simulação da ${s.rotulo}`} className="h-16 w-16 rounded-md object-cover ring-1 ring-gold-soft" />
+            </a>
+          ))}
+        </div>
+      )}
       {comImagens && p.imagens.length > 0 && (
         <div className="mt-1 flex gap-2">
           {p.imagens.map((url, i) => (

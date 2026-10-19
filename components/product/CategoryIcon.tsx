@@ -1,4 +1,13 @@
 const ICON_BY_SLUG: Record<string, React.ReactNode> = {
+  // Medalha com brilho: peça gravada sob medida.
+  personalizados: (
+    <>
+      <circle cx="11" cy="14" r="6" />
+      <path d="M11 8V5.5" />
+      <path d="M8.5 14.5c.8 1.2 1.6 1.8 2.5 1.8s1.7-.6 2.5-1.8" />
+      <path d="M18.5 3.5v3M17 5h3" />
+    </>
+  ),
   colares: (
     <>
       <path d="M12 3c-3 0-5.5 2.2-5.5 5 0 3.5 2.5 6 5.5 10 3-4 5.5-6.5 5.5-10 0-2.8-2.5-5-5.5-5Z" />

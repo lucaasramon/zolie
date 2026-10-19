@@ -142,7 +142,6 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
   const preco = usaModelos ? (precosModelos.length ? Math.min(...precosModelos) : 0) : Number(form.preco) || 0;
   const precoPromocional = !usaModelos && form.precoPromocional ? Number(form.precoPromocional) : null;
   const precoEfetivo = precoPromocional || preco;
-  const precoPix = precoEfetivo * 0.9;
 
   function updateModelo(id: string, patch: Partial<ModeloForm>) {
     setModelos(ms => ms.map(m => (m.id === id ? { ...m, ...patch } : m)));
@@ -431,7 +430,6 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
           {preco > 0 && (
             <div className="rounded-lg bg-hoverbg p-3 text-sm">
               <div className="text-ink">{brl(precoEfetivo)}</div>
-              <div className="text-xs text-gold-text">{brl(precoPix)} no Pix</div>
             </div>
           )}
         </Section>

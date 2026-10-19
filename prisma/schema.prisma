@@ -630,7 +630,6 @@ model Banner {
 model SiteConfig {
   id                 String   @id @default("default")
   freteGratisAtivo   Boolean  @default(true) @map("frete_gratis_ativo")
-  descontoPixAtivo   Boolean  @default(true) @map("desconto_pix_ativo")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("site_config")

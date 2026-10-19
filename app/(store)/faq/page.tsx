@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
 import { jsonLdScript } from '@/lib/utils/jsonLd';
-import * as siteConfig from '@/lib/services/site-config.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,13 +11,10 @@ export const metadata: Metadata = {
 };
 
 export default async function FaqPage() {
-  await siteConfig.preparar();
-  const { descontoPixAtivo } = siteConfig.get();
-
   const perguntas = [
     { q: 'As peças enferrujam ou escurecem?', r: 'A prata 925 e o banho de ouro 18k reforçado são resistentes, mas recomendamos evitar contato com perfume, cloro e água do mar para prolongar o brilho.' },
     { q: 'Qual o prazo de entrega?', r: 'O prazo varia conforme a região e a modalidade de frete escolhida, exibido no checkout antes da confirmação do pedido.' },
-    { q: 'Posso parcelar minha compra?', r: `Sim, em até 12x sem juros no cartão de crédito${descontoPixAtivo ? ', ou com 10% de desconto pagando via Pix' : ''}.` }
+    { q: 'Posso parcelar minha compra?', r: 'Sim, em até 12x sem juros no cartão de crédito. Também aceitamos Pix e boleto.' }
   ];
 
   const faqJsonLd = {

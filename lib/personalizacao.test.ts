@@ -34,7 +34,7 @@ describe('precoPersonalizado', () => {
 describe('personalizacaoSchema', () => {
   it('aceita personalização completa', () => {
     const p = personalizacaoSchema.parse({
-      imagens: ['/uploads/a.png'],
+      imagens: ['https://abc.public.blob.vercel-storage.com/a.png'],
       verso: true,
       textoVerso: '  Te amo  ',
       pingente: false,
@@ -43,12 +43,17 @@ describe('personalizacaoSchema', () => {
     expect(p).toEqual({
       modeloId: null,
       modelo: null,
-      imagens: ['/uploads/a.png'],
+      imagens: ['https://abc.public.blob.vercel-storage.com/a.png'],
       verso: true,
       textoVerso: 'Te amo',
       pingente: false,
       fonte: '03 georgia',
+      simulacao: null,
     });
+  });
+
+  it('recusa fotos fora do nosso storage', () => {
+    expect(personalizacaoSchema.safeParse({ verso: false, imagens: ['https://site-qualquer.com/a.png'] }).success).toBe(false);
   });
 
   it('exige texto quando pediu verso', () => {
@@ -67,7 +72,7 @@ describe('personalizacaoSchema', () => {
   });
 
   it('limita a 2 imagens e às fontes da lista', () => {
-    expect(personalizacaoSchema.safeParse({ verso: false, imagens: ['a', 'b', 'c'] }).success).toBe(false);
+    expect(personalizacaoSchema.safeParse({ verso: false, imagens: ['/images/produtos/a.png', '/images/produtos/b.png', '/images/produtos/c.png'] }).success).toBe(false);
     expect(personalizacaoSchema.safeParse({ verso: false, fonte: 'comic sans' }).success).toBe(false);
   });
 });
@@ -79,7 +84,7 @@ describe('lerPersonalizacao / resumoPersonalizacao', () => {
   });
 
   it('monta o resumo para exibição', () => {
-    const p = lerPersonalizacao({ modelo: 'Escapulário', verso: true, textoVerso: 'Ana', pingente: true, fonte: null, imagens: ['x'] })!;
+    const p = lerPersonalizacao({ modelo: 'Escapulário', verso: true, textoVerso: 'Ana', pingente: true, fonte: null, imagens: ['https://abc.public.blob.vercel-storage.com/x.png'] })!;
     expect(resumoPersonalizacao(p)).toEqual([
       { rotulo: 'Modelo', valor: 'Escapulário' },
       { rotulo: 'Gravação no verso', valor: 'Sim — "Ana"' },

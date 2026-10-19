@@ -15,6 +15,7 @@ import {
   PERSONALIZACAO_INICIAL,
   validarPersonalizacao,
 } from '@/components/product/PersonalizacaoForm';
+import { assinaturaEscolhas, ResultadoSimulacao, SimulacaoIA } from '@/components/product/SimulacaoIA';
 
 interface Props {
   productId: string;
@@ -55,6 +56,10 @@ export function ProductPurchaseBox({
     ? precoPersonalizado({ precoBase: preco ?? 0, opcoes: opcoesPersonalizacao, valorGravacaoVerso }, personalizacao)
     : null;
   const [erroPersonalizacao, setErroPersonalizacao] = useState<string | null>(null);
+  const [simulacao, setSimulacao] = useState<ResultadoSimulacao | null>(null);
+  // Só vai para o pedido a simulação que corresponde às respostas atuais.
+  const simulacaoAtual =
+    simulacao && simulacao.assinatura === assinaturaEscolhas(personalizacao, tamanho) ? simulacao : null;
   const [quantidade, setQuantidade] = useState(1);
   const [cep, setCep] = useState('');
   const [frete, setFrete] = useState<{ opcoes: { nome: string; prazoDias: number; valor: number }[] } | null>(null);
@@ -89,12 +94,16 @@ export function ProductPurchaseBox({
             textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
             pingente: personalizacao.pingente,
             fonte: personalizacao.fonte,
+            simulacao: simulacaoAtual ? { frente: simulacaoAtual.frente, verso: simulacaoAtual.verso } : null,
           },
         }),
       });
       await refresh();
       // Cada peça personalizada é única: o formulário volta ao início para a próxima.
-      if (personalizado) setPersonalizacao(inicial);
+      if (personalizado) {
+        setPersonalizacao(inicial);
+        setSimulacao(null);
+      }
 
       // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
       if (nome && preco != null) {
@@ -147,6 +156,17 @@ export function ProductPurchaseBox({
           corrente={tamanho}
           onCorrenteChange={setTamanho}
           erro={erroPersonalizacao}
+        />
+      )}
+
+      {personalizado && (
+        <SimulacaoIA
+          productId={productId}
+          personalizacao={personalizacao}
+          tamanho={tamanho}
+          opcoes={opcoesPersonalizacao}
+          resultado={simulacao}
+          onResultado={setSimulacao}
         />
       )}
 

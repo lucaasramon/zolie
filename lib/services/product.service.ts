@@ -38,7 +38,6 @@ export function decorate(p: any) {
     precoEfetivo: preco,
     temDesconto: p.precoPromocional != null,
     percentualDesconto: p.precoPromocional != null ? Math.round((1 - Number(p.precoPromocional) / Number(p.preco)) * 100) : 0,
-    precoPix: round(preco * (1 - (siteConfig.get().descontoPixAtivo ? env.business.pixDiscountPercent : 0) / 100)),
     parcela: round(preco / env.business.maxInstallments),
     maxParcelas: env.business.maxInstallments,
     // Peça personalizada cujo preço depende do modelo/gravação escolhidos: a

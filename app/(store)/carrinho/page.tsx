@@ -34,7 +34,6 @@ interface CartData {
     faltaParaFreteGratis: number;
     desconto: number;
     total: number;
-    totalPix: number;
     parcelamento: { maxParcelas: number; valorParcela: number };
   };
   cupom: { codigo: string; descricao: string } | null;
@@ -213,9 +212,6 @@ export default function CarrinhoPage() {
                 <span>Total</span>
                 <span>{brl(resumo.total)}</span>
               </div>
-              {resumo.totalPix < resumo.total && (
-                <span className="text-xs text-gold-text">{brl(resumo.totalPix)} no Pix</span>
-              )}
               <span className="text-xs text-ink-tertiary">
                 ou {resumo.parcelamento.maxParcelas}x de {brl(resumo.parcelamento.valorParcela)}
               </span>

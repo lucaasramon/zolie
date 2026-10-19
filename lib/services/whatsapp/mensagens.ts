@@ -110,6 +110,12 @@ export function imagensPersonalizacao(o: PedidoParaAviso): { url: string; legend
         legenda: `📎 Pedido *${o.numero}* — ${item.nomeProduto}${p.modelo ? ` (${p.modelo})` : ''} — imagem ${i + 1}/${p.imagens.length}`,
       });
     });
+    if (p.simulacao) {
+      out.push(
+        { url: p.simulacao.frente, legenda: `✨ Pedido *${o.numero}* — simulação com IA vista pela cliente (frente)` },
+        { url: p.simulacao.verso, legenda: `✨ Pedido *${o.numero}* — simulação com IA vista pela cliente (verso)` },
+      );
+    }
   }
   return out;
 }

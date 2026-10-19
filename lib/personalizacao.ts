@@ -74,17 +74,36 @@ export function rotuloOpcao(o: Pick<OpcaoPersonalizacao, 'modelo' | 'tamanho'>):
 // Escolhas da cliente (item da sacola / do pedido)
 // ---------------------------------------------------------------------------
 
+/** Só aceita arquivos que subiram pelo nosso upload (Vercel Blob ou storage local de dev). */
+export function urlDoNossoStorage(url: string): boolean {
+  if (url.startsWith('/images/produtos/')) return true;
+  try {
+    const u = new URL(url);
+    return u.protocol === 'https:' && u.hostname.endsWith('.public.blob.vercel-storage.com');
+  } catch {
+    return false;
+  }
+}
+
+const urlStorage = z.string().min(1).max(500).refine(urlDoNossoStorage, 'Arquivo de origem inválida');
+
 export const personalizacaoSchema = z
   .object({
     modeloId: z.string().max(50).nullable().optional().transform(v => v ?? null),
     // Nome do modelo gravado pelo servidor no momento da compra (snapshot para o
     // pedido continuar legível mesmo se o modelo for removido do anúncio depois).
     modelo: z.string().max(120).nullable().optional().transform(v => v ?? null),
-    imagens: z.array(z.string().min(1).max(500)).max(LIMITE_IMAGENS_PERSONALIZACAO).default([]),
+    imagens: z.array(urlStorage).max(LIMITE_IMAGENS_PERSONALIZACAO).default([]),
     verso: z.boolean({ required_error: 'Informe se deseja personalização no verso' }),
     textoVerso: z.string().trim().max(200).nullable().optional().transform(v => (v ? v : null)),
     pingente: z.boolean().default(true),
     fonte: z.enum(FONTES_PERSONALIZACAO).nullable().optional().transform(v => v ?? null),
+    // Simulação com IA que a cliente viu antes de comprar (frente e verso).
+    simulacao: z
+      .object({ frente: urlStorage, verso: urlStorage })
+      .nullable()
+      .optional()
+      .transform(v => v ?? null),
   })
   .superRefine((p, ctx) => {
     if (p.verso && !p.textoVerso) {
@@ -130,5 +149,6 @@ export function resumoPersonalizacao(p: Personalizacao): { rotulo: string; valor
     { rotulo: 'Pingente de coração', valor: p.pingente ? 'Com pingente' : 'Sem pingente' },
     { rotulo: 'Letra', valor: p.fonte || 'Não escolhida' },
     { rotulo: 'Imagens', valor: p.imagens.length > 0 ? `${p.imagens.length} enviada(s)` : 'Nenhuma' },
+    ...(p.simulacao ? [{ rotulo: 'Simulação com IA', valor: 'Vista pela cliente antes da compra' }] : []),
   ];
 }

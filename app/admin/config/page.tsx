@@ -18,7 +18,6 @@ export default async function AdminConfigPage() {
         <h2 className="font-sans text-lg font-semibold text-ink">Regras de venda</h2>
         <p className="text-xs text-ink-tertiary">Estes valores são definidos por variáveis de ambiente do servidor (.env) e exibidos aqui somente para consulta.</p>
         <Row label="Valor mínimo p/ frete grátis (quando ativo)" value={brl(env.business.freeShippingThreshold)} />
-        <Row label="Percentual de desconto no Pix (quando ativo)" value={`${env.business.pixDiscountPercent}%`} />
         <Row label="Máximo de parcelas" value={`${env.business.maxInstallments}x`} />
         <Row label="Alerta de estoque baixo" value="3 unidades por variação" />
       </div>

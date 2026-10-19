@@ -18,7 +18,6 @@ export interface SetPiece {
   preco: number | string;
   temDesconto: boolean;
   percentualDesconto: number;
-  precoPix: number;
   parcela: number;
   maxParcelas: number;
   estoque: number;

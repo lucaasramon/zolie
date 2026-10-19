@@ -36,7 +36,6 @@ export const env = {
 
   business: {
     freeShippingThreshold: num(process.env.FREE_SHIPPING_THRESHOLD, 199),
-    pixDiscountPercent: num(process.env.PIX_DISCOUNT_PERCENT, 10),
     maxInstallments: num(process.env.MAX_INSTALLMENTS, 12),
   },
 
@@ -122,6 +121,14 @@ export const env = {
   openai: {
     apiKey: process.env.OPENAI_API_KEY || '',
     model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+  },
+
+  // Simulação com IA da peça personalizada (frente e verso). Usa a mesma chave da OpenAI.
+  simulacao: {
+    modeloImagem: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2',
+    // Análise da foto do anúncio e verificação do resultado.
+    modeloVisao: process.env.OPENAI_VISION_MODEL || 'gpt-5.4',
+    qualidade: (process.env.OPENAI_IMAGE_QUALITY || 'high') as 'low' | 'medium' | 'high',
   },
 
   appUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',

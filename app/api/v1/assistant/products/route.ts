@@ -28,7 +28,6 @@ export const GET = withAssistantAuth(async req => {
     categoria: p.categoria?.nome ?? null,
     material: p.material,
     preco: p.precoEfetivo,
-    precoPix: p.precoPix,
     parcelamento: `${p.maxParcelas}x de R$ ${p.parcela.toFixed(2)} sem juros`,
     disponivel: p.disponivel,
     tamanhos: p.tamanhos ?? [],

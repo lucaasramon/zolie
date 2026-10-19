@@ -107,7 +107,7 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
 
           <div className="flex flex-col gap-2.5">
             <span className="mb-2 text-[11px] font-medium uppercase tracking-[0.24em] text-gold">Categorias</span>
-            {categorias.slice(0, 6).map(c => (
+            {categorias.slice(0, 7).map(c => (
               <Link key={c.slug} href={`/produtos?categoria=${c.slug}`} className="text-sm font-light text-[#CFC7B8] transition-colors hover:text-white">
                 {c.nome}
               </Link>

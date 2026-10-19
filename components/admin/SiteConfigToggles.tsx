@@ -5,7 +5,6 @@ import { api } from '@/lib/api-client';
 
 interface Config {
   freteGratisAtivo: boolean;
-  descontoPixAtivo: boolean;
 }
 
 export function SiteConfigToggles({ config }: { config: Config }) {
@@ -34,12 +33,6 @@ export function SiteConfigToggles({ config }: { config: Config }) {
         ativo={current.freteGratisAtivo}
         saving={saving === 'freteGratisAtivo'}
         onClick={() => toggle('freteGratisAtivo')}
-      />
-      <Toggle
-        label="Desconto no pagamento via Pix"
-        ativo={current.descontoPixAtivo}
-        saving={saving === 'descontoPixAtivo'}
-        onClick={() => toggle('descontoPixAtivo')}
       />
     </div>
   );
