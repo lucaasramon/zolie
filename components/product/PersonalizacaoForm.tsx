@@ -5,7 +5,6 @@ import { api, ApiError } from '@/lib/api-client';
 import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
 import {
-  FONTES_PERSONALIZACAO,
   LIMITE_IMAGENS_PERSONALIZACAO,
   OpcaoPersonalizacao,
   PERGUNTAS_PERSONALIZACAO,
@@ -18,7 +17,6 @@ export interface PersonalizacaoState {
   /** null = ainda não respondido (a pergunta é obrigatória). */
   verso: boolean | null;
   textoVerso: string;
-  fonte: string | null;
 }
 
 export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
@@ -26,7 +24,6 @@ export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
   imagens: [],
   verso: null,
   textoVerso: '',
-  fonte: null,
 };
 
 /** Mensagem do primeiro problema encontrado, ou null se dá para enviar. */
@@ -179,22 +176,6 @@ export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange
           <span className="text-xs text-ink-tertiary">Escreva exatamente como quer gravar: nomes, datas ou uma frase curta.</span>
         </label>
       )}
-
-      <fieldset className="flex flex-col gap-2">
-        <legend className={`${labelClass} mb-2`}>{PERGUNTAS_PERSONALIZACAO.fonte}</legend>
-        {FONTES_PERSONALIZACAO.map(f => (
-          <label key={f} className="flex cursor-pointer items-center gap-3 text-sm font-medium text-ink">
-            <input
-              type="radio"
-              name="fonte-personalizacao"
-              checked={value.fonte === f}
-              onChange={() => set({ fonte: f })}
-              className="h-6 w-6 accent-gold"
-            />
-            {f}
-          </label>
-        ))}
-      </fieldset>
 
       <label className="flex flex-col gap-2">
         <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.corrente}</span>

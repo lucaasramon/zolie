@@ -15,15 +15,6 @@ import { z } from 'zod';
 
 export const LIMITE_IMAGENS_PERSONALIZACAO = 2;
 
-export const FONTES_PERSONALIZACAO = [
-  '01 verdana',
-  '02 baskerville',
-  '03 georgia',
-  '04 pingfangTC-ligth',
-  '05 timesnewromannPSmt',
-  '06 savoyeLetPlain',
-] as const;
-
 /** Tamanhos de corrente que o admin pode marcar no anúncio. */
 export const CORRENTES_DISPONIVEIS = [35, 40, 45, 50, 55, 60, 65, 70, 75, 80].map(cm => `Corrente ${cm} cm`);
 
@@ -42,7 +33,6 @@ export const PERGUNTAS_PERSONALIZACAO = {
   imagensAjuda: `Inserir imagem (fique tranquilo, enviaremos a prévia para aprovação em 2 dias no seu WhatsApp) (Limite de ${LIMITE_IMAGENS_PERSONALIZACAO} arquivos)`,
   verso: 'Deseja gravação no verso da peça?',
   textoVerso: 'O que você quer gravar no verso?',
-  fonte: 'Escolha a letra usada (caso possua escrita) - Verifique as opções na imagem do produto',
   corrente: 'Escolha o tamanho da corrente',
 };
 
@@ -97,7 +87,9 @@ export const personalizacaoSchema = z
     textoVerso: z.string().trim().max(200).nullable().optional().transform(v => (v ? v : null)),
     // Opção descontinuada: só existe em pedidos antigos, lida para a produção não perder a informação.
     pingente: z.boolean().optional(),
-    fonte: z.enum(FONTES_PERSONALIZACAO).nullable().optional().transform(v => v ?? null),
+    // Opção descontinuada (a loja escolhe a letra): só existe em pedidos antigos,
+    // lida para a produção ainda ver a letra que a cliente escolheu na época.
+    fonte: z.string().max(60).nullable().optional().transform(v => v ?? null),
     // Simulação com IA que a cliente viu antes de comprar (frente e verso).
     simulacao: z
       .object({ frente: urlStorage, verso: urlStorage })
@@ -147,7 +139,7 @@ export function resumoPersonalizacao(p: Personalizacao): { rotulo: string; valor
     ...(p.modelo ? [{ rotulo: 'Modelo', valor: p.modelo }] : []),
     { rotulo: 'Gravação no verso', valor: p.verso ? `Sim — "${p.textoVerso}"` : 'Não' },
     ...(p.pingente === true ? [{ rotulo: 'Pingente de coração', valor: 'Com pingente (pedido antigo)' }] : []),
-    { rotulo: 'Letra', valor: p.fonte || 'Não escolhida' },
+    ...(p.fonte ? [{ rotulo: 'Letra', valor: p.fonte }] : []),
     { rotulo: 'Imagens', valor: p.imagens.length > 0 ? `${p.imagens.length} enviada(s)` : 'Nenhuma' },
     ...(p.simulacao ? [{ rotulo: 'Simulação com IA', valor: 'Vista pela cliente antes da compra' }] : []),
   ];

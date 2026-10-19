@@ -19,7 +19,6 @@ export function assinaturaEscolhas(p: PersonalizacaoState, tamanho: string): str
     imagens: p.imagens,
     verso: p.verso,
     textoVerso: p.verso ? p.textoVerso.trim() : '',
-    fonte: p.fonte,
     tamanho,
   });
 }
@@ -74,7 +73,6 @@ export function SimulacaoIA({ productId, personalizacao, tamanho, opcoes, result
           imagens: personalizacao.imagens,
           verso: personalizacao.verso,
           textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
-          fonte: personalizacao.fonte,
         },
       });
       onResultado({ ...data, assinatura: assinaturaEscolhas(personalizacao, tamanho) });

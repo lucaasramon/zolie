@@ -146,7 +146,6 @@ async function verificar(
         lado,
         modelo: ctx.modelo,
         textoVerso: ctx.textoVerso,
-        fonte: ctx.fonte,
         fotosCliente: ctx.fotosCliente,
       },
       fotosProduto.length,
@@ -223,7 +222,6 @@ export async function simular({ productId, tamanho, personalizacao }: SimularInp
     fotosProduto: fotosProduto.length,
     fotosCliente: fotosCliente.length,
     textoVerso: p.verso ? p.textoVerso : null,
-    fonte: p.fonte,
     analise,
   };
 

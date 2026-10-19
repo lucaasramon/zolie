@@ -9,7 +9,6 @@ const ctx: ContextoSimulacao = {
   fotosProduto: 2,
   fotosCliente: 1,
   textoVerso: 'Helena ♥ 12/03/2024',
-  fonte: '06 savoyeLetPlain',
   analise: null,
 };
 
@@ -55,7 +54,7 @@ describe('promptVerso', () => {
 
   it('leva o texto literal entre marcadores e a descrição da fonte', () => {
     expect(p).toContain('<<<Helena ♥ 12/03/2024>>>');
-    expect(p).toContain('Savoye LET');
+    expect(p).toContain("the shop's standard lettering");
     expect(p).toContain('NOT mirrored');
   });
 
@@ -75,7 +74,7 @@ describe('promptVerso', () => {
 describe('verificação e correções', () => {
   it('a imagem inspecionada é a última e o texto é conferido literalmente', () => {
     const v = promptVerificacao(
-      { lado: 'verso', modelo: ctx.modelo, textoVerso: ctx.textoVerso, fonte: ctx.fonte, fotosCliente: 1 },
+      { lado: 'verso', modelo: ctx.modelo, textoVerso: ctx.textoVerso, fotosCliente: 1 },
       2,
     );
     expect(v).toContain('image 3) is the GENERATED BACK');

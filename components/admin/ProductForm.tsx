@@ -307,8 +307,8 @@ export function ProductForm({ categorias, initialData }: { categorias: Categoria
           {form.personalizado ? (
             <>
               <div className="rounded-lg bg-bg-alt p-3 text-xs leading-relaxed text-ink-muted">
-                Na página do produto a cliente escolhe o modelo e responde: envio de até 2 imagens, gravação no verso (sim/não + texto),
-                letra usada (01 verdana a 06 savoyeLetPlain) e tamanho da corrente.
+                Na página do produto a cliente escolhe o modelo e responde: envio de até 2 imagens, gravação no verso (sim/não + texto)
+                e tamanho da corrente.
                 As respostas aparecem no pedido, aqui no admin.
               </div>
 

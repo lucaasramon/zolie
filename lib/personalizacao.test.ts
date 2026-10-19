@@ -70,9 +70,8 @@ describe('personalizacaoSchema', () => {
     expect(personalizacaoSchema.safeParse({}).success).toBe(false);
   });
 
-  it('limita a 2 imagens e às fontes da lista', () => {
+  it('limita a 2 imagens', () => {
     expect(personalizacaoSchema.safeParse({ verso: false, imagens: ['/images/produtos/a.png', '/images/produtos/b.png', '/images/produtos/c.png'] }).success).toBe(false);
-    expect(personalizacaoSchema.safeParse({ verso: false, fonte: 'comic sans' }).success).toBe(false);
   });
 });
 
@@ -82,6 +81,11 @@ describe('lerPersonalizacao / resumoPersonalizacao', () => {
     expect(resumoPersonalizacao(antigo)).toContainEqual({ rotulo: 'Pingente de coração', valor: 'Com pingente (pedido antigo)' });
     const novo = lerPersonalizacao({ verso: false })!;
     expect(resumoPersonalizacao(novo).some(l => l.rotulo === 'Pingente de coração')).toBe(false);
+  });
+
+  it('pedido antigo com letra escolhida continua mostrando a letra', () => {
+    expect(resumoPersonalizacao(lerPersonalizacao({ verso: false, fonte: '03 georgia' })!)).toContainEqual({ rotulo: 'Letra', valor: '03 georgia' });
+    expect(resumoPersonalizacao(lerPersonalizacao({ verso: false })!).some(l => l.rotulo === 'Letra')).toBe(false);
   });
 
   it('ignora valor ausente ou malformado', () => {
@@ -94,7 +98,6 @@ describe('lerPersonalizacao / resumoPersonalizacao', () => {
     expect(resumoPersonalizacao(p)).toEqual([
       { rotulo: 'Modelo', valor: 'Escapulário' },
       { rotulo: 'Gravação no verso', valor: 'Sim — "Ana"' },
-      { rotulo: 'Letra', valor: 'Não escolhida' },
       { rotulo: 'Imagens', valor: '1 enviada(s)' },
     ]);
   });

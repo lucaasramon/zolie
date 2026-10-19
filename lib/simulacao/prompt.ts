@@ -10,24 +10,9 @@
  * peça nova. Tudo que não foi pedido pela cliente é invariante.
  */
 
-/** Descrição tipográfica de cada fonte oferecida — o modelo não tem os arquivos de fonte. */
-export const FONTES_DESCRICAO: Record<string, string> = {
-  '01 verdana':
-    'Verdana: a wide humanist SANS-SERIF typeface, no serifs, uniform stroke width, large open letterforms, generous letter spacing',
-  '02 baskerville':
-    'Baskerville: a classic transitional SERIF typeface, elegant, high contrast between thick and thin strokes, sharp bracketed serifs',
-  '03 georgia':
-    'Georgia: a sturdy SERIF typeface, slightly heavy strokes, moderate contrast, wide and very legible, old-style feel',
-  '04 pingfangTC-ligth':
-    'PingFang TC Light: a THIN, LIGHT-weight modern SANS-SERIF typeface, clean geometric shapes, delicate hairline strokes, no serifs',
-  '05 timesnewromannPSmt':
-    'Times New Roman: a traditional compact SERIF typeface, narrow letters, high stroke contrast, classic newspaper look',
-  '06 savoyeLetPlain':
-    'Savoye LET: a very elegant flowing CALLIGRAPHIC SCRIPT typeface, connected cursive handwriting with long graceful swashes and loops, thin delicate strokes',
-};
-
+// A cliente não escolhe a letra: a loja grava sempre no seu estilo padrão.
 const FONTE_PADRAO =
-  'a simple, elegant, classic SERIF engraving typeface (the shop default when no font is chosen)';
+  "a simple, elegant, classic engraving typeface (the shop's standard lettering), clean and highly legible";
 
 const MATERIAL_DESCRICAO: Record<string, string> = {
   PRATA_925: 'polished 925 sterling silver (cool bright silver tone)',
@@ -95,7 +80,6 @@ export interface ContextoSimulacao {
   /** Quantas fotos da cliente vão logo depois das do anúncio. */
   fotosCliente: number;
   textoVerso: string | null;
-  fonte: string | null;
   analise: AnalisePeca | null;
 }
 
@@ -191,7 +175,6 @@ FINAL CHECK BEFORE ANSWERING: same exact model as Image 1? same shape, bail, cha
 }
 
 export function promptVerso(ctx: ContextoSimulacao): string {
-  const fonte = (ctx.fonte && FONTES_DESCRICAO[ctx.fonte]) || FONTE_PADRAO;
   const conteudo = ctx.textoVerso
     ? `
 WHAT TO ENGRAVE ON THE BACK — TEXT (exact characters between the markers <<< and >>>; the markers themselves are NOT engraved):
@@ -199,7 +182,7 @@ WHAT TO ENGRAVE ON THE BACK — TEXT (exact characters between the markers <<< a
 Text rules (critical, zero tolerance):
 - Engrave EXACTLY these characters, in this exact order: same letters, same uppercase/lowercase, same accents and cedillas (á, ã, â, é, ê, í, ó, õ, ô, ú, ç), same digits, same punctuation, same symbols (♥ & / - . , etc.). Character count must match exactly.
 - Do NOT translate, correct spelling, change capitalization, abbreviate, add, remove or repeat any word or character. Do NOT add quotation marks, dates, names, hearts or decorations that are not in the text.
-- Typeface: ${fonte}. Every letter must clearly show the characteristics of this typeface.
+- Typeface: ${FONTE_PADRAO}.
 - Readable left-to-right as seen by the viewer (NOT mirrored), horizontally centered, vertically centered inside the back face, with a safety margin from the edges. If it does not fit on one line, break it into 2-4 lines ONLY at existing spaces, keeping the reading order; keep a consistent size for all lines.
 - Engraving look: fine, crisp, dark grey laser-engraved lettering slightly recessed into the polished metal (laser engraving only — never printed, painted, enameled or colored).`
     : `
@@ -219,7 +202,7 @@ VIEW: the REVERSE side of the very same piece, as if it were flipped over around
 ${conteudo}
 
 FINAL CHECK BEFORE ANSWERING: same exact model as Image 1 seen from behind? same shape, bail, chain and metal? ${
-    ctx.textoVerso ? 'text identical character by character, not mirrored, in the requested typeface?' : 'back completely blank?'
+    ctx.textoVerso ? 'text identical character by character, not mirrored, elegant and legible?' : 'back completely blank?'
   } nothing extra added? If any answer is no, fix it.`;
 }
 
@@ -271,7 +254,6 @@ export interface VerificacaoEsperada {
   lado: Lado;
   modelo: string | null;
   textoVerso: string | null;
-  fonte: string | null;
   fotosCliente: number;
 }
 
@@ -294,7 +276,7 @@ Check the generated image:
         ? "is the customer's photo content (same people/subjects, faces, poses) engraved on the front, inside the piece, as a MONOCHROME LASER ENGRAVING (grayscale etched into the metal)? Different people, missing subjects, a generic picture, or a colored/printed/sticker-like photo = false."
         : 'is the front free of any engraving/personalization (blank where personalization would go)?'
       : v.textoVerso
-        ? `is the engraved text EXACTLY <<<${v.textoVerso}>>> (character by character: letters, case, accents, digits, punctuation; markers not included), not mirrored, readable, in a typeface matching: ${(v.fonte && FONTES_DESCRICAO[v.fonte]) || FONTE_PADRAO}? Any missing/extra/wrong character = false.`
+        ? `is the engraved text EXACTLY <<<${v.textoVerso}>>> (character by character: letters, case, accents, digits, punctuation; markers not included), not mirrored and readable? (Any clean, elegant engraving typeface is acceptable — do not fail on the font style.) Any missing/extra/wrong character = false.`
         : 'is the back completely blank (no text, marks or logos)?'
   }
 3. semExtras: is the image free of anything not requested (extra text, logos, watermarks, labels, extra stones, any added charm such as a heart charm, hands, props) and is the piece fully visible and photorealistic?
