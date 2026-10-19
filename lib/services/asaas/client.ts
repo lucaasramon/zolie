@@ -25,7 +25,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     } catch {
       // corpo não é JSON (ex: erro de auth/proxy) — segue com body vazio
     }
-    logger.error(`Erro do gateway Asaas em ${init.method || 'GET'} ${path}`, undefined, { status: res.status, body: rawText.slice(0, 500) });
+    // Criar cobrança/cliente só acontece no checkout, que já manda um alerta
+    // completo (com a cliente e o motivo) quando falha — aqui seria duplicado.
+    const doCheckout = init.method === 'POST' && (path === '/payments' || path === '/customers');
+    logger.error(
+      `Erro do gateway Asaas em ${init.method || 'GET'} ${path}`,
+      undefined,
+      { status: res.status, body: rawText.slice(0, 500) },
+      { alertar: !doCheckout },
+    );
     const message = body.errors?.[0]?.description || `Erro ao comunicar com o gateway de pagamento (status ${res.status})`;
     throw new AppError(message, 502, 'ASAAS_PROVIDER_ERROR');
   }

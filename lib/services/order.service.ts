@@ -17,6 +17,8 @@ import * as notifications from '@/lib/services/notification.service';
 import { STATUS_LABEL } from '@/lib/utils/format';
 import { round } from '@/lib/utils/money';
 import { logger } from '@/lib/logger';
+import * as whatsapp from '@/lib/services/whatsapp';
+import { linkWhatsapp, pagamentoLabel } from '@/lib/services/whatsapp/mensagens';
 import { env } from '@/lib/env';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
@@ -111,6 +113,27 @@ async function resolveContatoEEndereco(
   };
 }
 
+/** Alerta de compra que não foi concluída, com o contato da cliente para recuperar a venda. */
+function alertarCheckout(
+  titulo: string,
+  contato: { nome: string; email: string; telefone?: string | null },
+  detalhes: Record<string, unknown>,
+  nivel: 'erro' | 'aviso' = 'erro',
+) {
+  const zap = linkWhatsapp(contato.telefone ?? null);
+  whatsapp.alertar(
+    titulo,
+    {
+      Cliente: contato.nome,
+      Telefone: contato.telefone ? `${contato.telefone}${zap ? ` · ${zap}` : ''}` : undefined,
+      'E-mail': contato.email,
+      ...detalhes,
+    },
+    // Uma cliente tentando de novo em seguida não gera vários avisos iguais.
+    { nivel, chave: `${titulo}:${contato.email}` },
+  );
+}
+
 export async function create(userId: string | null, cartOwner: CartOwner, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp, guest }: CreateOrderInput) {
   await siteConfig.preparar();
   const { contato, endereco } = await resolveContatoEEndereco(userId, { enderecoId, guest });
@@ -121,6 +144,11 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
 
   for (const i of items) {
     if (i.product.estoque < i.quantidade) {
+      alertarCheckout('Compra travada por falta de estoque', contato, {
+        Produto: i.product.nome,
+        'Quantidade pedida': i.quantidade,
+        'Estoque atual': i.product.estoque,
+      }, 'aviso');
       throw new AppError(`Estoque insuficiente: ${i.product.nome}`, 422, 'OUT_OF_STOCK');
     }
     if (pricing.precoItemOuNull(i) == null) {
@@ -261,7 +289,19 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
         if (userId) await couponRepo.removeRedemptionByCode(cupomCodigo, userId, tx);
       }
     });
-    logger.error('Falha ao criar cobrança Asaas; pedido cancelado, estoque, carrinho e cupom revertidos', err, { orderId: order.id });
+    // O alerta abaixo já leva o contato da cliente e o motivo — o do logger seria duplicado.
+    logger.error('Falha ao criar cobrança Asaas; pedido cancelado, estoque, carrinho e cupom revertidos', err, { orderId: order.id }, { alertar: false });
+    alertarCheckout(
+      formaPagamento === 'CARTAO_CREDITO' ? 'Pagamento com cartão não aprovado' : 'Falha ao gerar a cobrança no checkout',
+      contato,
+      {
+        Motivo: err instanceof Error ? err.message : String(err),
+        Valor: `R$ ${Number(total).toFixed(2).replace('.', ',')}`,
+        Pagamento: pagamentoLabel(formaPagamento, parcelas),
+        Itens: items.map(i => `${i.quantidade}x ${i.product.nome}`).join(', '),
+        Pedido: `${order.numero} (cancelado automaticamente; a sacola voltou para a cliente)`,
+      },
+    );
     throw err;
   }
 
@@ -464,6 +504,9 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
 
   const order = await orderRepo.updateStatus(id, status, descricao, undefined, { codigoRastreio, transportadora });
   if (!order) throw notFound('Pedido');
+
+  // Antes dos e-mails: uma falha no envio de e-mail não pode impedir o aviso da venda.
+  if (motivo === 'PAGAMENTO_CONFIRMADO') whatsapp.notificarVendaConfirmada(order.id);
 
   const emailStatus = order.user?.email ?? order.guestEmail;
   const nomeStatus = order.user?.nome ?? order.guestNome ?? '';

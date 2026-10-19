@@ -2,12 +2,13 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { logger } from '@/lib/logger';
 import { linkWhatsApp } from '@/lib/loja';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
-    logger.error('Erro não tratado capturado pelo error boundary', error, { digest: error.digest });
+    // `console` direto: `lib/logger` é só do servidor (dispara alertas no WhatsApp).
+    // O erro de servidor por trás deste boundary já foi registrado do lado de lá.
+    console.error('[error] Erro não tratado capturado pelo error boundary', error, { digest: error.digest });
   }, [error]);
 
   const whatsapp = linkWhatsApp('Olá! Encontrei um erro no site e preciso de ajuda.');

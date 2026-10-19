@@ -12,6 +12,7 @@ import {
   extractPaymentEvent,
 } from '@/lib/services/asaasWebhook.logic';
 import { logger } from '@/lib/logger';
+import * as whatsapp from '@/lib/services/whatsapp';
 
 // Não testável end-to-end sem URL pública: o Asaas precisa alcançar esta rota via internet.
 // Para testar em dev local, exponha um túnel (ex: `ngrok http 3000`) e cadastre a URL gerada
@@ -94,6 +95,16 @@ export const POST = withErrorHandling(async (req: NextRequest) => {
         motivo: `Pagamento cancelado/estornado via Asaas (${payload.event})`,
         estornar: false,
       });
+      whatsapp.alertar(
+        payload.event === 'PAYMENT_CHARGEBACK_REQUESTED' ? 'Chargeback (contestação) aberto no cartão' : 'Pagamento estornado/cancelado no Asaas',
+        {
+          Pedido: order!.numero,
+          Evento: payload.event,
+          'O que foi feito': 'Pedido cancelado, estoque e cupom devolvidos',
+          Admin: `${env.appUrl}/admin/pedidos/${order!.id}`,
+        },
+        { nivel: 'aviso', chave: null },
+      );
     }
   } catch (err) {
     // O pagamento já aconteceu de fato no gateway: devolver erro aqui faria o Asaas

@@ -84,6 +84,18 @@ export const env = {
 
   // Dados institucionais exibidos no site. Exigidos pelo art. 2º do Decreto
   // 7.962/2013 (e-commerce): identificação, CNPJ e endereço físico visíveis.
+  // Avisos internos no WhatsApp via Evolution API (mesma instância do número da
+  // Zoliê usada pelo AtendAI). Sem URL/chave/instância, os avisos ficam
+  // desligados em silêncio — nada no fluxo de compra depende deles.
+  whatsapp: {
+    apiUrl: (process.env.EVOLUTION_API_URL || '').replace(/\/$/, ''),
+    apiKey: process.env.EVOLUTION_API_KEY || '',
+    instancia: process.env.EVOLUTION_INSTANCE || '',
+    // Ids dos grupos (ex: 1203630xxxxxxxx@g.us).
+    grupoVendas: process.env.WHATSAPP_GRUPO_VENDAS || '',
+    grupoAlertas: process.env.WHATSAPP_GRUPO_ALERTAS || '',
+  },
+
   loja: {
     razaoSocial: process.env.LOJA_RAZAO_SOCIAL || '',
     cnpj: process.env.LOJA_CNPJ || '',
