@@ -18,7 +18,6 @@ export interface PersonalizacaoState {
   /** null = ainda não respondido (a pergunta é obrigatória). */
   verso: boolean | null;
   textoVerso: string;
-  pingente: boolean;
   fonte: string | null;
 }
 
@@ -27,7 +26,6 @@ export const PERSONALIZACAO_INICIAL: PersonalizacaoState = {
   imagens: [],
   verso: null,
   textoVerso: '',
-  pingente: true,
   fonte: null,
 };
 
@@ -181,14 +179,6 @@ export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange
           <span className="text-xs text-ink-tertiary">Escreva exatamente como quer gravar: nomes, datas ou uma frase curta.</span>
         </label>
       )}
-
-      <label className="flex flex-col gap-2">
-        <span className={labelClass}>{PERGUNTAS_PERSONALIZACAO.pingente}</span>
-        <select value={value.pingente ? 'com' : 'sem'} onChange={e => set({ pingente: e.target.value === 'com' })} className={inputClass}>
-          <option value="com">Com pingente</option>
-          <option value="sem">Sem pingente</option>
-        </select>
-      </label>
 
       <fieldset className="flex flex-col gap-2">
         <legend className={`${labelClass} mb-2`}>{PERGUNTAS_PERSONALIZACAO.fonte}</legend>

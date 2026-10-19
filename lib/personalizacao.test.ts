@@ -63,7 +63,6 @@ describe('personalizacaoSchema', () => {
   it('descarta o texto do verso quando respondeu não', () => {
     const p = personalizacaoSchema.parse({ verso: false, textoVerso: 'sobrou' });
     expect(p.textoVerso).toBeNull();
-    expect(p.pingente).toBe(true);
     expect(p.imagens).toEqual([]);
   });
 
@@ -78,17 +77,23 @@ describe('personalizacaoSchema', () => {
 });
 
 describe('lerPersonalizacao / resumoPersonalizacao', () => {
+  it('pedido antigo com pingente continua mostrando a escolha', () => {
+    const antigo = lerPersonalizacao({ verso: false, pingente: true })!;
+    expect(resumoPersonalizacao(antigo)).toContainEqual({ rotulo: 'Pingente de coração', valor: 'Com pingente (pedido antigo)' });
+    const novo = lerPersonalizacao({ verso: false })!;
+    expect(resumoPersonalizacao(novo).some(l => l.rotulo === 'Pingente de coração')).toBe(false);
+  });
+
   it('ignora valor ausente ou malformado', () => {
     expect(lerPersonalizacao(null)).toBeNull();
     expect(lerPersonalizacao({ foo: 1 })).toBeNull();
   });
 
   it('monta o resumo para exibição', () => {
-    const p = lerPersonalizacao({ modelo: 'Escapulário', verso: true, textoVerso: 'Ana', pingente: true, fonte: null, imagens: ['https://abc.public.blob.vercel-storage.com/x.png'] })!;
+    const p = lerPersonalizacao({ modelo: 'Escapulário', verso: true, textoVerso: 'Ana', fonte: null, imagens: ['https://abc.public.blob.vercel-storage.com/x.png'] })!;
     expect(resumoPersonalizacao(p)).toEqual([
       { rotulo: 'Modelo', valor: 'Escapulário' },
       { rotulo: 'Gravação no verso', valor: 'Sim — "Ana"' },
-      { rotulo: 'Pingente de coração', valor: 'Com pingente' },
       { rotulo: 'Letra', valor: 'Não escolhida' },
       { rotulo: 'Imagens', valor: '1 enviada(s)' },
     ]);

@@ -92,7 +92,6 @@ export function ProductPurchaseBox({
             imagens: personalizacao.imagens,
             verso: personalizacao.verso,
             textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
-            pingente: personalizacao.pingente,
             fonte: personalizacao.fonte,
             simulacao: simulacaoAtual ? { frente: simulacaoAtual.frente, verso: simulacaoAtual.verso } : null,
           },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { comCorrecoes, ContextoSimulacao, CORES_PINGENTE, descreverModelo, promptFrente, promptVerificacao, promptVerso } from './prompt';
+import { comCorrecoes, ContextoSimulacao, descreverModelo, promptFrente, promptVerificacao, promptVerso } from './prompt';
 
 const ctx: ContextoSimulacao = {
   nomeProduto: 'Colar Personalizado Prata 925',
@@ -10,8 +10,6 @@ const ctx: ContextoSimulacao = {
   fotosCliente: 1,
   textoVerso: 'Helena ♥ 12/03/2024',
   fonte: '06 savoyeLetPlain',
-  pingente: true,
-  corPingente: CORES_PINGENTE[0],
   analise: null,
 };
 
@@ -42,9 +40,9 @@ describe('promptFrente', () => {
     expect(p).not.toContain('Helena');
   });
 
-  it('pede exatamente um pingente da cor sorteada', () => {
-    expect(p).toContain(`${CORES_PINGENTE[0].en} color`);
-    expect(p).toContain('Exactly one charm');
+  it('proíbe qualquer pingente/charm', () => {
+    expect(p).toContain('NO charms of any kind');
+    expect(p).not.toContain('HEART CHARM (requested');
   });
 
   it('sem foto da cliente, a frente fica sem gravação', () => {
@@ -69,15 +67,15 @@ describe('promptVerso', () => {
     expect(promptVerso({ ...ctx, textoVerso: null, fotosCliente: 0 })).toContain('WHAT TO ENGRAVE ON THE BACK: NOTHING');
   });
 
-  it('sem pingente, proíbe adicionar coração', () => {
-    expect(promptVerso({ ...ctx, pingente: false, fotosCliente: 0 })).toContain('Do not add any heart');
+  it('também proíbe pingente no verso', () => {
+    expect(p).toContain('no heart charm');
   });
 });
 
 describe('verificação e correções', () => {
   it('a imagem inspecionada é a última e o texto é conferido literalmente', () => {
     const v = promptVerificacao(
-      { lado: 'verso', modelo: ctx.modelo, textoVerso: ctx.textoVerso, fonte: ctx.fonte, fotosCliente: 1, pingente: true, corPingente: ctx.corPingente },
+      { lado: 'verso', modelo: ctx.modelo, textoVerso: ctx.textoVerso, fonte: ctx.fonte, fotosCliente: 1 },
       2,
     );
     expect(v).toContain('image 3) is the GENERATED BACK');

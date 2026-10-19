@@ -42,7 +42,6 @@ export const PERGUNTAS_PERSONALIZACAO = {
   imagensAjuda: `Inserir imagem (fique tranquilo, enviaremos a prévia para aprovação em 2 dias no seu WhatsApp) (Limite de ${LIMITE_IMAGENS_PERSONALIZACAO} arquivos)`,
   verso: 'Deseja gravação no verso da peça?',
   textoVerso: 'O que você quer gravar no verso?',
-  pingente: 'Pingente zircônia de coração (cor aleatória - grátis)',
   fonte: 'Escolha a letra usada (caso possua escrita) - Verifique as opções na imagem do produto',
   corrente: 'Escolha o tamanho da corrente',
 };
@@ -96,7 +95,8 @@ export const personalizacaoSchema = z
     imagens: z.array(urlStorage).max(LIMITE_IMAGENS_PERSONALIZACAO).default([]),
     verso: z.boolean({ required_error: 'Escolha se deseja gravação no verso' }),
     textoVerso: z.string().trim().max(200).nullable().optional().transform(v => (v ? v : null)),
-    pingente: z.boolean().default(true),
+    // Opção descontinuada: só existe em pedidos antigos, lida para a produção não perder a informação.
+    pingente: z.boolean().optional(),
     fonte: z.enum(FONTES_PERSONALIZACAO).nullable().optional().transform(v => v ?? null),
     // Simulação com IA que a cliente viu antes de comprar (frente e verso).
     simulacao: z
@@ -146,7 +146,7 @@ export function resumoPersonalizacao(p: Personalizacao): { rotulo: string; valor
   return [
     ...(p.modelo ? [{ rotulo: 'Modelo', valor: p.modelo }] : []),
     { rotulo: 'Gravação no verso', valor: p.verso ? `Sim — "${p.textoVerso}"` : 'Não' },
-    { rotulo: 'Pingente de coração', valor: p.pingente ? 'Com pingente' : 'Sem pingente' },
+    ...(p.pingente === true ? [{ rotulo: 'Pingente de coração', valor: 'Com pingente (pedido antigo)' }] : []),
     { rotulo: 'Letra', valor: p.fonte || 'Não escolhida' },
     { rotulo: 'Imagens', valor: p.imagens.length > 0 ? `${p.imagens.length} enviada(s)` : 'Nenhuma' },
     ...(p.simulacao ? [{ rotulo: 'Simulação com IA', valor: 'Vista pela cliente antes da compra' }] : []),

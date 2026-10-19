@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from 'crypto';
+import { randomUUID } from 'crypto';
 import { toFile } from 'openai';
 import { env } from '@/lib/env';
 import { getOpenAIClient } from '@/lib/openai-client';
@@ -14,7 +14,6 @@ import {
   aprovada,
   comCorrecoes,
   ContextoSimulacao,
-  CORES_PINGENTE,
   Lado,
   descreverModelo,
   promptAnalise,
@@ -32,9 +31,9 @@ import {
  *  1. análise: um modelo de visão descreve a peça da foto do anúncio com precisão
  *     (cacheada por foto) — essa descrição vira o "contrato" do prompt de imagem;
  *  2. geração: o modelo de imagem EDITA a foto do anúncio (nunca gera do zero),
- *     frente e verso em paralelo, com a mesma cor de pingente nos dois;
+ *     frente e verso em paralelo;
  *  3. verificação: a visão compara cada resultado com a foto oficial (modelo,
- *     texto letra a letra, foto da cliente, pingente, extras);
+ *     texto letra a letra, foto da cliente, extras);
  *  4. correção: o lado reprovado é refeito uma vez com a lista de problemas,
  *     se ainda houver tempo dentro do limite da função.
  */
@@ -149,8 +148,6 @@ async function verificar(
         textoVerso: ctx.textoVerso,
         fonte: ctx.fonte,
         fotosCliente: ctx.fotosCliente,
-        pingente: ctx.pingente,
-        corPingente: ctx.corPingente,
       },
       fotosProduto.length,
     );
@@ -227,9 +224,6 @@ export async function simular({ productId, tamanho, personalizacao }: SimularInp
     fotosCliente: fotosCliente.length,
     textoVerso: p.verso ? p.textoVerso : null,
     fonte: p.fonte,
-    pingente: p.pingente,
-    // "Cor aleatória" na loja: sorteada uma vez para frente e verso ficarem iguais.
-    corPingente: CORES_PINGENTE[randomInt(CORES_PINGENTE.length)],
     analise,
   };
 
@@ -260,6 +254,5 @@ export async function simular({ productId, tamanho, personalizacao }: SimularInp
   return {
     frente: urlFrente.url,
     verso: urlVerso.url,
-    corPingente: ctx.pingente ? ctx.corPingente.nome : null,
   };
 }

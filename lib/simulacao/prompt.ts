@@ -36,18 +36,6 @@ const MATERIAL_DESCRICAO: Record<string, string> = {
   ACO: 'polished stainless steel (neutral grey-silver tone)',
 };
 
-/** Cores possíveis do pingente de coração ("cor aleatória" na loja). */
-export const CORES_PINGENTE = [
-  { nome: 'rosa', en: 'soft pink' },
-  { nome: 'lilás', en: 'lilac purple' },
-  { nome: 'azul-claro', en: 'light aqua blue' },
-  { nome: 'vermelho', en: 'ruby red' },
-  { nome: 'branco (cristal)', en: 'clear colorless crystal' },
-  { nome: 'verde', en: 'emerald green' },
-] as const;
-
-export type CorPingente = (typeof CORES_PINGENTE)[number];
-
 // Termos usados nos nomes de modelo cadastrados no admin (em português). Sem
 // tradução explícita, a IA chegou a ler "Medalha Coração" como medalha redonda.
 const TERMOS_MODELO: [RegExp, string][] = [
@@ -108,8 +96,6 @@ export interface ContextoSimulacao {
   fotosCliente: number;
   textoVerso: string | null;
   fonte: string | null;
-  pingente: boolean;
-  corPingente: CorPingente;
   analise: AnalisePeca | null;
 }
 
@@ -167,23 +153,11 @@ ABSOLUTE RULES — THE PIECE MUST BE THE SAME MODEL AS THE PRODUCT PHOTO:
 2. Keep the exact shape: a round piece stays perfectly round, a heart stays the same heart, a rectangle keeps the same corner radius and ratio, a scapular keeps its exact form. Never swap it for a generic medal.
 3. Keep the exact metal color and finish of Image 1 (${MATERIAL_DESCRICAO[ctx.material] ?? 'same metal as Image 1'}; if this hint ever conflicts with Image 1, Image 1 wins).
 4. Keep every fixed design element of Image 1 (borders, reliefs, stones, cut-outs, existing religious images or ornaments) exactly as they are, in the same place and size — unless it is the shop's sample personalization, which must be replaced.
-5. Add NOTHING that was not requested: no extra stones, no extra charms, no extra text, no initials, no dates, no logos, no hallmarks, no brand marks, no watermarks, no captions, no labels such as "front"/"back".
+5. Add NOTHING that was not requested: no extra stones, NO charms of any kind (no heart charm, no extra pendant hanging on the chain), no extra text, no initials, no dates, no logos, no hallmarks, no brand marks, no watermarks, no captions, no labels such as "front"/"back".
 6. The piece must be fully visible, centered, not cropped, in focus, photographed like Image 1: same style of clean studio product photography and soft lighting.
 6b. BACKGROUND: keep EXACTLY the background of Image 1 (same color, same gradient, same plain studio surface). Never replace it with a scene, room, table, blur of objects or any new environment. The front and back previews must look like two photos from the same photo session.
 6c. No hands, no people wearing it, no props, no packaging.
 7. Photorealistic jewelry macro photography. The result must look like a real photo of the real piece after personalization, not an illustration or 3D render.`;
-}
-
-function blocoPingente(ctx: ContextoSimulacao, lado: Lado): string {
-  if (!ctx.pingente) {
-    return `\nHEART CHARM: the customer chose NO extra charm. Do not add any heart or other charm (keep only what exists in Image 1).`;
-  }
-  return `
-HEART CHARM (requested, it is a free gift): add exactly ONE small heart-shaped zirconia charm in ${ctx.corPingente.en} color, set in a thin bezel of the SAME metal and color as the piece, hanging from the SAME chain/jump ring right beside the main piece. It must be clearly smaller than the main piece (about one quarter of its height), never overlapping or covering the engraving. ${
-    lado === 'verso'
-      ? 'This is the back view, so show the back of the charm: its metal bezel back, with the colored stone just visible at the edges. Same color as on the front.'
-      : 'Show the faceted colored stone facing the camera.'
-  } Exactly one charm — not two, not zero.`;
 }
 
 export function promptFrente(ctx: ContextoSimulacao): string {
@@ -212,7 +186,6 @@ ${blocoAnalise(ctx.analise)}${blocoInvariantes(ctx)}
 
 VIEW: FRONT of the piece, same camera angle, framing and composition as Image 1.
 ${conteudo}
-${blocoPingente(ctx, 'frente')}
 
 FINAL CHECK BEFORE ANSWERING: same exact model as Image 1? same shape, bail, chain and metal? only the requested personalization added? no extra text or marks? If any answer is no, fix it.`;
 }
@@ -244,7 +217,6 @@ VIEW: the REVERSE side of the very same piece, as if it were flipped over around
 - The silhouette is the horizontal mirror of the front silhouette (for symmetric shapes it looks identical); same size, same thickness and edge profile, same bail/jump ring, same chain.
 - The back surface is the plain back of the same piece in the same metal and finish (if one of the official product photos shows the real back, reproduce that back exactly). Front-side reliefs, stones or engraved images do NOT appear on the back. The customer's photo (if any) is on the FRONT only and must NOT appear here.
 ${conteudo}
-${blocoPingente(ctx, 'verso')}
 
 FINAL CHECK BEFORE ANSWERING: same exact model as Image 1 seen from behind? same shape, bail, chain and metal? ${
     ctx.textoVerso ? 'text identical character by character, not mirrored, in the requested typeface?' : 'back completely blank?'
@@ -301,8 +273,6 @@ export interface VerificacaoEsperada {
   textoVerso: string | null;
   fonte: string | null;
   fotosCliente: number;
-  pingente: boolean;
-  corPingente: CorPingente;
 }
 
 export function promptVerificacao(v: VerificacaoEsperada, fotosProduto: number): string {
@@ -327,12 +297,7 @@ Check the generated image:
         ? `is the engraved text EXACTLY <<<${v.textoVerso}>>> (character by character: letters, case, accents, digits, punctuation; markers not included), not mirrored, readable, in a typeface matching: ${(v.fonte && FONTES_DESCRICAO[v.fonte]) || FONTE_PADRAO}? Any missing/extra/wrong character = false.`
         : 'is the back completely blank (no text, marks or logos)?'
   }
-3. pingenteCorreto: ${
-    v.pingente
-      ? `is there exactly ONE small heart-shaped charm (${v.corPingente.en} stone) beside the piece on the same chain?`
-      : 'is there NO added heart charm (only what exists in the official photo)?'
-  }
-4. semExtras: is the image free of anything not requested (extra text, logos, watermarks, labels, extra stones/charms, hands, props) and is the piece fully visible and photorealistic?
+3. semExtras: is the image free of anything not requested (extra text, logos, watermarks, labels, extra stones, any added charm such as a heart charm, hands, props) and is the piece fully visible and photorealistic?
 
 Only fail a check for a problem you can clearly see in the generated image; if you are unsure, the check passes. Never invent problems.
 In "problemas", list each failure as a short, concrete, actionable correction instruction in English (e.g. "The text reads 'Helna' but must read exactly 'Helena'", "The medal became oval; it must be a perfect circle like image 1"). Empty list if everything passes.`;
@@ -344,11 +309,10 @@ export const VERIFICACAO_SCHEMA = {
   schema: {
     type: 'object',
     additionalProperties: false,
-    required: ['mesmoModelo', 'conteudoCorreto', 'pingenteCorreto', 'semExtras', 'problemas'],
+    required: ['mesmoModelo', 'conteudoCorreto', 'semExtras', 'problemas'],
     properties: {
       mesmoModelo: { type: 'boolean' },
       conteudoCorreto: { type: 'boolean' },
-      pingenteCorreto: { type: 'boolean' },
       semExtras: { type: 'boolean' },
       problemas: { type: 'array', items: { type: 'string' } },
     },
@@ -358,18 +322,17 @@ export const VERIFICACAO_SCHEMA = {
 export interface Verificacao {
   mesmoModelo: boolean;
   conteudoCorreto: boolean;
-  pingenteCorreto: boolean;
   semExtras: boolean;
   problemas: string[];
 }
 
-export const aprovada = (v: Verificacao) => v.mesmoModelo && v.conteudoCorreto && v.pingenteCorreto && v.semExtras;
+export const aprovada = (v: Verificacao) => v.mesmoModelo && v.conteudoCorreto && v.semExtras;
 
 /** Prompt de nova tentativa: o original + as correções apontadas pela verificação. */
 export function comCorrecoes(prompt: string, problemas: string[]): string {
   if (problemas.length === 0) return prompt;
   return `${prompt}
 
-CORRECTIONS REQUIRED — a previous attempt was rejected by quality control for these reasons. Fix every one of them while keeping all rules above. If a correction contradicts the customer's choices or the rules above (chosen model/shape, text, photo, charm), IGNORE that correction — the customer's choices always win:
+CORRECTIONS REQUIRED — a previous attempt was rejected by quality control for these reasons. Fix every one of them while keeping all rules above. If a correction contradicts the customer's choices or the rules above (chosen model/shape, text, photo), IGNORE that correction — the customer's choices always win:
 ${problemas.map(p => `- ${p}`).join('\n')}`;
 }

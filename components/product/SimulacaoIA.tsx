@@ -8,7 +8,6 @@ import { PersonalizacaoState, validarPersonalizacao } from '@/components/product
 export interface ResultadoSimulacao {
   frente: string;
   verso: string;
-  corPingente: string | null;
   /** Escolhas usadas na geração — se mudarem depois, a simulação fica desatualizada. */
   assinatura: string;
 }
@@ -20,7 +19,6 @@ export function assinaturaEscolhas(p: PersonalizacaoState, tamanho: string): str
     imagens: p.imagens,
     verso: p.verso,
     textoVerso: p.verso ? p.textoVerso.trim() : '',
-    pingente: p.pingente,
     fonte: p.fonte,
     tamanho,
   });
@@ -76,7 +74,6 @@ export function SimulacaoIA({ productId, personalizacao, tamanho, opcoes, result
           imagens: personalizacao.imagens,
           verso: personalizacao.verso,
           textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
-          pingente: personalizacao.pingente,
           fonte: personalizacao.fonte,
         },
       });
@@ -147,7 +144,7 @@ export function SimulacaoIA({ productId, personalizacao, tamanho, opcoes, result
             ))}
           </div>
           <p className="text-[11px] leading-relaxed text-ink-tertiary">
-            Simulação ilustrativa gerada por IA{resultado.corPingente ? ` (pingente simulado na cor ${resultado.corPingente}; a cor real é aleatória)` : ''}.
+            Simulação ilustrativa gerada por IA.
             A peça é produzida a partir das suas respostas, e você recebe a prévia real para aprovação no WhatsApp.
           </p>
         </div>
