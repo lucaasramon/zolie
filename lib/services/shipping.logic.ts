@@ -1,7 +1,11 @@
 import { round } from '@/lib/utils/money';
 
-/** Dimensões mínimas do pacote (cm) — usadas quando o volume calculado é menor. */
-export const PACOTE_MINIMO = { height: 4, width: 8, length: 11 };
+/**
+ * Caixa de envio (cm). As transportadoras cobram pelo volume da CAIXA, não da
+ * semijoia — e todo pedido vai na mesma caixa de 16 x 11 x 5 cm, qualquer que
+ * seja o tipo ou a quantidade de peças. Usada na cotação e na etiqueta.
+ */
+export const CAIXA_ENVIO = { length: 16, width: 11, height: 5 };
 
 /** Peso considerado por peça quando o produto não tem `pesoGramas` cadastrado. */
 export const PESO_PADRAO_GRAMAS = 150;
@@ -33,17 +37,9 @@ export function calcularPesoKg(itens: ItemParaFrete[]): number {
   return Math.max(0.05, Number((gramas / 1000).toFixed(3)));
 }
 
-/**
- * Dimensões do pacote. Semijoia é pequena e leve, então a altura cresce um pouco
- * conforme a quantidade em vez de empilhar volumes — reflete melhor a caixa real.
- */
-export function calcularDimensoes(totalPecas: number) {
-  const alturaExtra = Math.floor(Math.max(0, totalPecas - 1) / 3);
-  return {
-    height: PACOTE_MINIMO.height + alturaExtra,
-    width: PACOTE_MINIMO.width,
-    length: PACOTE_MINIMO.length,
-  };
+/** Dimensões do pacote: sempre a caixa padrão da loja (ver CAIXA_ENVIO). */
+export function calcularDimensoes() {
+  return { ...CAIXA_ENVIO };
 }
 
 export function limparCep(cep: string): string {

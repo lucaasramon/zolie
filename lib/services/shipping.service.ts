@@ -140,8 +140,7 @@ export async function cotar(cep: string, subtotal = 0, { itens }: CotarOpts = {}
 
   const itensParaPeso = itens?.length ? itens : [{ quantidade: 1 }];
   const pesoKg = calcularPesoKg(itensParaPeso);
-  const totalPecas = itensParaPeso.reduce((s, i) => s + i.quantidade, 0);
-  const dimensoes = calcularDimensoes(totalPecas);
+  const dimensoes = calcularDimensoes();
 
   const chave = chaveCache(limpo, pesoKg);
   const cacheado = lerCache(chave);

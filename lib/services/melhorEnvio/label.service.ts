@@ -3,8 +3,10 @@ import { melhorEnvioClient } from '@/lib/services/melhorEnvio/client';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { AppError, notFound } from '@/lib/utils/errors';
 import { logger } from '@/lib/logger';
+import { CAIXA_ENVIO } from '@/lib/services/shipping.logic';
 
-const PACOTE_PADRAO = { height: 4, width: 8, length: 11, weight: 0.15 };
+// Mesma caixa da cotação: a etiqueta precisa declarar o volume que foi cobrado do cliente.
+const PACOTE_PADRAO = { ...CAIXA_ENVIO, weight: 0.15 };
 
 /** Campos do remetente sem os quais o Melhor Envio recusa o carrinho. */
 const REMETENTE_OBRIGATORIO = ['nome', 'email', 'documento', 'endereco', 'numero', 'bairro', 'cidade', 'estado'] as const;

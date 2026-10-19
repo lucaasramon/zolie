@@ -6,7 +6,7 @@ import {
   limparCep,
   PESO_PADRAO_GRAMAS,
   PESO_EMBALAGEM_GRAMAS,
-  PACOTE_MINIMO,
+  CAIXA_ENVIO,
 } from './shipping.logic';
 
 describe('calcularPesoKg', () => {
@@ -58,18 +58,9 @@ describe('calcularPesoKg', () => {
 });
 
 describe('calcularDimensoes', () => {
-  it('usa as dimensões mínimas para uma peça', () => {
-    expect(calcularDimensoes(1)).toEqual(PACOTE_MINIMO);
-  });
-
-  it('aumenta a altura conforme a quantidade', () => {
-    expect(calcularDimensoes(10).height).toBeGreaterThan(calcularDimensoes(1).height);
-  });
-
-  it('mantém largura e comprimento fixos', () => {
-    const d = calcularDimensoes(20);
-    expect(d.width).toBe(PACOTE_MINIMO.width);
-    expect(d.length).toBe(PACOTE_MINIMO.length);
+  it('usa sempre a caixa de envio de 16 x 11 x 5 cm', () => {
+    expect(calcularDimensoes()).toEqual({ length: 16, width: 11, height: 5 });
+    expect(calcularDimensoes()).toEqual(CAIXA_ENVIO);
   });
 });
 
