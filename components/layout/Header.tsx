@@ -44,10 +44,17 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
   const [bagPulse, setBagPulse] = useState(false);
   const prevItemCount = useRef(itemCount);
   const [scrolled, setScrolled] = useState(false);
+  const [compact, setCompact] = useState(false);
 
   useEffect(() => {
+    // Histerese no modo compacto (só aplicado no mobile via `max-md:`): entra
+    // depois de rolar um pouco e só sai perto do topo, para não piscar. Em
+    // páginas curtas não compacta, senão o encolhimento do header reduz o
+    // scroll máximo e devolve o usuário ao topo.
     function onScroll() {
-      setScrolled(window.scrollY > 8);
+      const y = window.scrollY;
+      setScrolled(y > 8);
+      setCompact(prev => (prev ? y > 24 : y > 120 && document.documentElement.scrollHeight - window.innerHeight > 400));
     }
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -124,6 +131,9 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
     router.push(`/produtos?q=${encodeURIComponent(query.trim())}`);
   }
 
+  // Itens secundários escondidos no mobile enquanto o header está compacto.
+  const hideCompact = compact ? 'max-md:hidden' : '';
+
   const contaLabel = user ? user.nome.split(' ')[0] : 'Entrar';
   const saudacao = user ? 'Olá,' : 'Bem-vinda(o)';
 
@@ -156,23 +166,47 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
           scrolled ? 'border-border-subtle shadow-sm' : 'border-transparent'
         }`}
       >
-        <div className="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-[22px] gap-y-3.5 px-5 py-3.5">
-          <Link href="/" className="group flex items-center gap-2.5">
+        <div
+          className={`mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-[22px] gap-y-3.5 px-5 py-3.5 transition-[padding] duration-300 ${
+            compact ? 'max-md:flex-nowrap max-md:gap-x-2.5 max-md:py-2' : ''
+          }`}
+        >
+          {compact && (
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Abrir menu"
+              className="-ml-1 grid h-9 w-9 flex-none place-items-center rounded-full text-ink-muted animate-zfade transition-colors hover:bg-hoverbg md:hidden"
+            >
+              <MenuIcon className="h-5 w-5" />
+            </button>
+          )}
+
+          <Link href="/" className="group flex flex-none items-center gap-2.5">
             <Image
               src="/images/zolie.png"
               alt="Zoliê Semijoias"
               width={38}
               height={48}
-              className="h-11 w-auto flex-none object-contain transition-transform duration-300 group-hover:scale-105"
+              className={`h-11 w-auto flex-none object-contain transition-all duration-300 group-hover:scale-105 ${
+                compact ? 'max-md:h-8' : ''
+              }`}
             />
-            <span className="flex flex-col items-start gap-px">
+            <span className={`flex flex-col items-start gap-px ${hideCompact}`}>
               <span className="font-serif text-[26px] leading-none tracking-[0.14em] text-ink">ZOLIÊ</span>
               <span className="text-[8px] font-light uppercase leading-none tracking-[0.34em] text-gold-text">semijoias</span>
             </span>
           </Link>
 
-          <div ref={searchBoxRef} className="relative flex flex-1 basis-[280px] items-center">
-            <div className="flex w-full items-center gap-1 rounded-full border border-transparent bg-bg-alt pl-[18px] pr-1.5 shadow-xs transition-all focus-within:border-gold-soft focus-within:bg-white focus-within:shadow-sm">
+          <div
+            ref={searchBoxRef}
+            className={`relative flex flex-1 basis-[280px] items-center ${compact ? 'max-md:min-w-0 max-md:basis-0' : ''}`}
+          >
+            <div
+              className={`flex w-full items-center gap-1 rounded-full border border-transparent bg-bg-alt pl-[18px] pr-1.5 shadow-xs transition-all focus-within:border-gold-soft focus-within:bg-white focus-within:shadow-sm ${
+                compact ? 'max-md:pl-3.5 max-md:pr-1' : ''
+              }`}
+            >
               <SearchIcon className="h-4 w-4 flex-none text-ink-tertiary" />
               <input
                 value={query}
@@ -181,13 +215,17 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
                 onKeyDown={e => e.key === 'Enter' && onSearch()}
                 placeholder="Buscar colares, brincos, anéis..."
                 aria-label="Buscar produtos"
-                className="flex-1 border-none bg-transparent px-2.5 py-[11px] text-sm text-ink outline-none"
+                className={`min-w-0 flex-1 border-none bg-transparent px-2.5 py-[11px] text-sm text-ink outline-none transition-[padding] duration-300 ${
+                  compact ? 'max-md:px-2 max-md:py-2' : ''
+                }`}
               />
               <button
                 type="button"
                 onClick={onSearch}
                 aria-label="Buscar"
-                className="grid h-9 w-9 flex-none place-items-center rounded-full bg-gold text-ink transition-all hover:bg-gold-hover active:scale-90"
+                className={`grid h-9 w-9 flex-none place-items-center rounded-full bg-gold text-ink transition-all hover:bg-gold-hover active:scale-90 ${
+                  compact ? 'max-md:h-8 max-md:w-8' : ''
+                }`}
               >
                 <SearchIcon className="h-4 w-4" />
               </button>
@@ -217,12 +255,14 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
             )}
           </div>
 
-          <div className="flex items-center gap-1">
-            <MusicToggle />
+          <div className="flex flex-none items-center gap-1">
+            <div className={hideCompact}>
+              <MusicToggle />
+            </div>
 
             <Link
               href={user ? '/conta' : '/login'}
-              className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+              className={`group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg ${hideCompact}`}
             >
               <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
                 <UserIcon className="h-[18px] w-[18px]" />
@@ -235,7 +275,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
 
             <Link
               href="/conta/favoritos"
-              className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+              className={`group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg ${hideCompact}`}
             >
               <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
                 <HeartIcon className="h-[18px] w-[18px]" />
@@ -246,7 +286,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
             {user && (
               <Link
                 href="/conta/notificacoes"
-                className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+                className={`group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg ${hideCompact}`}
               >
                 <span className="relative grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
                   <BellIcon className="h-[18px] w-[18px]" />
@@ -262,7 +302,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
 
             <Link
               href="/conta/cupons"
-              className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+              className={`group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg ${hideCompact}`}
             >
               <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
                 <TagIcon className="h-[18px] w-[18px]" />
@@ -272,7 +312,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
 
             <Link
               href="/carrinho"
-              className="group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg"
+              className={`group flex items-center gap-2 rounded-full px-3 py-2 transition-colors hover:bg-hoverbg ${compact ? 'max-md:-mr-1 max-md:px-1' : ''}`}
             >
               <span className="relative grid h-8 w-8 flex-none place-items-center rounded-full bg-bg-alt text-ink-muted transition-colors group-hover:bg-gold group-hover:text-ink">
                 <BagIcon className="h-[18px] w-[18px]" />
@@ -287,48 +327,54 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
           </div>
         </div>
 
-        <div className="relative border-t border-border-subtle">
-          <div className="mx-auto flex max-w-[1280px] items-stretch gap-1 overflow-x-auto px-5">
-            <div ref={catBoxRef} className="relative">
-              <button
-                ref={catButtonRef}
-                type="button"
-                onClick={() => {
-                  if (window.matchMedia('(min-width: 768px)').matches) {
-                    setCatOpen(o => !o);
-                  } else {
-                    setMenuOpen(true);
-                  }
-                }}
-                className={`flex flex-none items-center gap-2 whitespace-nowrap py-3 pr-4 text-xs font-medium uppercase tracking-[0.1em] transition-colors ${catOpen ? 'text-gold-text-hover' : 'text-gold-text hover:text-gold-text-hover'}`}
-              >
-                <MenuIcon className="h-4 w-4" />
-                Categorias
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.8}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={`hidden h-3 w-3 transition-transform duration-300 md:block ${catOpen ? '-rotate-180' : ''}`}
-                  aria-hidden="true"
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ${
+            compact ? 'grid-rows-[0fr] md:grid-rows-[1fr]' : 'grid-rows-[1fr]'
+          }`}
+        >
+          <div className="relative min-h-0 overflow-hidden border-t border-border-subtle">
+            <div className="mx-auto flex max-w-[1280px] items-stretch gap-1 overflow-x-auto px-5">
+              <div ref={catBoxRef} className="relative">
+                <button
+                  ref={catButtonRef}
+                  type="button"
+                  onClick={() => {
+                    if (window.matchMedia('(min-width: 768px)').matches) {
+                      setCatOpen(o => !o);
+                    } else {
+                      setMenuOpen(true);
+                    }
+                  }}
+                  className={`flex flex-none items-center gap-2 whitespace-nowrap py-3 pr-4 text-xs font-medium uppercase tracking-[0.1em] transition-colors ${catOpen ? 'text-gold-text-hover' : 'text-gold-text hover:text-gold-text-hover'}`}
                 >
-                  <path d="m6 9 6 6 6-6" />
-                </svg>
-              </button>
-            </div>
+                  <MenuIcon className="h-4 w-4" />
+                  Categorias
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className={`hidden h-3 w-3 transition-transform duration-300 md:block ${catOpen ? '-rotate-180' : ''}`}
+                    aria-hidden="true"
+                  >
+                    <path d="m6 9 6 6 6-6" />
+                  </svg>
+                </button>
+              </div>
 
-            <span className="my-2 w-px flex-none bg-border-subtle" />
-            {categorias.map(c => (
-              <Link
-                key={c.slug}
-                href={`/produtos?categoria=${c.slug}`}
-                className="relative flex-none whitespace-nowrap px-3.5 py-3 text-[13px] text-ink-muted transition-colors after:absolute after:bottom-0 after:left-3.5 after:right-3.5 after:h-[2px] after:origin-left after:scale-x-0 after:bg-gold after:transition-transform after:duration-300 hover:text-gold-text hover:after:scale-x-100"
-              >
-                {c.nome}
-              </Link>
-            ))}
+              <span className="my-2 w-px flex-none bg-border-subtle" />
+              {categorias.map(c => (
+                <Link
+                  key={c.slug}
+                  href={`/produtos?categoria=${c.slug}`}
+                  className="relative flex-none whitespace-nowrap px-3.5 py-3 text-[13px] text-ink-muted transition-colors after:absolute after:bottom-0 after:left-3.5 after:right-3.5 after:h-[2px] after:origin-left after:scale-x-0 after:bg-gold after:transition-transform after:duration-300 hover:text-gold-text hover:after:scale-x-100"
+                >
+                  {c.nome}
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       </header>
