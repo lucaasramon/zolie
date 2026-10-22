@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { OpcaoPersonalizacao } from '@/lib/personalizacao';
 import { PersonalizacaoState, validarPersonalizacao } from '@/components/product/PersonalizacaoForm';
@@ -56,6 +56,8 @@ interface Props {
   productId: string;
   /** Foto principal do anúncio, usada na animação enquanto a IA trabalha. */
   imagemPeca?: string | null;
+  /** Nome do anúncio, usado no texto ao compartilhar a simulação. */
+  nomePeca?: string;
   personalizacao: PersonalizacaoState;
   tamanho: string;
   opcoes: OpcaoPersonalizacao[];
@@ -63,7 +65,7 @@ interface Props {
   onResultado: (r: ResultadoSimulacao | null) => void;
 }
 
-export function SimulacaoIA({ productId, imagemPeca, personalizacao, tamanho, opcoes, resultado, onResultado }: Props) {
+export function SimulacaoIA({ productId, imagemPeca, nomePeca, personalizacao, tamanho, opcoes, resultado, onResultado }: Props) {
   const [gerando, setGerando] = useState(false);
   const [etapa, setEtapa] = useState(0);
   const [progresso, setProgresso] = useState(0);
@@ -82,6 +84,51 @@ export function SimulacaoIA({ productId, imagemPeca, personalizacao, tamanho, op
       clearInterval(p);
     };
   }, [gerando]);
+
+  // A imagem é baixada antes do clique: o compartilhamento nativo (sobretudo no
+  // iPhone) só abre se for chamado direto no toque, sem esperar download.
+  const arquivoParaCompartilhar = useRef<File | null>(null);
+  useEffect(() => {
+    arquivoParaCompartilhar.current = null;
+    if (!resultado) return;
+    let cancelado = false;
+    fetch(resultado.frente)
+      .then(r => r.blob())
+      .then(blob => {
+        if (!cancelado) arquivoParaCompartilhar.current = new File([blob], 'minha-peca-zolie.png', { type: blob.type || 'image/png' });
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, [resultado]);
+
+  async function compartilhar() {
+    if (!resultado) return;
+    const link = `${window.location.origin}${window.location.pathname}`;
+    const texto = `Olha como vai ficar minha peça${nomePeca ? ` ${nomePeca}` : ''} da Zoliê ✨`;
+    const arquivo = arquivoParaCompartilhar.current;
+    try {
+      if (arquivo && navigator.canShare?.({ files: [arquivo] })) {
+        await navigator.share({ files: [arquivo], text: `${texto}
+${link}` });
+        return;
+      }
+      if (navigator.share) {
+        await navigator.share({ title: 'Minha peça Zoliê', text: texto, url: link });
+        return;
+      }
+    } catch (err) {
+      // A cliente fechou a janela de compartilhar: não abre outra coisa por cima.
+      if (err instanceof DOMException && err.name === 'AbortError') return;
+    }
+    // Computador ou navegador sem compartilhamento nativo: WhatsApp com o link da imagem.
+    const mensagem = `${texto}
+${resultado.frente}
+
+Veja a peça: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(mensagem)}`, '_blank', 'noopener,noreferrer');
+  }
 
   const desatualizada = resultado != null && resultado.assinatura !== assinaturaEscolhas(personalizacao, tamanho);
 
@@ -202,9 +249,23 @@ export function SimulacaoIA({ productId, imagemPeca, personalizacao, tamanho, op
               </button>
             ))}
           </div>
+          {!desatualizada && (
+            <button
+              type="button"
+              onClick={compartilhar}
+              className="flex items-center justify-center gap-2 rounded-full border border-gold-soft bg-white py-2.5 text-xs font-medium uppercase tracking-wider text-gold-text transition-colors hover:bg-gold hover:text-ink active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4" aria-hidden="true">
+                <circle cx="18" cy="5" r="2.5" />
+                <circle cx="6" cy="12" r="2.5" />
+                <circle cx="18" cy="19" r="2.5" />
+                <path d="m8.2 10.8 7.6-4.4M8.2 13.2l7.6 4.4" />
+              </svg>
+              Mostrar para alguém
+            </button>
+          )}
           <p className="text-[11px] leading-relaxed text-ink-tertiary">
-            Simulação ilustrativa gerada por IA.
-            A peça é produzida a partir das suas respostas, e você recebe a prévia real para aprovação no WhatsApp.
+            Simulação ilustrativa gerada por IA. A peça é produzida a partir das suas respostas.
           </p>
         </div>
       )}

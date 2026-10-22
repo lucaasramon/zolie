@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 
 export const wishlistRepo = {
+  countByProduct: (productId: string) => prisma.wishlistItem.count({ where: { productId } }),
   listByUser: (userId: string) => prisma.wishlistItem.findMany({ where: { userId }, include: { product: true } }),
   add: (userId: string, productId: string) =>
     prisma.wishlistItem.upsert({

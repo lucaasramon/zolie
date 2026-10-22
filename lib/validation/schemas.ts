@@ -309,4 +309,5 @@ export const bannerSchema = z.object({
 
 export const siteConfigSchema = z.object({
   freteGratisAtivo: z.boolean().optional(),
+  faixaDatasAtiva: z.boolean().optional(),
 });

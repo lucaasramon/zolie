@@ -11,6 +11,10 @@
     {
       "path": "/api/v1/cron/sync-tracking",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/v1/cron/review-requests",
+      "schedule": "0 14 * * *"
     }
   ]
 }

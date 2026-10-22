@@ -30,7 +30,7 @@ export const MODELOS_SUGERIDOS = ['Escapulário', 'Placa retangular', 'Medalha r
 export const PERGUNTAS_PERSONALIZACAO = {
   modelo: 'Escolha o modelo',
   imagens: 'Sua personalização tem imagens',
-  imagensAjuda: `Inserir imagem (fique tranquilo, enviaremos a prévia para aprovação em 2 dias no seu WhatsApp) (Limite de ${LIMITE_IMAGENS_PERSONALIZACAO} arquivos)`,
+  imagensAjuda: `Inserir imagem (limite de ${LIMITE_IMAGENS_PERSONALIZACAO} arquivos)`,
   verso: 'Deseja gravação no verso da peça?',
   textoVerso: 'O que você quer gravar no verso?',
   corrente: 'Escolha o tamanho da corrente',

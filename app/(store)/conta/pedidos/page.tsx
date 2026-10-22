@@ -16,7 +16,7 @@ interface Order {
   total: number | string;
   createdAt: string;
   prazoDiasEnvio: number | null;
-  items: { quantidade: number }[];
+  items: { quantidade: number; personalizacao?: unknown }[];
 }
 
 export default function MeusPedidosPage() {
@@ -78,7 +78,7 @@ export default function MeusPedidosPage() {
                   {new Date(o.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })} · {itens} ite{itens === 1 ? 'm' : 'ns'}
                 </div>
                 <div className="mt-1 text-xs">
-                  <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} />
+                  <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} items={o.items} />
                 </div>
               </div>
             </div>

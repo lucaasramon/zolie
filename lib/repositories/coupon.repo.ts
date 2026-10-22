@@ -21,11 +21,15 @@ export const couponRepo = {
   /** Cupons ativos, dentro da validade e ainda não esgotados globalmente — filtro
    * por elegibilidade do usuário (restrição de compra, já resgatado) é feito
    * em coupon.service.ts, que precisa da contagem de pedidos e do histórico. */
-  listActive: () =>
+  listActive: (userId: string) =>
     prisma.coupon.findMany({
       where: {
         ativo: true,
-        OR: [{ validade: null }, { validade: { gt: new Date() } }],
+        AND: [
+          { OR: [{ validade: null }, { validade: { gt: new Date() } }] },
+          // Públicos + os pessoais desta cliente; o pessoal de outra pessoa nunca aparece.
+          { OR: [{ userId: null }, { userId }] },
+        ],
       },
       orderBy: { createdAt: 'desc' },
     }),

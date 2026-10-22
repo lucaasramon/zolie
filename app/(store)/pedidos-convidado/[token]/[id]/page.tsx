@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 import { ErrorMessage } from '@/components/ui/ErrorMessage';
 import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
+import { JornadaPedido } from '@/components/account/JornadaPedido';
 
 interface OrderDetail {
   numero: string;
@@ -136,9 +137,11 @@ export default function DetalhePedidoConvidadoPage() {
             {STATUS_LABEL[order.status]}
           </span>
           <span className="text-sm">
-            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} />
+            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} items={order.items} />
           </span>
         </div>
+
+        <JornadaPedido status={order.status} events={order.events} items={order.items} />
 
         {order.status === 'AGUARDANDO_PAGAMENTO' && (
           <div className="flex flex-col gap-3 rounded-lg border border-gold-soft bg-hoverbg p-4">

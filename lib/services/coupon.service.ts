@@ -12,7 +12,8 @@ interface ValidarOpts {
 /** Valida o cupom e devolve o desconto em reais para o subtotal informado. */
 export async function validar(codigo: string, { subtotal, userId = null, frete = 0 }: ValidarOpts) {
   const cupom = await couponRepo.findByCode(codigo);
-  if (!cupom || !cupom.ativo) throw new AppError('Cupom inválido', 404, 'COUPON_NOT_FOUND');
+  // Cupom pessoal de outra pessoa responde igual a um código inexistente.
+  if (!cupom || !cupom.ativo || (cupom.userId && cupom.userId !== userId)) throw new AppError('Cupom inválido', 404, 'COUPON_NOT_FOUND');
   if (cupom.validade && new Date(cupom.validade) < new Date()) throw new AppError('Cupom expirado', 410, 'COUPON_EXPIRED');
   if (cupom.usoMaximo != null && cupom.usos >= cupom.usoMaximo) throw new AppError('Cupom esgotado', 410, 'COUPON_EXHAUSTED');
   if (cupom.minimoPedido != null && subtotal < Number(cupom.minimoPedido)) {
@@ -62,7 +63,7 @@ export async function validar(codigo: string, { subtotal, userId = null, frete =
  * compatíveis com a etapa de compra dele e ainda não resgatados por ele. */
 export async function listarDisponiveis(userId: string) {
   const [ativos, pedidos] = await Promise.all([
-    couponRepo.listActive(),
+    couponRepo.listActive(userId),
     userRepo.countOrders(userId),
   ]);
 

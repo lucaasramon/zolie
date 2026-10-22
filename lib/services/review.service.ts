@@ -1,7 +1,13 @@
 import { productRepo } from '@/lib/repositories/product.repo';
 import { reviewRepo } from '@/lib/repositories/review.repo';
 import { orderRepo } from '@/lib/repositories/order.repo';
+import { couponRepo } from '@/lib/repositories/coupon.repo';
+import { userRepo } from '@/lib/repositories/user.repo';
+import { enviarCupomAvaliacaoFoto } from '@/lib/services/email.service';
+import { CUPOM_AVALIACAO_FOTO } from '@/lib/avaliacao';
+import { logger } from '@/lib/logger';
 import { AppError, notFound } from '@/lib/utils/errors';
+import { randomBytes } from 'crypto';
 
 export async function list(productId: string, pagination: { skip?: number; take?: number }) {
   const product = await productRepo.findById(productId);
@@ -53,5 +59,40 @@ export async function moderar(reviewId: string, aprovado: boolean) {
   if (!review) throw notFound('Avaliação');
   await reviewRepo.setAprovado(reviewId, aprovado);
   if (aprovado) await reviewRepo.recalcProduct(review.productId);
+  if (aprovado && review.imagens.length > 0 && !review.cupomRecompensa) {
+    // A aprovação já valeu; uma falha no cupom não pode desfazê-la nem travar a moderação.
+    await recompensarAvaliacaoComFoto(review).catch(err =>
+      logger.error('Falha ao gerar cupom da avaliação com foto', err, { reviewId }),
+    );
+  }
   return { aprovado, reviewId };
+}
+
+/**
+ * Cupom pessoal de agradecimento pela avaliação com foto — no máximo um por
+ * avaliação, mesmo que ela seja reprovada e aprovada de novo.
+ */
+async function recompensarAvaliacaoComFoto(review: { id: string; userId: string }) {
+  const codigo = `${CUPOM_AVALIACAO_FOTO.prefixo}${randomBytes(4).toString('hex').toUpperCase()}`;
+  if (!(await reviewRepo.reservarCupomRecompensa(review.id, codigo))) return;
+
+  const validade = new Date(Date.now() + CUPOM_AVALIACAO_FOTO.validadeDias * 86_400_000);
+  try {
+    await couponRepo.create({
+      codigo,
+      descricao: 'Agradecimento pela avaliação com foto',
+      tipoDesconto: 'PERCENT',
+      valor: CUPOM_AVALIACAO_FOTO.percentual,
+      usoMaximo: 1,
+      validade,
+      userId: review.userId,
+    });
+  } catch (err) {
+    // Sem o cupom criado, a reserva voltaria a ser um código que não existe.
+    await reviewRepo.liberarCupomRecompensa(review.id);
+    throw err;
+  }
+
+  const user = await userRepo.findById(review.userId);
+  if (user) await enviarCupomAvaliacaoFoto(user.email, user.nome, codigo, CUPOM_AVALIACAO_FOTO.percentual, validade);
 }

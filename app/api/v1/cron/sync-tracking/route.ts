@@ -20,3 +20,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return fail(500, 'Erro ao sincronizar rastreios', 'INTERNAL_ERROR');
   }
 }
+
+// A Vercel Cron chama a rota com GET (e envia o mesmo `Authorization: Bearer CRON_SECRET`);
+// POST continua valendo para disparo manual.
+export const GET = POST;

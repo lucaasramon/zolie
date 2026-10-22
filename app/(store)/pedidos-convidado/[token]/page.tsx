@@ -18,7 +18,7 @@ interface Order {
   total: number | string;
   createdAt: string;
   prazoDiasEnvio: number | null;
-  items: { quantidade: number }[];
+  items: { quantidade: number; personalizacao?: unknown }[];
 }
 
 export default function PedidosConvidadoPage() {
@@ -67,7 +67,7 @@ export default function PedidosConvidadoPage() {
                     {new Date(o.createdAt).toLocaleDateString('pt-BR')} · {itens} ite{itens === 1 ? 'm' : 'ns'}
                   </div>
                   <div className="mt-0.5 text-xs">
-                    <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} />
+                    <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} items={o.items} />
                   </div>
                 </div>
                 <span className={`rounded-full border px-3 py-1 text-xs ${style.text} ${style.border} ${style.bg}`}>

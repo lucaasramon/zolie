@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { somarDiasUteis, dataPrevisaoEntrega } from './prazoEntrega';
+import { somarDiasUteis, subtrairDiasUteis, dataPrevisaoEntrega, diasPreparo, DIAS_PREPARO } from './prazoEntrega';
 
 describe('somarDiasUteis', () => {
   it('soma dias úteis simples sem cruzar fim de semana', () => {
@@ -36,5 +36,31 @@ describe('dataPrevisaoEntrega', () => {
     const criado = new Date('2026-08-17T12:00:00');
     const resultado = dataPrevisaoEntrega(criado, 3);
     expect(resultado?.getDate()).toBe(20);
+  });
+});
+
+describe('subtrairDiasUteis', () => {
+  it('volta pulando o fim de semana', () => {
+    // Segunda 2026-08-24 - 1 dia útil = sexta 2026-08-21
+    const resultado = subtrairDiasUteis(new Date('2026-08-24T12:00:00'), 1);
+    expect(resultado.getDay()).toBe(5);
+    expect(resultado.getDate()).toBe(21);
+  });
+});
+
+describe('diasPreparo', () => {
+  it('usa o prazo da personalizada quando qualquer item é personalizado', () => {
+    expect(diasPreparo([{ personalizacao: null }, { personalizacao: { verso: false } }])).toBe(DIAS_PREPARO.personalizado);
+  });
+
+  it('usa o prazo de pronta entrega sem item personalizado', () => {
+    expect(diasPreparo([{ personalizacao: null }])).toBe(DIAS_PREPARO.prontaEntrega);
+    expect(diasPreparo(undefined)).toBe(DIAS_PREPARO.prontaEntrega);
+  });
+
+  it('soma o preparo ao prazo do frete na previsão', () => {
+    // Segunda 2026-08-17 + (2 + 3) dias úteis = segunda 2026-08-24
+    const resultado = dataPrevisaoEntrega(new Date('2026-08-17T12:00:00'), 3, 2);
+    expect(resultado?.getDate()).toBe(24);
   });
 });

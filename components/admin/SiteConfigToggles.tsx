@@ -5,6 +5,7 @@ import { api } from '@/lib/api-client';
 
 interface Config {
   freteGratisAtivo: boolean;
+  faixaDatasAtiva: boolean;
 }
 
 export function SiteConfigToggles({ config }: { config: Config }) {
@@ -33,6 +34,12 @@ export function SiteConfigToggles({ config }: { config: Config }) {
         ativo={current.freteGratisAtivo}
         saving={saving === 'freteGratisAtivo'}
         onClick={() => toggle('freteGratisAtivo')}
+      />
+      <Toggle
+        label="Faixa de datas comemorativas (ex.: “peça até 03/12 para chegar antes do Natal”)"
+        ativo={current.faixaDatasAtiva}
+        saving={saving === 'faixaDatasAtiva'}
+        onClick={() => toggle('faixaDatasAtiva')}
       />
     </div>
   );

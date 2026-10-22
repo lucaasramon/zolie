@@ -20,6 +20,43 @@ export const orderRepo = {
     });
     return count > 0;
   },
+  /** Unidades vendidas (pedidos pagos, não cancelados) de um produto nos últimos dias — prova social da página do produto. */
+  unidadesVendidasUltimosDias: async (productId: string, dias: number) => {
+    const desde = new Date(Date.now() - dias * 86_400_000);
+    const agg = await prisma.orderItem.aggregate({
+      where: {
+        productId,
+        order: { createdAt: { gte: desde }, status: { in: ['PROCESSANDO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE'] } },
+      },
+      _sum: { quantidade: true },
+    });
+    return agg._sum.quantidade ?? 0;
+  },
+  /**
+   * Pedidos do site, de cliente com conta, entregues dentro da janela e que
+   * ainda não receberam o e-mail pedindo avaliação. Convidado fica de fora:
+   * só quem tem conta consegue avaliar.
+   */
+  findParaPedirAvaliacao: (entreguesDesde: Date, entreguesAte: Date, take = 50) =>
+    prisma.order.findMany({
+      where: {
+        status: 'ENTREGUE',
+        origem: 'SITE',
+        userId: { not: null },
+        avaliacaoSolicitadaEm: null,
+        events: { some: { status: 'ENTREGUE', createdAt: { gte: entreguesDesde, lte: entreguesAte } } },
+      },
+      take,
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        userId: true,
+        user: { select: { nome: true, email: true } },
+        items: { select: { productId: true, nomeProduto: true } },
+      },
+    }),
+  marcarAvaliacaoSolicitada: (id: string) =>
+    prisma.order.update({ where: { id }, data: { avaliacaoSolicitadaEm: new Date() } }),
   listByUser: async (userId: string, { skip = 0, take = 10 }: { skip?: number; take?: number } = {}) => {
     const [total, items] = await Promise.all([
       prisma.order.count({ where: { userId } }),

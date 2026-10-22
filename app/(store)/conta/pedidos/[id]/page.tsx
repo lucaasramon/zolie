@@ -13,6 +13,7 @@ import { ReturnRequestForm } from '@/components/account/ReturnRequestForm';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
+import { JornadaPedido } from '@/components/account/JornadaPedido';
 
 interface OrderDetail {
   numero: string;
@@ -52,8 +53,6 @@ interface Pagamento {
   url?: string;
   linhaDigitavel?: string;
 }
-
-const JORNADA = ['PROCESSANDO', 'SEPARANDO', 'ENVIADO', 'ENTREGUE'];
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   AGUARDANDO_PAGAMENTO: (
@@ -129,7 +128,6 @@ export default function DetalhePedidoPage() {
   }
 
   const style = STATUS_STYLE[order.status];
-  const passoAtual = JORNADA.indexOf(order.status);
   const cancelado = order.status === 'CANCELADO';
   const aguardandoPagamento = order.status === 'AGUARDANDO_PAGAMENTO';
 
@@ -163,44 +161,13 @@ export default function DetalhePedidoPage() {
               {STATUS_LABEL[order.status]}
             </span>
             <span className="text-xs text-ink-tertiary">
-              <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} />
+              <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} items={order.items} />
             </span>
           </div>
         </div>
 
-        {/* Timeline de progresso */}
         {!cancelado && !aguardandoPagamento && (
-          <div className="mt-6">
-            <div className="flex items-center">
-              {JORNADA.map((etapa, i) => {
-                const concluido = i <= passoAtual;
-                const ultimo = i === JORNADA.length - 1;
-                return (
-                  <div key={etapa} className={`flex items-center ${ultimo ? '' : 'flex-1'}`}>
-                    <div className="flex flex-col items-center gap-1.5">
-                      <div
-                        className={`flex h-7 w-7 flex-none items-center justify-center rounded-full border-2 transition-colors ${
-                          concluido ? 'border-gold bg-gold' : 'border-border-soft bg-white'
-                        }`}
-                      >
-                        {concluido && (
-                          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
-                            <path d="M20 6 9 17l-5-5" />
-                          </svg>
-                        )}
-                      </div>
-                      <span className={`hidden text-[11px] sm:block ${concluido ? 'font-medium text-ink' : 'text-ink-tertiary'}`}>
-                        {STATUS_LABEL[etapa]}
-                      </span>
-                    </div>
-                    {!ultimo && (
-                      <div className={`mx-1.5 h-0.5 flex-1 rounded-full transition-colors ${i < passoAtual ? 'bg-gold' : 'bg-border-soft'}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <JornadaPedido status={order.status} events={order.events} items={order.items} />
         )}
       </div>
 

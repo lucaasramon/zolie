@@ -69,7 +69,7 @@ interface Props {
 /**
  * Prévia instantânea da gravação do verso, desenhada no navegador enquanto a
  * cliente digita (sem IA e sem custo). A letra e a posição finais seguem o
- * padrão da loja; a versão fiel vem na simulação com IA e na prévia do WhatsApp.
+ * padrão da loja; a versão mais fiel vem na simulação com IA.
  */
 export function PreviaVerso({ texto, modelo, material }: Props) {
   const formato = formatoDoModelo(modelo);

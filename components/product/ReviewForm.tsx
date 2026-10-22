@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { api, ApiError } from '@/lib/api-client';
 import { useAuth } from '@/components/providers/AuthProvider';
 import { useToast } from '@/components/providers/ToastProvider';
+import { CUPOM_AVALIACAO_FOTO } from '@/lib/avaliacao';
 
 type Motivo = 'NOT_LOGGED_IN' | 'REVIEW_EXISTS' | 'REVIEW_REQUIRES_DELIVERY' | null;
 
@@ -38,7 +39,12 @@ export function ReviewForm({ productId }: { productId: string }) {
 
   if (!user) return null;
   if (enviado) {
-    return <p className="text-sm text-success">Obrigada pela sua avaliação! Ela será publicada após moderação.</p>;
+    return (
+      <p className="text-sm text-success">
+        Obrigada pela sua avaliação! Ela será publicada após moderação.
+        {imagens.length > 0 && ` Assim que for publicada, seu cupom de ${CUPOM_AVALIACAO_FOTO.percentual}% chega por e-mail.`}
+      </p>
+    );
   }
   // Ainda carregando a checagem de elegibilidade — não mostra nada para não
   // piscar o botão antes de saber se o cliente pode avaliar.
@@ -79,13 +85,16 @@ export function ReviewForm({ productId }: { productId: string }) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="self-start rounded-full border border-border-soft px-4 py-2 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text hover:text-gold-text"
-      >
-        Avaliar esta peça
-      </button>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="self-start rounded-full border border-border-soft px-4 py-2 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text hover:text-gold-text"
+        >
+          Avaliar esta peça
+        </button>
+        <span className="text-xs text-gold-text">Com foto, você ganha {CUPOM_AVALIACAO_FOTO.percentual}% na próxima compra</span>
+      </div>
     );
   }
 
@@ -126,6 +135,10 @@ export function ReviewForm({ productId }: { productId: string }) {
           </label>
         )}
       </div>
+      <p className="rounded-md bg-hoverbg px-3 py-2 text-xs text-ink-muted">
+        📸 Mande uma foto usando a peça: quando sua avaliação for publicada, você ganha um cupom pessoal de{' '}
+        <strong className="text-gold-text">{CUPOM_AVALIACAO_FOTO.percentual}% de desconto</strong> na próxima compra.
+      </p>
       {erro && <span className="text-xs text-danger">{erro}</span>}
       <div className="flex gap-2">
         <button

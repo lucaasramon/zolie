@@ -58,6 +58,21 @@ export const reviewRepo = {
       },
     }),
   findById: (id: string) => prisma.productReview.findUnique({ where: { id } }),
+  /** Quais destes produtos a cliente já avaliou (para não pedir avaliação de novo). */
+  listProductIdsAvaliados: async (userId: string, productIds: string[]) => {
+    const rows = await prisma.productReview.findMany({ where: { userId, productId: { in: productIds } }, select: { productId: true } });
+    return new Set(rows.map(r => r.productId));
+  },
+  /**
+   * Reserva o cupom de recompensa para a avaliação. Só grava se ainda estiver
+   * vazio, então duas aprovações simultâneas não geram dois cupons: quem
+   * recebe `false` não deve criar nada.
+   */
+  reservarCupomRecompensa: async (id: string, codigo: string) => {
+    const { count } = await prisma.productReview.updateMany({ where: { id, cupomRecompensa: null }, data: { cupomRecompensa: codigo } });
+    return count === 1;
+  },
+  liberarCupomRecompensa: (id: string) => prisma.productReview.update({ where: { id }, data: { cupomRecompensa: null } }),
   create: (data: { productId: string; userId: string; nota: number; titulo?: string; comentario?: string; imagens?: string[] }) =>
     prisma.productReview.create({ data }),
   findByUserAndProduct: (userId: string, productId: string) =>

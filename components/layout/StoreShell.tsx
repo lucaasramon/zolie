@@ -1,14 +1,15 @@
-import { listParaLoja } from '@/lib/services/category.service';
+import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
 import * as siteConfig from '@/lib/services/site-config.service';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { WhatsAppButton } from '@/components/layout/WhatsAppButton';
+import { FaixaDataComemorativa } from '@/components/layout/FaixaDataComemorativa';
 import { ConsultoriaButton } from '@/components/consultoria/ConsultoriaButton';
 import { linkWhatsApp } from '@/lib/loja';
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const [categorias] = await Promise.all([listParaLoja(), siteConfig.preparar()]);
-  const { freteGratisAtivo } = siteConfig.get();
+  const { freteGratisAtivo, faixaDatasAtiva } = siteConfig.get();
   const categoriasSimple = categorias.map(c => ({ nome: c.nome, slug: c.slug }));
   const whatsappHref = linkWhatsApp('Olá! Vim pelo site da Zoliê e gostaria de tirar uma dúvida.');
 
@@ -19,6 +20,7 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
+      {faixaDatasAtiva && <FaixaDataComemorativa slugPersonalizados={SLUG_PERSONALIZADOS} />}
       <Header categorias={categoriasSimple} avisos={avisos} />
       <main className="flex-1">{children}</main>
       <Footer categorias={categoriasSimple} />

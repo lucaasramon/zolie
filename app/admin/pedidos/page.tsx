@@ -133,7 +133,7 @@ export default async function AdminPedidosPage({ searchParams }: Props) {
                 <td className="px-4 py-3 text-ink-muted">{PAGAMENTO_LABEL[o.formaPagamento] || o.formaPagamento}</td>
                 <td className="px-4 py-3 font-medium text-ink">{brl(Number(o.total))}</td>
                 <td className="px-4 py-3 text-ink-muted">
-                  <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} compact />
+                  <PrevisaoEntrega createdAt={o.createdAt} prazoDiasEnvio={o.prazoDiasEnvio} status={o.status} items={o.items} compact />
                 </td>
                 <td className="px-4 py-3">
                   <OrderStatusBadge orderId={o.id} status={o.status} codigoRastreio={o.codigoRastreio} transportadora={o.transportadora} />

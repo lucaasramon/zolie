@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import { DIAS_PREPARO } from '@/lib/utils/prazoEntrega';
 
 export interface FotoPersonalizado {
   id: string;
@@ -13,7 +14,7 @@ export interface FotoPersonalizado {
 const PASSOS = [
   { titulo: 'Escolha a peça', texto: 'Escolha o modelo e envie a foto, o nome ou a data que você quer gravar.' },
   { titulo: 'Veja antes de pagar', texto: 'Nossa simulação com IA mostra a frente e o verso da sua peça já gravada.' },
-  { titulo: 'Aprove e receba', texto: 'Você aprova a prévia real no WhatsApp em até 2 dias e a peça segue para você.' },
+  { titulo: 'Receba em casa', texto: `Gravamos sua peça e postamos em até ${DIAS_PREPARO.personalizado} dias úteis, com rastreio.` },
 ];
 
 /**

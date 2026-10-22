@@ -471,6 +471,48 @@ export async function enviarCupomVoltei10(to: string, nome: string, codigo: stri
   await send(to, `Você ganhou um cupom de 10% — Zoliê`, html);
 }
 
+/** Alguns dias depois da entrega: pede a avaliação das peças e anuncia o cupom da foto. */
+export async function enviarPedidoAvaliacao(
+  to: string,
+  nome: string,
+  orderId: string,
+  itens: { nomeProduto: string }[],
+  percentualCupomFoto: number,
+) {
+  const listaHtml = itens
+    .slice(0, 5)
+    .map(i => `<p style="margin: 0 0 6px; font-family: Arial, sans-serif; font-size: 13px; color: ${COLORS.ink};">• ${escapar(i.nomeProduto)}</p>`)
+    .join('');
+
+  const html = layout(
+    'Conta pra gente o que achou da sua peça',
+    `
+      ${badge('Sua opinião vale brilho')}
+      ${heading(`E aí, ${escapar(nome.split(' ')[0])}, gostou?`)}
+      ${paragraph('Esperamos que sua peça já esteja fazendo parte dos seus dias. Leva um minutinho para avaliar e ajuda muito outras clientes a escolherem.')}
+      <div style="margin: 16px 0;">${listaHtml}</div>
+      ${paragraph(`<strong style="color:${COLORS.ink};">Mande uma foto usando a peça</strong> e, quando sua avaliação for publicada, você ganha um cupom de ${percentualCupomFoto}% para a próxima compra.`)}
+      ${button('Avaliar minha peça', `${env.appUrl}/conta/pedidos/${orderId}`)}
+    `,
+  );
+  await send(to, 'Como ficou sua peça? Avalie e ganhe um mimo — Zoliê', html);
+}
+
+/** Avaliação com foto aprovada: entrega o cupom pessoal de agradecimento. */
+export async function enviarCupomAvaliacaoFoto(to: string, nome: string, codigo: string, percentual: number, validade: Date) {
+  const html = layout(
+    `Seu cupom ${codigo} chegou`,
+    `
+      ${badge('Cupom desbloqueado', 'success')}
+      ${heading('Obrigada pela foto!')}
+      ${paragraph(`Olá, ${escapar(nome.split(' ')[0])}! Sua avaliação foi publicada e já está ajudando outras clientes. Como agradecimento, use o cupom <strong style="color:${COLORS.ink};">${escapar(codigo)}</strong> e ganhe ${percentual}% de desconto na próxima compra.`)}
+      ${button('Escolher minha próxima peça', `${env.appUrl}/produtos`)}
+      <p style="margin: 0; font-family: Arial, sans-serif; font-size: 12px; color: ${COLORS.inkTertiary};">Cupom pessoal, válido para um uso até ${validade.toLocaleDateString('pt-BR')}. Ele também aparece em "Meus cupons" na sua conta.</p>
+    `,
+  );
+  await send(to, `Você ganhou ${percentual}% pela sua foto — Zoliê`, html);
+}
+
 export async function enviarConfirmacaoAvisoEstoque(to: string, nomeProduto: string, slugProduto: string) {
   const html = layout(
     `Vamos te avisar quando ${nomeProduto} chegar`,

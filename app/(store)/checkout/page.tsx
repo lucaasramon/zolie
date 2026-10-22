@@ -13,6 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { tokenizeCard } from '@/lib/asaasJs';
 import { cpfValido, formatarCpf, normalizarCpf } from '@/lib/utils/cpf';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
+import { diasPreparo, somarDiasUteis } from '@/lib/utils/prazoEntrega';
 
 interface Address {
   id: string;
@@ -27,7 +28,7 @@ interface Address {
 }
 
 interface CartData {
-  items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null }[];
+  items: { id: string; nome: string; quantidade: number; precoUnitario: number; subtotal: number; tamanho: string | null; personalizacao?: unknown }[];
   resumo: { subtotal: number; frete: number; desconto: number; total: number };
   cupom: { codigo: string; descricao: string; freteGratis: boolean } | null;
 }
@@ -807,7 +808,13 @@ export default function CheckoutPage() {
                 <label key={o.id} className={`flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm ${envioId === o.id ? 'border-gold' : 'border-border-soft'}`}>
                   <span className="flex items-center gap-3">
                     <input type="radio" checked={envioId === o.id} onChange={() => setEnvioId(o.id)} />
-                    {o.nome} · até {o.prazoDias} dias úteis
+                    <span className="flex flex-col">
+                      <span>{o.nome} · até {o.prazoDias} dias úteis</span>
+                      <span className="text-xs text-gold-text">
+                        Chega até{' '}
+                        {somarDiasUteis(new Date(), diasPreparo(cart?.items) + o.prazoDias).toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                      </span>
+                    </span>
                   </span>
                   <span className="font-medium text-ink">{o.valor === 0 || cupomAplicado?.freteGratis ? 'Grátis' : brl(o.valor)}</span>
                 </label>

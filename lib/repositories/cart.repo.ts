@@ -137,11 +137,17 @@ export const cartRepo = {
 
     await prisma.cart.delete({ where: { id: guestCart.id } });
   },
-  findAbandoned: (olderThanHours: number) => {
+  /**
+   * Carrinhos parados há mais de `olderThanHours`, mas não mais velhos que
+   * `maxAgeDays`: um lembrete de um carrinho de meses atrás não faz sentido
+   * para a cliente e, depois de um tempo sem o cron rodar, viraria um disparo em massa.
+   */
+  findAbandoned: (olderThanHours: number, maxAgeDays = 7) => {
     const threshold = new Date(Date.now() - olderThanHours * 60 * 60000);
+    const limiteAntigo = new Date(Date.now() - maxAgeDays * 24 * 60 * 60000);
     return prisma.cart.findMany({
       where: {
-        updatedAt: { lt: threshold },
+        updatedAt: { lt: threshold, gte: limiteAntigo },
         abandonedEmailSentAt: null,
         userId: { not: null },
         items: { some: {} },

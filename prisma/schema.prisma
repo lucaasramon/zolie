@@ -82,6 +82,7 @@ model User {
   returnRequests ReturnRequest[]
   couponRedemptions CouponRedemption[]
   notifications Notification[]
+  cuponsPessoais Coupon[]
 
   @@map("users")
 }
@@ -293,6 +294,9 @@ model ProductReview {
   comentario String?
   imagens    String[]
   aprovado   Boolean  @default(false)
+  // Código do cupom de agradecimento gerado ao aprovar uma avaliação com foto.
+  // Preenchido uma única vez: aprovar de novo não gera outro cupom.
+  cupomRecompensa String? @map("cupom_recompensa")
   createdAt  DateTime @default(now()) @map("created_at")
 
   product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -363,6 +367,9 @@ model Order {
   // hora da compra, mesmo que o prazo da transportadora mude posteriormente.
   prazoDiasEnvio Int?          @map("prazo_dias_envio")
   codigoRastreio String?       @map("codigo_rastreio")
+  // Quando o e-mail pedindo avaliação foi enviado (cron review-requests). Nulo =
+  // ainda não pedido; garante no máximo um e-mail por pedido.
+  avaliacaoSolicitadaEm DateTime? @map("avaliacao_solicitada_em")
   asaasPaymentId String?       @unique @map("asaas_payment_id")
   asaasStatus    String?       @map("asaas_status")
   // Etiqueta do Melhor Envio: o id só existe depois do checkout (etiqueta paga).
@@ -460,10 +467,15 @@ model Coupon {
   restricaoCompra CouponPurchaseRestriction? @map("restricao_compra")
   validade        DateTime?
   ativo           Boolean                    @default(true)
+  // Cupom pessoal: só esta cliente vê (em "Meus cupons") e consegue usar.
+  // null = cupom público, como os cadastrados no admin.
+  userId          String?                    @map("user_id")
   createdAt       DateTime                   @default(now()) @map("created_at")
 
+  user            User?                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   redemptions     CouponRedemption[]
 
+  @@index([userId])
   @@map("coupons")
 }
 
@@ -630,6 +642,8 @@ model Banner {
 model SiteConfig {
   id                 String   @id @default("default")
   freteGratisAtivo   Boolean  @default(true) @map("frete_gratis_ativo")
+  // Faixa "peça até X para chegar antes do Natal" (ver lib/utils/datasComemorativas.ts).
+  faixaDatasAtiva    Boolean  @default(true) @map("faixa_datas_ativa")
   updatedAt          DateTime @updatedAt @map("updated_at")
 
   @@map("site_config")

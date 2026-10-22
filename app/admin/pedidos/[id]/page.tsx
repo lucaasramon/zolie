@@ -30,7 +30,7 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
             {STATUS_LABEL[order.status]}
           </span>
           <span className="text-sm">
-            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} />
+            <PrevisaoEntrega createdAt={order.createdAt} prazoDiasEnvio={order.prazoDiasEnvio} status={order.status} items={order.items} />
           </span>
         </div>
 

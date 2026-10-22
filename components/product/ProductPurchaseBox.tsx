@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, ApiError } from '@/lib/api-client';
 import { useCart } from '@/components/providers/CartProvider';
@@ -16,6 +16,20 @@ import {
   validarPersonalizacao,
 } from '@/components/product/PersonalizacaoForm';
 import { assinaturaEscolhas, ResultadoSimulacao, SimulacaoIA } from '@/components/product/SimulacaoIA';
+import { diasPreparo, somarDiasUteis } from '@/lib/utils/prazoEntrega';
+
+/** A personalização em andamento fica guardada no navegador por uma semana. */
+const RASCUNHO_VALIDADE_MS = 7 * 86_400_000;
+const chaveRascunho = (productId: string) => `zolie:personalizacao:${productId}`;
+
+interface Rascunho {
+  personalizacao: PersonalizacaoState;
+  tamanho: string;
+  simulacao: ResultadoSimulacao | null;
+  salvoEm: number;
+}
+
+const dataCurta = (d: Date) => d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 
 interface Props {
   productId: string;
@@ -74,6 +88,43 @@ export function ProductPurchaseBox({
   const { showToast } = useToast();
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const buyButtonRef = useRef<HTMLButtonElement>(null);
+  const preparo = diasPreparo(personalizado);
+  // Só grava depois de tentar restaurar, senão o estado inicial apagaria o rascunho salvo.
+  const [rascunhoLido, setRascunhoLido] = useState(false);
+
+  // Volta a personalização (e a simulação, que custa caro gerar) de quem saiu da
+  // página e voltou. Respostas que não valem mais (modelo removido, corrente
+  // fora da lista) são descartadas em vez de restauradas.
+  /* eslint-disable react-hooks/set-state-in-effect -- o rascunho vive no localStorage, que só existe
+     depois de montar; ler no render quebraria a hidratação da página (que vem pronta do servidor). */
+  useEffect(() => {
+    if (!personalizado) return;
+    try {
+      const salvo = localStorage.getItem(chaveRascunho(productId));
+      const r: Rascunho | null = salvo ? JSON.parse(salvo) : null;
+      if (r && Date.now() - r.salvoEm < RASCUNHO_VALIDADE_MS) {
+        const modeloValido = opcoesPersonalizacao.length === 0 || opcoesPersonalizacao.some(o => o.id === r.personalizacao.modeloId);
+        if (modeloValido) setPersonalizacao(r.personalizacao);
+        if (tamanhos.includes(r.tamanho)) setTamanho(r.tamanho);
+        if (modeloValido && r.simulacao) setSimulacao(r.simulacao);
+      }
+    } catch {
+      // Armazenamento bloqueado ou rascunho corrompido: segue com o formulário vazio.
+    }
+    setRascunhoLido(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- restaura uma única vez, ao abrir o produto
+  }, [productId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  useEffect(() => {
+    if (!personalizado || !rascunhoLido) return;
+    try {
+      const rascunho: Rascunho = { personalizacao, tamanho, simulacao, salvoEm: Date.now() };
+      localStorage.setItem(chaveRascunho(productId), JSON.stringify(rascunho));
+    } catch {
+      // Sem armazenamento: o rascunho só não sobrevive a sair da página.
+    }
+  }, [personalizado, rascunhoLido, productId, personalizacao, tamanho, simulacao]);
 
   async function addToCart(buyNow = false) {
     if (personalizado) {
@@ -106,6 +157,9 @@ export function ProductPurchaseBox({
       if (personalizado) {
         setPersonalizacao(inicial);
         setSimulacao(null);
+        try {
+          localStorage.removeItem(chaveRascunho(productId));
+        } catch {}
       }
 
       // Só depois do sucesso: registrar antes contaria carrinho que nunca existiu.
@@ -167,6 +221,7 @@ export function ProductPurchaseBox({
         <SimulacaoIA
           productId={productId}
           imagemPeca={imagem}
+          nomePeca={nome}
           personalizacao={personalizacao}
           tamanho={tamanho}
           opcoes={opcoesPersonalizacao}
@@ -271,14 +326,26 @@ export function ProductPurchaseBox({
             Calcular
           </button>
         </div>
-        {frete && (
-          <div className="flex flex-col gap-1.5 rounded-lg bg-bg-alt p-3 text-sm text-ink-muted animate-zfade">
+        {!frete && (
+          <p className="text-xs text-ink-tertiary">
+            {personalizado ? 'Sua peça é gravada sob encomenda e postada' : 'Postamos'} em até {preparo} dias úteis. Informe o CEP para ver a data de entrega.
+          </p>
+        )}
+        {frete && frete.opcoes.length > 0 && (
+          <div className="flex flex-col gap-2 rounded-lg bg-bg-alt p-3 text-sm text-ink-muted animate-zfade">
+            <span className="text-sm font-medium text-ink">
+              Pedindo hoje, chega até{' '}
+              <span className="text-gold-text">{dataCurta(somarDiasUteis(new Date(), preparo + Math.min(...frete.opcoes.map(o => o.prazoDias))))}</span>
+            </span>
             {frete.opcoes.map(o => (
-              <div key={o.nome} className="flex justify-between">
-                <span>{o.nome} · até {o.prazoDias} dias úteis</span>
+              <div key={o.nome} className="flex justify-between gap-3">
+                <span>
+                  {o.nome} · chega até {dataCurta(somarDiasUteis(new Date(), preparo + o.prazoDias))}
+                </span>
                 <span className="font-medium text-ink">{o.valor === 0 ? 'Grátis' : brl(o.valor)}</span>
               </div>
             ))}
+            <span className="text-[11px] text-ink-tertiary">Inclui {preparo} dias úteis para {personalizado ? 'gravar e postar' : 'postar'} a peça.</span>
           </div>
         )}
       </div>
