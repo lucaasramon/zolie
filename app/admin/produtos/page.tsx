@@ -6,6 +6,8 @@ import { brl } from '@/lib/utils/money';
 import { MATERIAL_LABEL } from '@/lib/utils/format';
 import { ProductStatusToggle } from '@/components/admin/ProductStatusToggle';
 import { ProductDeleteButton } from '@/components/admin/ProductDeleteButton';
+import { AutoSubmitSelect } from '@/components/admin/AutoSubmitSelect';
+import type { ProductFilters } from '@/lib/repositories/product.repo';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,40 +19,39 @@ export default async function AdminProdutosPage({ searchParams }: Props) {
   const sp = await searchParams;
   const categorias = await categoryRepo.list();
 
-  const filters: any = {};
-  if (sp.categoria) filters.categoria = sp.categoria;
-  if (sp.status === 'estoque_baixo') filters.notaMin = undefined;
+  // Status filtrado no banco (não em memória depois do `take`), para o filtro e
+  // a contagem valerem mesmo com mais anúncios do que cabem na página.
+  const filters: ProductFilters = {
+    categoria: sp.categoria || undefined,
+    ativo: sp.status === 'ativos' ? true : sp.status === 'pausados' ? false : undefined,
+    estoque: sp.status === 'estoque_baixo' ? 'baixo' : sp.status === 'sem_estoque' ? 'zerado' : undefined,
+  };
 
-  const { items } = await listAdmin(filters, 'relevancia', { skip: 0, take: 200 });
-
-  const filtered = items.filter(p => {
-    if (sp.status === 'ativos') return p.ativo;
-    if (sp.status === 'pausados') return !p.ativo;
-    if (sp.status === 'estoque_baixo') return p.estoqueBaixo;
-    if (sp.status === 'sem_estoque') return p.estoque === 0;
-    return true;
-  });
+  const { items: filtered, total } = await listAdmin(filters, 'relevancia', { skip: 0, take: 200 });
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <form className="flex items-center gap-2 text-sm">
-            <select name="categoria" defaultValue={sp.categoria || ''} className="rounded-md border border-border-subtle px-3 py-2">
+            <AutoSubmitSelect name="categoria" defaultValue={sp.categoria || ''} className="rounded-md border border-border-subtle px-3 py-2">
               <option value="">Todas as categorias</option>
               {categorias.map(c => (
                 <option key={c.slug} value={c.slug}>{c.nome}</option>
               ))}
-            </select>
-            <select name="status" defaultValue={sp.status || ''} className="rounded-md border border-border-subtle px-3 py-2">
+            </AutoSubmitSelect>
+            <AutoSubmitSelect name="status" defaultValue={sp.status || ''} className="rounded-md border border-border-subtle px-3 py-2">
               <option value="">Todos os status</option>
               <option value="ativos">Ativos</option>
               <option value="pausados">Pausados</option>
               <option value="estoque_baixo">Estoque baixo</option>
               <option value="sem_estoque">Sem estoque</option>
-            </select>
+            </AutoSubmitSelect>
           </form>
-          <span className="text-sm text-ink-tertiary">{filtered.length} resultado{filtered.length === 1 ? '' : 's'}</span>
+          <span className="text-sm text-ink-tertiary">
+            {total} resultado{total === 1 ? '' : 's'}
+            {total > filtered.length && ` (mostrando ${filtered.length})`}
+          </span>
         </div>
         <Link href="/admin/produtos/novo" className="rounded-full bg-gold px-4 py-2 text-xs font-medium uppercase tracking-wider text-ink hover:bg-gold-hover">
           + Novo anúncio

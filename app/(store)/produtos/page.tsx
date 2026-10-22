@@ -53,7 +53,8 @@ interface Props {
 
 export default async function ProdutosPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const page = Number(sp.page) || 1;
+  // `?page=-1` ou `?page=abc` não podem virar OFFSET negativo/NaN na query.
+  const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
   const perPage = 9;
 
   const filters = {

@@ -41,7 +41,9 @@ export default async function AdminPedidosPage({ searchParams }: Props) {
 
   // Dentro de "Em andamento", um sub-filtro pode restringir a uma única etapa;
   // nas demais abas o sub-filtro não se aplica.
-  const subStatus = aba === 'andamento' && sp.status ? (sp.status as OrderStatus) : undefined;
+  // Só aceita etapas conhecidas: um `?status=` qualquer na URL quebraria a query do Prisma.
+  const subStatus =
+    aba === 'andamento' && EM_ANDAMENTO.includes(sp.status as OrderStatus) ? (sp.status as OrderStatus) : undefined;
   const statusQuery = subStatus ? [subStatus] : tabAtiva.status;
 
   const [{ items, total }, counts] = await Promise.all([
@@ -87,7 +89,7 @@ export default async function AdminPedidosPage({ searchParams }: Props) {
               key={f.value || 'todas'}
               href={f.value ? `/admin/pedidos?aba=andamento&status=${f.value}` : '/admin/pedidos?aba=andamento'}
               className={`rounded-full px-3 py-1.5 text-xs transition-colors ${
-                (sp.status || '') === f.value ? 'bg-[#FBF7EA] text-gold-text shadow-xs' : 'bg-bg-alt text-ink-muted hover:bg-hoverbg'
+                (subStatus || '') === f.value ?'bg-[#FBF7EA] text-gold-text shadow-xs' : 'bg-bg-alt text-ink-muted hover:bg-hoverbg'
               }`}
             >
               {f.label}

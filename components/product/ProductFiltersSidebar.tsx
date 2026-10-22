@@ -15,7 +15,9 @@ interface Props {
 
 function buildHref(sp: Record<string, string | undefined>, changes: Record<string, string | undefined>) {
   const params = new URLSearchParams();
-  const merged = { ...sp, ...changes };
+  // Mudar um filtro sempre volta para a página 1 — manter `page=3` com um filtro
+  // que só tem 5 peças cairia numa página vazia.
+  const merged = { ...sp, page: undefined, ...changes };
   for (const [k, v] of Object.entries(merged)) {
     if (v) params.set(k, v);
   }
@@ -91,6 +93,14 @@ export function ProductFiltersSidebar({ categorias, searchParams: sp }: Props) {
             />
           );
         })}
+      </FilterGroup>
+
+      <FilterGroup title="Ofertas">
+        <FilterOption
+          label="Em promoção"
+          active={sp.promocao === 'true'}
+          href={buildHref(sp, { promocao: sp.promocao === 'true' ? undefined : 'true' })}
+        />
       </FilterGroup>
 
       <FilterGroup title="Pedra">
