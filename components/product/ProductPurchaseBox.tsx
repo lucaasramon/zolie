@@ -26,6 +26,9 @@ interface Props {
   /** Modelos com preço próprio do anúncio personalizado (vazio = usa o preço do produto). */
   opcoesPersonalizacao?: OpcaoPersonalizacao[];
   valorGravacaoVerso?: number | null;
+  /** Foto principal e material do anúncio, usados nas prévias da personalização. */
+  imagem?: string | null;
+  material?: string;
   /** Dados usados só para os eventos de analytics. */
   nome?: string;
   preco?: number;
@@ -39,6 +42,8 @@ export function ProductPurchaseBox({
   personalizado = false,
   opcoesPersonalizacao = [],
   valorGravacaoVerso = null,
+  imagem = null,
+  material,
   nome,
   preco,
   categoria,
@@ -154,12 +159,14 @@ export function ProductPurchaseBox({
           corrente={tamanho}
           onCorrenteChange={setTamanho}
           erro={erroPersonalizacao}
+          material={material}
         />
       )}
 
       {personalizado && (
         <SimulacaoIA
           productId={productId}
+          imagemPeca={imagem}
           personalizacao={personalizacao}
           tamanho={tamanho}
           opcoes={opcoesPersonalizacao}

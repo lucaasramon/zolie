@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { useToast } from '@/components/providers/ToastProvider';
 import { brl } from '@/lib/utils/money';
+import { PreviaVerso } from '@/components/product/PreviaVerso';
 import {
   LIMITE_IMAGENS_PERSONALIZACAO,
   OpcaoPersonalizacao,
@@ -47,9 +48,11 @@ interface Props {
   corrente: string;
   onCorrenteChange: (corrente: string) => void;
   erro?: string | null;
+  /** Material do anúncio, para a prévia do verso usar a cor do metal certo. */
+  material?: string;
 }
 
-export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange, correntes, corrente, onCorrenteChange, erro }: Props) {
+export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange, correntes, corrente, onCorrenteChange, erro, material }: Props) {
   const [enviando, setEnviando] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -174,6 +177,11 @@ export function PersonalizacaoForm({ opcoes, valorGravacaoVerso, value, onChange
             className={inputClass}
           />
           <span className="text-xs text-ink-tertiary">Escreva exatamente como quer gravar: nomes, datas ou uma frase curta.</span>
+          <PreviaVerso
+            texto={value.textoVerso}
+            modelo={opcoes.find(o => o.id === value.modeloId)?.modelo ?? opcoes[0]?.modelo}
+            material={material}
+          />
         </label>
       )}
 

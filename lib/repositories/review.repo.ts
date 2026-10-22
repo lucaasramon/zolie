@@ -44,6 +44,19 @@ export const reviewRepo = {
     ]);
     return { total, items };
   },
+  /** Avaliações aprovadas com foto de peças personalizadas ativas (vitrine dos Personalizados). */
+  listComFotoPersonalizados: (take = 8) =>
+    prisma.productReview.findMany({
+      where: { aprovado: true, imagens: { isEmpty: false }, product: { personalizado: true, ativo: true } },
+      take,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        imagens: true,
+        user: { select: { nome: true } },
+        product: { select: { nome: true, slug: true } },
+      },
+    }),
   findById: (id: string) => prisma.productReview.findUnique({ where: { id } }),
   create: (data: { productId: string; userId: string; nota: number; titulo?: string; comentario?: string; imagens?: string[] }) =>
     prisma.productReview.create({ data }),

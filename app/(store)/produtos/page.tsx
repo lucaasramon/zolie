@@ -2,10 +2,15 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { list as listProducts } from '@/lib/services/product.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
+import { reviewRepo } from '@/lib/repositories/review.repo';
 import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductFiltersSidebar } from '@/components/product/ProductFiltersSidebar';
 import { ProductSortSelect } from '@/components/product/ProductSortSelect';
+import { FotoPersonalizado, PersonalizadosIntro } from '@/components/product/PersonalizadosIntro';
+
+/** Quantas fotos a abertura dos Personalizados mostra (completa com fotos dos anúncios). */
+const FOTOS_INTRO = 6;
 
 export const dynamic = 'force-dynamic';
 
@@ -69,11 +74,30 @@ export default async function ProdutosPage({ searchParams }: Props) {
     promocao: sp.promocao === 'true',
   };
   const sort = sp.sort || 'relevancia';
+  // A abertura só aparece na primeira página da categoria, sem busca: em filtros
+  // e paginação a cliente já está escolhendo e ela só empurraria a lista para baixo.
+  const comIntro = sp.categoria === SLUG_PERSONALIZADOS && page === 1 && !sp.q;
 
-  const [{ total, items }, categorias] = await Promise.all([
+  const [{ total, items }, categorias, avaliacoesComFoto] = await Promise.all([
     listProducts(filters, sort, { skip: (page - 1) * perPage, take: perPage }),
     listParaLoja(),
+    comIntro ? reviewRepo.listComFotoPersonalizados(FOTOS_INTRO) : Promise.resolve([]),
   ]);
+
+  // Fotos de clientes primeiro; faltando, completa com a foto de uso (a 2ª) dos anúncios.
+  const fotosIntro: FotoPersonalizado[] = [
+    ...avaliacoesComFoto.map(r => ({
+      id: r.id,
+      url: r.imagens[0],
+      legenda: `${(r.user.nome || 'Cliente').split(' ')[0]} · ${r.product.nome}`,
+      slug: r.product.slug,
+      daCliente: true,
+    })),
+    ...items.flatMap(p => {
+      const url = p.imagens?.[1] ?? p.imagens?.[0];
+      return url ? [{ id: p.id, url, legenda: p.nome, slug: p.slug, daCliente: false }] : [];
+    }),
+  ].slice(0, FOTOS_INTRO);
 
   const categoriaAtual = categorias.find(c => c.slug === sp.categoria);
   const titulo = sp.q ? `Resultados para "${sp.q}"` : categoriaAtual ? categoriaAtual.nome : 'Todas as peças';
@@ -95,6 +119,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
         </div>
         <ProductSortSelect sort={sort} searchParams={sp} />
       </div>
+
+      {comIntro && <PersonalizadosIntro fotos={fotosIntro} />}
 
       <div className="flex flex-col gap-8 lg:flex-row">
         <ProductFiltersSidebar categorias={categorias} searchParams={sp} />

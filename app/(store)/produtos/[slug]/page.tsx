@@ -211,6 +211,8 @@ export default async function ProdutoPage({ params }: Props) {
               personalizado={produto.personalizado}
               opcoesPersonalizacao={opcoes}
               valorGravacaoVerso={produto.valorGravacaoVerso}
+              imagem={produto.imagens?.[0] ?? null}
+              material={produto.material}
               nome={produto.nome}
               preco={produto.precoEfetivo}
               categoria={produto.categoria?.nome}
