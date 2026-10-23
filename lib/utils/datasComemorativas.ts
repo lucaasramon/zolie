@@ -7,8 +7,12 @@ import { DIAS_PREPARO, subtrairDiasUteis } from '@/lib/utils/prazoEntrega';
  */
 export const FRETE_REFERENCIA_DIAS_UTEIS = 10;
 
-/** A faixa aparece a partir de quantos dias (corridos) antes da data. */
-const JANELA_DIAS = 45;
+/**
+ * A faixa aparece a partir de quantos dias (corridos) antes da data. Largo o
+ * bastante para quem planeja presente com antecedência, e ainda dentro do
+ * prazo das personalizadas (que fecha ~3 semanas antes da data).
+ */
+const JANELA_DIAS = 75;
 
 interface DataComemorativa {
   nome: string;

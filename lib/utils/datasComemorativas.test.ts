@@ -43,3 +43,11 @@ describe('avisoDataComemorativa', () => {
     expect(ddmm(aviso!.limitePersonalizado)).toBe('16/04');
   });
 });
+
+describe('janela de exibição', () => {
+  it('já mostra o Natal em 22/10 (64 dias antes)', () => {
+    const aviso = avisoDataComemorativa(dia('2026-10-22'));
+    expect(aviso?.nome).toBe('Natal');
+    expect(aviso?.fase).toBe('todas');
+  });
+});
