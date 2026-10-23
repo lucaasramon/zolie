@@ -1,14 +1,17 @@
 /**
  * Camada única de analytics. Os componentes chamam funções de domínio
- * (`trackAddToCart`) e não conhecem GA4 nem Meta Pixel — trocar de provedor
+ * (`trackAddToCart`) e não conhecem GA4, Meta Pixel nem Clarity — trocar de provedor
  * ou adicionar outro acontece só aqui.
  *
  * Tudo é no-op quando os IDs não estão configurados, então o site funciona
  * normalmente em dev e em qualquer ambiente sem as variáveis.
  */
 
+import Clarity from '@microsoft/clarity';
+
 declare global {
   interface Window {
+    clarity?: (...args: unknown[]) => void;
     gtag?: (...args: unknown[]) => void;
     fbq?: (...args: unknown[]) => void;
     dataLayer?: unknown[];
@@ -18,7 +21,9 @@ declare global {
 export const GA_ID = process.env.NEXT_PUBLIC_GA_ID || '';
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID || '';
 
-export const analyticsAtivo = Boolean(GA_ID || META_PIXEL_ID);
+export const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID || '';
+
+export const analyticsAtivo = Boolean(GA_ID || META_PIXEL_ID || CLARITY_ID);
 
 export const CONSENT_STORAGE_KEY = 'zolie_cookie_consent';
 
@@ -51,6 +56,13 @@ export function aplicarConsentimento(aceito: boolean) {
   });
 
   window.fbq?.('consent', aceito ? 'grant' : 'revoke');
+
+  // Sem consentimento o Clarity segue gravando, mas sem cookies (sessões não são
+  // ligadas entre visitas) — mesmo modelo do Consent Mode do Google.
+  if (window.clarity) {
+    const estado = aceito ? 'granted' : 'denied';
+    Clarity.consentV2({ ad_Storage: estado, analytics_Storage: estado });
+  }
 }
 
 export interface AnalyticsItem {
@@ -72,6 +84,17 @@ function fbqEvent(evento: string, params: Record<string, unknown>) {
   if (typeof window === 'undefined' || !window.fbq || !META_PIXEL_ID) return;
   if (!temConsentimento()) return;
   window.fbq('track', evento, params);
+}
+
+/**
+ * Eventos do Clarity não levam parâmetros: servem para filtrar gravações e
+ * heatmaps ("sessões com add_to_cart"). Não exige consentimento porque, sem ele,
+ * o Clarity já opera sem cookies.
+ */
+function clarityEvent(evento: string, tags?: Record<string, string>) {
+  if (typeof window === 'undefined' || !window.clarity || !CLARITY_ID) return;
+  Clarity.event(evento);
+  for (const [chave, valor] of Object.entries(tags ?? {})) Clarity.setTag(chave, valor);
 }
 
 /** Formato de item esperado pelo GA4 (Google Analytics 4 / ecommerce). */
@@ -99,6 +122,7 @@ export function trackViewItem(item: AnalyticsItem) {
     value: item.preco,
     currency: 'BRL',
   });
+  clarityEvent('view_item', { produto: item.nome });
 }
 
 export function trackAddToCart(item: AnalyticsItem) {
@@ -111,6 +135,7 @@ export function trackAddToCart(item: AnalyticsItem) {
     value: valor,
     currency: 'BRL',
   });
+  clarityEvent('add_to_cart');
 }
 
 export function trackBeginCheckout(itens: AnalyticsItem[]) {
@@ -123,6 +148,7 @@ export function trackBeginCheckout(itens: AnalyticsItem[]) {
     value: valor,
     currency: 'BRL',
   });
+  clarityEvent('begin_checkout');
 }
 
 interface CompraInfo {
@@ -149,9 +175,13 @@ export function trackPurchase({ numero, total, frete, cupom, itens }: CompraInfo
     value: total,
     currency: 'BRL',
   });
+  clarityEvent('purchase', { pedido: numero });
+  // Garante que a gravação de uma sessão que converteu não seja descartada pela amostragem.
+  if (typeof window !== 'undefined' && window.clarity && CLARITY_ID) Clarity.upgrade('purchase');
 }
 
 export function trackSearch(termo: string) {
   gtagEvent('search', { search_term: termo });
   fbqEvent('Search', { search_string: termo });
+  clarityEvent('search');
 }

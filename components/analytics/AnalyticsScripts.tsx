@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import Script from 'next/script';
-import { GA_ID, META_PIXEL_ID } from '@/lib/analytics';
+import { usePathname } from 'next/navigation';
+import Clarity from '@microsoft/clarity';
+import { GA_ID, META_PIXEL_ID, CLARITY_ID, CONSENT_STORAGE_KEY, aplicarConsentimento } from '@/lib/analytics';
 
 /**
- * Carrega GA4 e Meta Pixel. Cada bloco só é emitido se o respectivo ID estiver
+ * Carrega GA4, Meta Pixel e Microsoft Clarity. Cada bloco só é emitido se o respectivo ID estiver
  * configurado, então em dev nada é carregado e nenhum dado de teste polui os
  * relatórios de produção.
  *
@@ -12,6 +15,21 @@ import { GA_ID, META_PIXEL_ID } from '@/lib/analytics';
  * relevante porque a página de produto agora é servida do cache (ver item 4).
  */
 export function AnalyticsScripts() {
+  const pathname = usePathname();
+  // O admin exibe nome, endereço e CPF de clientes em texto puro — o Clarity mascara
+  // só inputs por padrão, então gravar essas telas vazaria dados pessoais.
+  const gravarClarity = Boolean(CLARITY_ID) && !pathname?.startsWith('/admin');
+
+  useEffect(() => {
+    if (!gravarClarity || window.clarity) return;
+    Clarity.init(CLARITY_ID);
+    let consentido = false;
+    try {
+      consentido = localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted';
+    } catch {}
+    aplicarConsentimento(consentido);
+  }, [gravarClarity]);
+
   return (
     <>
       {GA_ID && (
