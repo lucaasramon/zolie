@@ -5,6 +5,7 @@ metadata:
   description: é um e-commerce de semi joias
   annotations:
     github.com/project-slug: lucaasramon/zolie
+    backstage.io/techdocs-ref: dir:.
 spec:
   type: service
   lifecycle: experimental

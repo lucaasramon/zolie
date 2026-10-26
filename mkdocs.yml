@@ -1,0 +1,8 @@
+site_name: Zoliê
+site_description: E-commerce de semijoias
+
+nav:
+  - Início: index.md
+
+plugins:
+  - techdocs-core
