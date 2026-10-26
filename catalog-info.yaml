@@ -1,0 +1,11 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: zolie
+  description: é um e-commerce de semi joias
+  annotations:
+    github.com/project-slug: lucaasramon/zolie
+spec:
+  type: service
+  lifecycle: experimental
+  owner: guests
