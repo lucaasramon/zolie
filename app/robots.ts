@@ -6,7 +6,9 @@ export default function robots(): MetadataRoute.Robots {
 
   // Ambiente que não é o domínio de produção fica fora do índice por completo:
   // preview da Vercel indexado gera conteúdo duplicado competindo com a loja real.
-  const ehProducao = /^https:\/\/(www\.)?zolie\./i.test(base);
+  // Usa o VERCEL_ENV em vez de testar o domínio: o regex antigo (`zolie\.`) não
+  // reconhecia `zolieoficial.com.br` e bloqueava o Google em produção.
+  const ehProducao = process.env.VERCEL_ENV === 'production';
   if (!ehProducao) {
     return { rules: [{ userAgent: '*', disallow: '/' }] };
   }
