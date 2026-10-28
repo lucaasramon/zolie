@@ -33,6 +33,12 @@ export const metadata: Metadata = {
     template: "%s | Zoliê Semijoias",
   },
   description: DESCRICAO,
+  applicationName: "Zoliê Semijoias",
+  category: "shopping",
+  // Verificação do Google Search Console por meta tag, quando não for feita por DNS.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION && {
+    verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION },
+  }),
   openGraph: {
     type: "website",
     locale: "pt_BR",

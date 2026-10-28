@@ -15,6 +15,7 @@ import { ProductSocialProof } from '@/components/product/ProductSocialProof';
 import { ReviewForm } from '@/components/product/ReviewForm';
 import Image from 'next/image';
 import { stars, MATERIAL_LABEL } from '@/lib/utils/format';
+import { OG_BASE, resumir } from '@/lib/utils/seo';
 import { brl } from '@/lib/utils/money';
 import { AppError } from '@/lib/utils/errors';
 import { env } from '@/lib/env';
@@ -58,9 +59,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Produto não encontrado' };
   }
 
-  const material = MATERIAL_LABEL[produto.material] || produto.material;
-  const descricao =
-    `${produto.nome} em ${material}. ${produto.descricao}`.slice(0, 155).trim() + '…';
+  // A chamada final fica sempre inteira; a descrição da peça é que encolhe.
+  const chamada = ` Em até ${produto.maxParcelas}x sem juros, com envio para todo o Brasil.`;
+  const descricao = resumir(produto.descricao, 155 - chamada.length) + chamada;
   const imagem = urlAbsoluta(produto.imagens?.[0]);
 
   return {
@@ -68,15 +69,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: descricao,
     alternates: { canonical: `/produtos/${produto.slug}` },
     openGraph: {
-      type: 'website',
-      title: `${produto.nome} — Zoliê Semijoias`,
+      ...OG_BASE,
+      title: `${produto.nome} | Zoliê Semijoias`,
       description: descricao,
       url: `/produtos/${produto.slug}`,
       ...(imagem && { images: [{ url: imagem, alt: produto.nome }] }),
     },
-    // Produto esgotado sai do índice para não gastar crawl budget nem levar o
-    // usuário a uma página onde ele não pode comprar. Volta sozinho ao repor estoque.
-    ...(produto.disponivel ? {} : { robots: { index: false, follow: true } }),
+    // Esgotado continua indexado (com `OutOfStock` no JSON-LD), como o Google
+    // recomenda para falta temporária: tirar do índice faz a página perder a
+    // posição e demorar a voltar quando o estoque é reposto.
+    // Tags de produto lidas por Facebook/Instagram/Pinterest nas prévias e catálogos.
+    other: {
+      'product:price:amount': produto.precoEfetivo.toFixed(2),
+      'product:price:currency': 'BRL',
+      'product:availability': produto.disponivel ? 'in stock' : 'out of stock',
+      'product:condition': 'new',
+      'product:brand': 'Zoliê Semijoias',
+    },
   };
 }
 
@@ -114,7 +123,7 @@ export default async function ProdutoPage({ params }: Props) {
     <div className="mx-auto max-w-[1280px] px-5 py-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(produtoJsonLd(produto)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(produtoJsonLd(produto, reviews)) }}
       />
       <script
         type="application/ld+json"

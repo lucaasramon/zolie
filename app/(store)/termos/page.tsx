@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
+import { metadataPagina } from '@/lib/utils/seo';
 import Link from 'next/link';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
 import { LOJA, linhaIdentificacao, formatarTelefone } from '@/lib/loja';
 
-export const metadata: Metadata = {
-  title: 'Termos de uso',
-  description: 'Condições de compra, pagamento, entrega e trocas da Zoliê Semijoias.',
-  alternates: { canonical: '/termos' },
-};
+export const metadata: Metadata = metadataPagina(
+  'Termos de uso',
+  'Condições de compra, pagamento, entrega e trocas da Zoliê Semijoias.',
+  '/termos',
+);
 
 export default function TermosPage() {
   return (

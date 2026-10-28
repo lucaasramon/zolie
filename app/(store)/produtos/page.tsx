@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { list as listProducts } from '@/lib/services/product.service';
 import { categoryRepo } from '@/lib/repositories/category.repo';
 import { reviewRepo } from '@/lib/repositories/review.repo';
@@ -8,6 +9,8 @@ import { ZolieCard } from '@/components/product/ZolieCard';
 import { ProductFiltersSidebar } from '@/components/product/ProductFiltersSidebar';
 import { ProductSortSelect } from '@/components/product/ProductSortSelect';
 import { FotoPersonalizado, PersonalizadosIntro } from '@/components/product/PersonalizadosIntro';
+import { breadcrumbJsonLd, itemListJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
+import { OG_BASE } from '@/lib/utils/seo';
 
 /** Quantas fotos a abertura dos Personalizados mostra (completa com fotos dos anúncios). */
 const FOTOS_INTRO = 6;
@@ -21,37 +24,48 @@ const FOTOS_INTRO = 6;
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const sp = await searchParams;
 
-  // Só a listagem "limpa" e as de categoria são indexáveis. Combinações de filtro
-  // e ordenação geram infinitas URLs de conteúdo praticamente igual — indexá-las
-  // dilui a relevância e desperdiça crawl budget.
-  const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'sort', 'page'];
+  // Só a listagem "limpa", as de categoria e a paginação delas são indexáveis.
+  // Combinações de filtro, ordenação e busca geram infinitas URLs de conteúdo
+  // praticamente igual — indexá-las dilui a relevância e desperdiça crawl budget.
+  const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'sort'];
   const temFiltroSecundario = filtrosSecundarios.some(f => sp[f]);
+  const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
+
+  let titulo = 'Todas as peças em Prata 925 e Banho de Ouro 18k';
+  let descricao =
+    'Colares, brincos, anéis, pulseiras e conjuntos em prata 925 e banho de ouro 18k. Em até 12x sem juros, com envio para todo o Brasil.';
+  let categoriaSlug: string | null = null;
 
   if (sp.categoria === SLUG_PERSONALIZADOS) {
-    return {
-      title: 'Personalizados',
-      description: 'Semijoias personalizadas com foto, nome ou data gravados a laser. Simule sua peça com IA antes de comprar.',
-      alternates: { canonical: `/produtos?categoria=${SLUG_PERSONALIZADOS}` },
-      ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
-    };
-  }
-
-  if (sp.categoria) {
+    titulo = 'Semijoias Personalizadas com Foto, Nome ou Data';
+    descricao =
+      'Semijoias personalizadas com foto, nome ou data gravados a laser. Simule sua peça com IA antes de comprar — presente único, com envio para todo o Brasil.';
+    categoriaSlug = SLUG_PERSONALIZADOS;
+  } else if (sp.categoria) {
     const categoria = await categoryRepo.findBySlug(sp.categoria);
     if (categoria) {
-      return {
-        title: categoria.nome,
-        description: `${categoria.nome} em prata 925 e banho de ouro 18k. Peças da Zoliê Semijoias com envio para todo o Brasil.`,
-        alternates: { canonical: `/produtos?categoria=${categoria.slug}` },
-        ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
-      };
+      titulo = `${categoria.nome} em Prata 925 e Banho de Ouro 18k`;
+      descricao = `${categoria.nome} em prata 925 e banho de ouro 18k da Zoliê Semijoias. Peças para usar no dia a dia e para presentear, em até 12x sem juros.`;
+      categoriaSlug = categoria.slug;
     }
   }
 
+  // Página 2+ aponta o canonical para ela mesma (não para a 1ª): o Google
+  // trata cada página da série como única e assim chega a todos os produtos.
+  const params = new URLSearchParams();
+  if (categoriaSlug) params.set('categoria', categoriaSlug);
+  if (page > 1) params.set('page', String(page));
+  const canonical = params.size ? `/produtos?${params}` : '/produtos';
+  if (page > 1) {
+    titulo = `${titulo} — Página ${page}`;
+    descricao = `Página ${page}. ${descricao}`;
+  }
+
   return {
-    title: 'Todas as peças',
-    description: 'Colares, brincos, anéis, pulseiras e conjuntos em prata 925 e banho de ouro 18k.',
-    alternates: { canonical: '/produtos' },
+    title: titulo,
+    description: descricao,
+    alternates: { canonical },
+    openGraph: { ...OG_BASE, title: `${titulo} | Zoliê Semijoias`, description: descricao, url: canonical },
     ...(temFiltroSecundario && { robots: { index: false, follow: true } }),
   };
 }
@@ -106,9 +120,24 @@ export default async function ProdutosPage({ searchParams }: Props) {
   const categoriaAtual = categorias.find(c => c.slug === sp.categoria);
   const titulo = sp.q ? `Resultados para "${sp.q}"` : categoriaAtual ? categoriaAtual.nome : 'Todas as peças';
   const totalPages = Math.max(1, Math.ceil(total / perPage));
+  // Página além da última viraria uma página vazia indexável (conteúdo ralo).
+  if (page > totalPages) notFound();
+
+  const trilha = [
+    { nome: 'Início', url: '/' },
+    { nome: 'Todas as peças', url: '/produtos' },
+    ...(categoriaAtual ? [{ nome: categoriaAtual.nome, url: `/produtos?categoria=${categoriaAtual.slug}` }] : []),
+  ];
 
   return (
     <div className="mx-auto max-w-[1280px] px-5 py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumbJsonLd(trilha)) }} />
+      {items.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(itemListJsonLd(items, (page - 1) * perPage)) }}
+        />
+      )}
       <div className="mb-2 flex items-center gap-1.5 text-xs text-ink-tertiary">
         <Link href="/" className="transition-colors hover:text-gold-text">Início</Link>
         <span className="text-border-soft">/</span>

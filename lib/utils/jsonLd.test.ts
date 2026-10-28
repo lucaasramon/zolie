@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { produtoJsonLd, breadcrumbJsonLd, urlAbsoluta, jsonLdScript } from './jsonLd';
+import {
+  produtoJsonLd,
+  breadcrumbJsonLd,
+  itemListJsonLd,
+  organizationJsonLd,
+  websiteJsonLd,
+  urlAbsoluta,
+  jsonLdScript,
+} from './jsonLd';
 
 const BASE = {
   nome: 'Colar Aurora',
@@ -53,6 +61,31 @@ describe('produtoJsonLd', () => {
     expect(ld.image).toBeUndefined();
   });
 
+  it('usa o slug como sku quando o produto não tem sku cadastrado', () => {
+    expect((produtoJsonLd(BASE) as any).sku).toBe('colar-aurora');
+    expect((produtoJsonLd({ ...BASE, sku: 'ZL-001' }) as any).sku).toBe('ZL-001');
+  });
+
+  it('declara a política de devolução na oferta', () => {
+    const politica = (produtoJsonLd(BASE) as any).offers.hasMerchantReturnPolicy;
+    expect(politica.applicableCountry).toBe('BR');
+    expect(politica.merchantReturnDays).toBe(7);
+  });
+
+  it('marca só avaliações com texto e expõe apenas o primeiro nome', () => {
+    const ld = produtoJsonLd(BASE, [
+      { nota: 5, comentario: 'Linda!', createdAt: '2026-10-01T12:00:00Z', user: { nome: 'Maria Souza' } },
+      { nota: 4, createdAt: '2026-10-02T12:00:00Z', user: { nome: 'Ana' } },
+    ]) as any;
+    expect(ld.review).toHaveLength(1);
+    expect(ld.review[0].author.name).toBe('Maria');
+    expect(ld.review[0].datePublished).toBe('2026-10-01');
+  });
+
+  it('omite review quando não há avaliação com texto', () => {
+    expect((produtoJsonLd(BASE) as any).review).toBeUndefined();
+  });
+
   it('traduz o enum de material para texto legível', () => {
     expect((produtoJsonLd(BASE) as any).material).toBe('Prata 925');
     expect((produtoJsonLd({ ...BASE, material: 'BANHADO_OURO' }) as any).material).toBe(
@@ -71,6 +104,23 @@ describe('breadcrumbJsonLd', () => {
     expect(ld.itemListElement[0].position).toBe(1);
     expect(ld.itemListElement[1].position).toBe(2);
     expect(ld.itemListElement[1].item).toMatch(/^https?:\/\//);
+  });
+});
+
+describe('itemListJsonLd', () => {
+  it('continua a numeração a partir da página atual', () => {
+    const ld = itemListJsonLd([{ slug: 'a', nome: 'A' }, { slug: 'b', nome: 'B' }], 9) as any;
+    expect(ld.itemListElement[0].position).toBe(10);
+    expect(ld.itemListElement[1].url).toMatch(/^https?:\/\/.+\/produtos\/b$/);
+  });
+});
+
+describe('organizationJsonLd / websiteJsonLd', () => {
+  it('ligam site e loja pelo mesmo @id', () => {
+    const org = organizationJsonLd() as any;
+    const site = websiteJsonLd() as any;
+    expect(org['@type']).toBe('OnlineStore');
+    expect(site.publisher['@id']).toBe(org['@id']);
   });
 });
 

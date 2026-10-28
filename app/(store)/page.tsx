@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { organizationJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
+import { organizationJsonLd, websiteJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
+import { OG_BASE } from '@/lib/utils/seo';
 import { list as listProducts } from '@/lib/services/product.service';
 import { list as listBanners } from '@/lib/services/banner.service';
 import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
@@ -10,14 +11,22 @@ import { CategoryIcon } from '@/components/product/CategoryIcon';
 import { HeroCarousel } from '@/components/layout/HeroCarousel';
 import { Reveal } from '@/components/layout/Reveal';
 
-export const dynamic = 'force-dynamic';
+// Cache de 5 min em vez de `force-dynamic`: a home é a página mais visitada e
+// tempo de resposta pesa no ranking (Core Web Vitals). Os toggles de /admin/config
+// invalidam o cache na hora (revalidatePath na rota de site-config).
+export const revalidate = 300;
 
 export async function generateMetadata(): Promise<Metadata> {
+  const titulo = 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k';
+  const descricao =
+    'Semijoias em prata 925 e banho de ouro 18k: colares, brincos, anéis, pulseiras e personalizados. Em até 12x sem juros, com envio para todo o Brasil.';
   return {
-    // A home usa o title padrão (sem o sufixo do template) por ser a raiz da marca.
-    title: 'Zoliê Semijoias — Prata 925 e Banho de Ouro 18k',
-    description: `Semijoias em prata 925 e banho de ouro 18k. Colares, brincos, anéis e pulseiras com envio para todo o Brasil.`,
+    // `absolute` ignora o template "%s | Zoliê Semijoias" do layout — sem ele a
+    // marca aparecia duas vezes no título da home.
+    title: { absolute: titulo },
+    description: descricao,
     alternates: { canonical: '/' },
+    openGraph: { ...OG_BASE, title: titulo, description: descricao, url: '/' },
   };
 }
 
@@ -91,8 +100,11 @@ export default async function HomePage() {
     <div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd()) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript([organizationJsonLd(), websiteJsonLd()]) }}
       />
+      {/* O topo visual é o carrossel de banners (títulos de campanha que mudam);
+          o h1 diz ao Google do que a loja trata sem alterar o layout. */}
+      <h1 className="sr-only">Zoliê Semijoias — semijoias em prata 925 e banho de ouro 18k</h1>
       <HeroCarousel banners={banners} />
 
       <Reveal>

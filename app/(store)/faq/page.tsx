@@ -1,14 +1,17 @@
 import type { Metadata } from 'next';
+import { metadataPagina } from '@/lib/utils/seo';
 import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
 import { jsonLdScript } from '@/lib/utils/jsonLd';
 
-export const dynamic = 'force-dynamic';
+// Cache de 5 min em vez de `force-dynamic`; os toggles de /admin/config
+// invalidam o cache na hora (revalidatePath na rota de site-config).
+export const revalidate = 300;
 
-export const metadata: Metadata = {
-  title: 'Perguntas frequentes',
-  description: 'Dúvidas sobre entrega, parcelamento, garantia e cuidados com as semijoias da Zoliê.',
-  alternates: { canonical: '/faq' },
-};
+export const metadata: Metadata = metadataPagina(
+  'Perguntas frequentes',
+  'Dúvidas sobre entrega, parcelamento em até 12x, trocas, garantia e cuidados com as semijoias em prata 925 e banho de ouro 18k da Zoliê.',
+  '/faq',
+);
 
 export default async function FaqPage() {
   const perguntas = [

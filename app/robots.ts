@@ -36,6 +36,8 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/cadastro',
           '/redefinir-senha',
+          // Links de acompanhamento de pedido com token: privados.
+          '/pedidos-convidado/',
           // Bloqueia a busca interna: gera URLs infinitas de baixo valor.
           '/produtos?q=',
           // Combinações de filtro/ordenação já são noindex; bloquear o rastreio
@@ -52,7 +54,7 @@ export default function robots(): MetadataRoute.Robots {
         ],
       },
     ],
+    // Sem `host`: diretiva obsoleta (só o Yandex lia), o Google ignora.
     sitemap: `${base}/sitemap.xml`,
-    host: base,
   };
 }
