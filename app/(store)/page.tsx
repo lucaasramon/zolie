@@ -75,12 +75,6 @@ const DIFERENCIAIS_BASE = [
   { icone: GiftIcon, titulo: 'Embalagem presente', texto: 'Cada peça chega pronta para presentear.' },
 ];
 
-const DEPOIMENTOS = [
-  { nome: 'Marina S.', local: 'São Paulo, SP', texto: 'As peças são lindas e chegaram muito bem embaladas. Já é a terceira compra!' },
-  { nome: 'Camila R.', local: 'Belo Horizonte, MG', texto: 'O banho de ouro não desbota, uso todos os dias e continua brilhando.' },
-  { nome: 'Fernanda A.', local: 'Curitiba, PR', texto: 'Atendimento excelente e entrega rápida. Recomendo demais a Zoliê.' },
-];
-
 export default async function HomePage() {
   await siteConfig.preparar();
   const { freteGratisAtivo } = siteConfig.get();
@@ -180,38 +174,6 @@ export default async function HomePage() {
                   <span className="text-[13px] font-light leading-relaxed text-ink-tertiary">{d.texto}</span>
                 </span>
               </div>
-            ))}
-          </div>
-        </section>
-      </Reveal>
-
-      <Reveal>
-        <section className="mx-auto max-w-[1280px] px-5 py-16">
-          <div className="flex flex-col items-center gap-1.5 text-center">
-            <span className="z-eyebrow">Depoimentos reais</span>
-            <h2 className="z-title text-[28px] sm:text-3xl">Quem já brilha com a Zoliê</h2>
-            <span className="z-rule mt-2" />
-          </div>
-          <div className="mt-9 grid grid-cols-1 gap-5 md:grid-cols-3">
-            {DEPOIMENTOS.map(d => (
-              <figure
-                key={d.nome}
-                className="relative flex flex-col gap-3 rounded-2xl border border-border-subtle bg-white p-6 pt-8 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-              >
-                <span className="pointer-events-none absolute left-5 top-2 font-serif text-[64px] leading-none text-gold/25" aria-hidden="true">
-                  &ldquo;
-                </span>
-                <span className="text-[13px] tracking-[0.2em] text-gold-soft">★★★★★</span>
-                <blockquote className="font-serif text-[17px] italic leading-relaxed text-ink">{d.texto}</blockquote>
-                <figcaption className="mt-auto flex items-center gap-2 pt-1">
-                  <span className="grid h-8 w-8 place-items-center rounded-full bg-bg-alt font-serif text-sm text-gold-text">
-                    {d.nome.charAt(0)}
-                  </span>
-                  <span className="text-xs text-ink-tertiary">
-                    <span className="font-medium text-ink">{d.nome}</span> · {d.local}
-                  </span>
-                </figcaption>
-              </figure>
             ))}
           </div>
         </section>

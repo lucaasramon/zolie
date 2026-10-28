@@ -26,15 +26,15 @@ export function urlAbsoluta(caminho?: string | null): string | undefined {
 
 /**
  * Política de devolução declarada no Merchant Center/Search: sem ela o Google
- * marca o produto com aviso em "Listagens do comerciante". Os 7 dias são o
- * direito de arrependimento do CDC, o mesmo prazo exibido em /trocas.
+ * marca o produto com aviso em "Listagens do comerciante". 30 dias é o prazo da
+ * loja exibido em /trocas e /termos e validado em return.service.ts.
  */
 function politicaDevolucao() {
   return {
     '@type': 'MerchantReturnPolicy',
     applicableCountry: 'BR',
     returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
-    merchantReturnDays: 7,
+    merchantReturnDays: 30,
     returnMethod: 'https://schema.org/ReturnByMail',
     merchantReturnLink: `${base()}/trocas`,
   };

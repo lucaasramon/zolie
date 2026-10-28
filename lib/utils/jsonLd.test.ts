@@ -69,7 +69,7 @@ describe('produtoJsonLd', () => {
   it('declara a política de devolução na oferta', () => {
     const politica = (produtoJsonLd(BASE) as any).offers.hasMerchantReturnPolicy;
     expect(politica.applicableCountry).toBe('BR');
-    expect(politica.merchantReturnDays).toBe(7);
+    expect(politica.merchantReturnDays).toBe(30);
   });
 
   it('marca só avaliações com texto e expõe apenas o primeiro nome', () => {

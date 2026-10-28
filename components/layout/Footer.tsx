@@ -31,7 +31,7 @@ function WhatsIcon({ className }: { className?: string }) {
 
 const SELOS = [
   { titulo: 'Compra protegida', texto: 'Dados criptografados' },
-  { titulo: 'Troca facilitada', texto: '7 dias para trocar' },
+  { titulo: 'Troca facilitada', texto: '30 dias para trocar' },
   { titulo: 'Envio para todo o Brasil', texto: 'Com código de rastreio' },
   { titulo: 'Garantia do banho', texto: 'Ouro 18k reforçado' },
 ];

@@ -5,7 +5,7 @@ import { InstitutionalPage } from '@/components/layout/InstitutionalPage';
 
 export const metadata: Metadata = metadataPagina(
   'Trocas e devoluções',
-  'Troca ou devolução em até 7 dias após o recebimento, pelo direito de arrependimento do CDC. Veja como solicitar direto pela página do seu pedido.',
+  'Troca ou devolução em até 30 dias após o recebimento — mais que os 7 dias garantidos pelo CDC. Veja como solicitar direto pela página do seu pedido.',
   '/trocas',
 );
 
@@ -13,8 +13,9 @@ export default function TrocasPage() {
   return (
     <InstitutionalPage titulo="Trocas e devoluções">
       <p>
-        O Código de Defesa do Consumidor garante 7 dias para
-        arrependimento em compras online.
+        Você tem até <strong>30 dias corridos</strong> após o recebimento para solicitar
+        troca ou devolução. O Código de Defesa do Consumidor garante 7 dias para
+        arrependimento em compras online; por política própria, ampliamos esse prazo.
       </p>
 
       <h2 className="mt-6 font-sans text-lg font-semibold text-ink">Como solicitar</h2>
