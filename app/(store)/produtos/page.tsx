@@ -12,7 +12,11 @@ import { FotoPersonalizado, PersonalizadosIntro } from '@/components/product/Per
 /** Quantas fotos a abertura dos Personalizados mostra (completa com fotos dos anúncios). */
 const FOTOS_INTRO = 6;
 
-export const dynamic = 'force-dynamic';
+// A listagem depende de `searchParams`, então o Next sempre a renderiza por
+// requisição (e responde `Cache-Control: private, no-store`). Nada aqui lê
+// cookies/sessão, por isso o HTML é cacheado no CDN da Vercel pelo header
+// `Vercel-CDN-Cache-Control` definido em next.config.ts — chaveado pela URL
+// completa, cada combinação de filtros tem sua própria cópia.
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const sp = await searchParams;
@@ -155,6 +159,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
                   <Link
                     key={n}
                     href={`/produtos?${params.toString()}`}
+                    prefetch={false}
                     className={`grid h-10 w-10 place-items-center rounded-full border text-sm transition-all ${
                       n === page
                         ? 'border-gold bg-gold font-medium text-ink shadow-sm'

@@ -174,9 +174,14 @@ function FilterGroup({ title, children }: { title: string; children: React.React
 }
 
 function FilterOption({ label, active, href }: { label: string; active: boolean; href: string }) {
+  // Cada opção leva a uma combinação nova de filtros: `nofollow` evita que
+  // crawlers percorram o produto cartesiano inteiro, e sem prefetch a sidebar
+  // não dispara ~20 requisições a cada visita à listagem.
   return (
     <Link
       href={href}
+      rel="nofollow"
+      prefetch={false}
       className={`group flex items-center gap-2.5 text-sm transition-colors hover:text-gold-text ${active ? 'font-medium text-ink' : 'text-ink-muted'}`}
     >
       <span
