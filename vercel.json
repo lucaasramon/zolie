@@ -7,7 +7,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(meta-externalagent|GPTBot|ClaudeBot|CCBot|Bytespider|PerplexityBot).*"
+          "value": ".*(meta-externalagent|meta-webindexer|GPTBot|ClaudeBot|CCBot|Bytespider|PerplexityBot).*"
         }
       ],
       "mitigate": {

@@ -19,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
       // Transfer) sem trazer clientes. `facebookexternalhit` (prévia de links no
       // WhatsApp/Instagram) é outro agente e continua liberado pela regra `*`.
       {
-        userAgent: ['meta-externalagent', 'GPTBot', 'ClaudeBot', 'CCBot', 'Bytespider', 'PerplexityBot'],
+        userAgent: ['meta-externalagent', 'meta-webindexer', 'GPTBot', 'ClaudeBot', 'CCBot', 'Bytespider', 'PerplexityBot'],
         disallow: '/',
       },
       {
