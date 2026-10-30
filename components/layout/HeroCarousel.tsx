@@ -79,7 +79,7 @@ export function HeroCarousel({ banners }: { banners: HeroBanner[] }) {
 
   return (
     <section
-      className="group/hero relative overflow-hidden animate-zfade select-none"
+      className="group/hero relative touch-pan-y touch-pinch-zoom overflow-hidden animate-zfade select-none"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => {
         setPaused(false);

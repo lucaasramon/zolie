@@ -19,7 +19,10 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    // `clip` (e não `hidden`): corta o que passar da tela sem virar contêiner de
+    // rolagem, o que quebraria o `sticky` do cabeçalho. O Safari do iOS nem sempre
+    // respeita só o overflow do body.
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
       {faixaDatasAtiva && <FaixaDataComemorativa slugPersonalizados={SLUG_PERSONALIZADOS} />}
       <Header categorias={categoriasSimple} avisos={avisos} />
       <main className="flex-1">{children}</main>

@@ -274,7 +274,7 @@ export default async function ProdutoPage({ params }: Props) {
           <div className="flex flex-col gap-3">
             {reviews.map((r: any) => (
               <div key={r.id} className="rounded-xl border border-border-subtle bg-bg-alt/40 p-5 transition-shadow hover:shadow-sm">
-                <div className="flex items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-bg-alt font-serif text-sm text-gold-text">
                     {(r.user?.nome || 'C').charAt(0)}
                   </span>

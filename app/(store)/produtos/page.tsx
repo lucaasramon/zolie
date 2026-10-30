@@ -180,7 +180,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
           )}
 
           {totalPages > 1 && (
-            <div className="mt-10 flex items-center justify-center gap-2">
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => {
                 const params = new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][]);
                 params.set('page', String(n));

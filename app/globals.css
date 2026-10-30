@@ -80,7 +80,22 @@
   box-sizing: border-box;
 }
 
+/* Sem o "elástico" lateral da página no toque. Só em telas de toque para manter
+   o gesto de voltar do trackpad no desktop. */
+@media (pointer: coarse) {
+  html {
+    overscroll-behavior-x: none;
+  }
+}
+
 body {
+  /* Trava o arrasto lateral da página. Fica só no body (e não no html) para o
+     valor passar à viewport: `hidden` no body sem isso viraria um contêiner de
+     rolagem e quebraria o `sticky` do cabeçalho, e as travas de rolagem dos
+     modais (`body.style.overflow = 'hidden'`) deixariam de funcionar.
+     `hidden` é o fallback para quem não conhece `clip` (iOS < 16). */
+  overflow-x: hidden;
+  overflow-x: clip;
   margin: 0;
   background: var(--color-bg);
   color: var(--color-ink);

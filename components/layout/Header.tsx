@@ -255,7 +255,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
             )}
           </div>
 
-          <div className="flex flex-none items-center gap-1">
+          <div className="flex max-w-full flex-none flex-wrap items-center gap-1">
             <div className={hideCompact}>
               <MusicToggle />
             </div>

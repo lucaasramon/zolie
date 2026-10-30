@@ -150,7 +150,7 @@ export default function CarrinhoPage() {
           </Link>
           <div className="flex flex-col gap-4">
             {cart.items.map(item => (
-              <div key={item.id} className="z-card flex gap-4 p-4 transition-shadow hover:shadow-sm sm:gap-5">
+              <div key={item.id} className="z-card flex flex-wrap gap-4 p-4 transition-shadow hover:shadow-sm sm:flex-nowrap sm:gap-5">
                 {item.imagem ? (
                   <Link href={`/produtos/${item.slug}`} className="relative h-28 w-24 flex-none overflow-hidden rounded-lg bg-bg-alt">
                     <Image src={item.imagem} alt={item.nome} fill sizes="96px" className="object-cover transition-transform duration-500 hover:scale-105" />
@@ -158,7 +158,9 @@ export default function CarrinhoPage() {
                 ) : (
                   <div className="img-placeholder h-28 w-24 flex-none rounded-lg" />
                 )}
-                <div className="flex flex-1 flex-col gap-1">
+                {/* No celular os preços descem para uma linha própria: ao lado da foto,
+                    foto + quantidade + preços não cabem na largura da tela. */}
+                <div className="flex min-w-0 flex-1 basis-[calc(100%-7rem)] flex-col gap-1 sm:basis-0">
                   <Link href={`/produtos/${item.slug}`} className="font-serif text-lg font-medium leading-snug text-ink transition-colors hover:text-gold-text">
                     {item.nome}
                   </Link>
@@ -166,7 +168,7 @@ export default function CarrinhoPage() {
                     {item.tamanho || 'Tamanho único'}
                   </span>
                   <PersonalizacaoResumo valor={item.personalizacao} />
-                  <div className="mt-auto flex items-center gap-4 pt-2">
+                  <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
                     <div className="flex items-center rounded-full border border-border-soft bg-bg-alt">
                       <button type="button" onClick={() => updateQty(item.id, item.quantidade - 1)} className="grid h-8 w-8 place-items-center text-ink-muted transition-colors hover:text-gold-text active:scale-90">−</button>
                       <span className="w-7 text-center text-sm font-medium">{item.quantidade}</span>
@@ -177,7 +179,7 @@ export default function CarrinhoPage() {
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-col items-end justify-between text-right">
+                <div className="flex w-full items-center justify-between text-right sm:w-auto sm:flex-col sm:items-end">
                   <div className="text-xs font-light text-ink-tertiary">{brl(item.precoUnitario)} un.</div>
                   <div className="text-base font-medium text-ink">{brl(item.subtotal)}</div>
                 </div>
