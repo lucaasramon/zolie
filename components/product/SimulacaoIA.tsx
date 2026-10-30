@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, ApiError } from '@/lib/api-client';
 import { OpcaoPersonalizacao } from '@/lib/personalizacao';
 import { PersonalizacaoState, validarPersonalizacao } from '@/components/product/PersonalizacaoForm';
+import type { EventoSimulacao } from '@/lib/services/simulacao.service';
 
 export interface ResultadoSimulacao {
   frente: string;
@@ -70,6 +71,8 @@ export function SimulacaoIA({ productId, imagemPeca, nomePeca, personalizacao, t
   const [etapa, setEtapa] = useState(0);
   const [progresso, setProgresso] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
+  // Imagem de cada lado enquanto se forma; o resultado final a substitui.
+  const [previas, setPrevias] = useState<{ frente?: string; verso?: string }>({});
   const [ampliada, setAmpliada] = useState<string | null>(null);
   // Só a simulação que acabou de chegar ganha a animação de revelação.
   const [recemGerada, setRecemGerada] = useState(false);
@@ -131,6 +134,7 @@ Veja a peça: ${link}`;
   }
 
   const desatualizada = resultado != null && resultado.assinatura !== assinaturaEscolhas(personalizacao, tamanho);
+  const temPrevia = Boolean(previas.frente || previas.verso);
 
   async function simular() {
     const problema = validarPersonalizacao(personalizacao, opcoes);
@@ -142,19 +146,32 @@ Veja a peça: ${link}`;
     setEtapa(0);
     setProgresso(0);
     setRecemGerada(false);
+    setPrevias({});
     setGerando(true);
     try {
-      const { data } = await api.post<Omit<ResultadoSimulacao, 'assinatura'>>('/personalizacao/simulacao', {
-        productId,
-        tamanho: tamanho || null,
-        personalizacao: {
-          modeloId: personalizacao.modeloId,
-          imagens: personalizacao.imagens,
-          verso: personalizacao.verso,
-          textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
+      const fim: { fotos?: Omit<ResultadoSimulacao, 'assinatura'>; erro?: string } = {};
+      await api.stream<EventoSimulacao>(
+        '/personalizacao/simulacao',
+        {
+          productId,
+          tamanho: tamanho || null,
+          personalizacao: {
+            modeloId: personalizacao.modeloId,
+            imagens: personalizacao.imagens,
+            verso: personalizacao.verso,
+            textoVerso: personalizacao.verso ? personalizacao.textoVerso.trim() : null,
+          },
         },
-      });
-      onResultado({ ...data, assinatura: assinaturaEscolhas(personalizacao, tamanho) });
+        evento => {
+          if (evento.tipo === 'previa') setPrevias(p => ({ ...p, [evento.lado]: evento.imagem }));
+          else if (evento.tipo === 'concluida') fim.fotos = { frente: evento.frente, verso: evento.verso };
+          else fim.erro = evento.mensagem;
+        },
+      );
+      if (fim.erro) throw new ApiError(fim.erro, 502, 'SIMULATION_FAILED');
+      // Resposta cortada no meio (ex.: limite de tempo da função) não traz o evento final.
+      if (!fim.fotos) throw new Error('Simulação sem resultado');
+      onResultado({ ...fim.fotos, assinatura: assinaturaEscolhas(personalizacao, tamanho) });
       setRecemGerada(true);
     } catch (err) {
       setErro(
@@ -182,8 +199,8 @@ Veja a peça: ${link}`;
 
       {gerando ? (
         <div className="flex flex-col items-center gap-4 rounded-lg bg-white/70 px-4 py-5 text-center" role="status" aria-live="polite">
-          <GravacaoEmAndamento imagem={imagemPeca} />
-          <span className="text-sm font-medium text-ink">{ETAPAS[etapa]}</span>
+          {temPrevia ? <PreviasEmAndamento previas={previas} /> : <GravacaoEmAndamento imagem={imagemPeca} />}
+          <span className="text-sm font-medium text-ink">{temPrevia ? 'Sua peça está tomando forma…' : ETAPAS[etapa]}</span>
           <div className="flex w-full max-w-[260px] flex-col gap-1.5">
             <div
               className="h-1.5 w-full overflow-hidden rounded-full bg-gold/15"
@@ -202,7 +219,11 @@ Veja a peça: ${link}`;
               {progresso >= 85 ? 'Quase pronta…' : `${Math.round(progresso)}%`}
             </span>
           </div>
-          <span className="text-xs text-ink-tertiary">Isso leva de 1 a 3 minutos. Não feche esta página.</span>
+          <span className="text-xs text-ink-tertiary">
+            {temPrevia
+              ? 'Esta é uma prévia. Ainda vamos conferir cada detalhe. Não feche esta página.'
+              : 'Isso leva de 1 a 3 minutos. Não feche esta página.'}
+          </span>
         </div>
       ) : (
         <button
@@ -281,6 +302,28 @@ Veja a peça: ${link}`;
           <img src={ampliada} alt="Simulação ampliada" className="max-h-[90vh] max-w-full rounded-xl shadow-lg" />
         </div>
       )}
+    </div>
+  );
+}
+
+/** Frente e verso enquanto se formam; o lado que ainda não chegou fica com o brilho de carregamento. */
+function PreviasEmAndamento({ previas }: { previas: { frente?: string; verso?: string } }) {
+  return (
+    <div className="grid w-full grid-cols-2 gap-3">
+      {[
+        { url: previas.frente, rotulo: 'Frente' },
+        { url: previas.verso, rotulo: 'Verso' },
+      ].map(f => (
+        <div key={f.rotulo} className="flex flex-col gap-1.5">
+          {f.url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- prévia em data URL, fora do otimizador
+            <img src={f.url} alt={`Prévia da ${f.rotulo.toLowerCase()} da peça`} className="aspect-square w-full rounded-lg object-cover ring-1 ring-border-subtle" />
+          ) : (
+            <div className="img-skeleton-shine aspect-square w-full rounded-lg" aria-hidden="true" />
+          )}
+          <span className="text-center text-xs font-medium uppercase tracking-wider text-ink">{f.rotulo}</span>
+        </div>
+      ))}
     </div>
   );
 }
