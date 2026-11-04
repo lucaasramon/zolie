@@ -1,12 +1,25 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { linkWhatsApp } from '@/lib/loja';
+import { trackWhatsApp } from '@/lib/analytics';
 
 interface Props {
   href: string;
 }
 
-const ROTAS_PERMITIDAS = ['/contato', '/faq', '/trocas'];
+// `/produtos` cobre a listagem e as páginas de produto: é onde chega quem vem dos
+// anúncios do Instagram, e para peça personalizada tirar a dúvida no WhatsApp
+// converte melhor que o carrinho para quem compra pela primeira vez.
+const ROTAS_PERMITIDAS = ['/contato', '/faq', '/trocas', '/produtos'];
+
+/** `/produtos/colar-x` → mensagem já citando a peça, para a atendente saber de qual se trata. */
+function hrefDaPagina(pathname: string | null, padrao: string): string {
+  const slug = pathname?.match(/^\/produtos\/([^/]+)$/)?.[1];
+  if (!slug) return padrao;
+  const url = `${window.location.origin}/produtos/${slug}`;
+  return linkWhatsApp(`Olá! Vim pelo site da Zoliê e tenho interesse nesta peça: ${url}`) ?? padrao;
+}
 
 export function WhatsAppButton({ href }: Props) {
   const pathname = usePathname();
@@ -19,6 +32,10 @@ export function WhatsAppButton({ href }: Props) {
   return (
     <a
       href={href}
+      onClick={e => {
+        e.currentTarget.href = hrefDaPagina(pathname, href);
+        trackWhatsApp(pathname ?? '');
+      }}
       target="_blank"
       rel="noreferrer"
       aria-label="Falar no WhatsApp"

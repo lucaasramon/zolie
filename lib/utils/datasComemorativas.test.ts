@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { avisoDataComemorativa } from './datasComemorativas';
+import { avisoDataComemorativa, conteudoFaixa, hojeNoBrasil } from './datasComemorativas';
 
 const dia = (iso: string) => new Date(`${iso}T10:00:00`);
 const ddmm = (d: Date) => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -49,5 +49,24 @@ describe('janela de exibição', () => {
     const aviso = avisoDataComemorativa(dia('2026-10-22'));
     expect(aviso?.nome).toBe('Natal');
     expect(aviso?.fase).toBe('todas');
+  });
+});
+
+describe('hojeNoBrasil', () => {
+  it('às 22h30 de Brasília ainda é o mesmo dia, embora já seja amanhã em UTC', () => {
+    const d = hojeNoBrasil(new Date('2026-11-05T01:30:00Z'));
+    expect([d.getFullYear(), d.getMonth() + 1, d.getDate()]).toEqual([2026, 11, 4]);
+  });
+});
+
+describe('conteudoFaixa', () => {
+  it('monta texto e link da fase de personalizados', () => {
+    const c = conteudoFaixa(avisoDataComemorativa(dia('2026-11-20')), 'personalizados');
+    expect(c?.href).toBe('/produtos?categoria=personalizados');
+    expect(c?.texto).toMatch(/^Natal: peça personalizados até \d{2}\/\d{2}/);
+  });
+
+  it('sem aviso não há faixa', () => {
+    expect(conteudoFaixa(null, 'personalizados')).toBeNull();
   });
 });

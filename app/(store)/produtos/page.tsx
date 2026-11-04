@@ -173,8 +173,8 @@ export default async function ProdutosPage({ searchParams }: Props) {
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-              {items.map(p => (
-                <ZolieCard key={p.id} product={p} />
+              {items.map((p, i) => (
+                <ZolieCard key={p.id} product={p} prioridade={i < 2} />
               ))}
             </div>
           )}

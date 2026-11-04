@@ -108,6 +108,10 @@ export function ProductGallery({
 
       <div className="group relative flex-1 overflow-hidden rounded-2xl bg-bg-alt shadow-xs">
         <div className="relative aspect-square overflow-hidden">
+          {/* O brilho fica por baixo da foto e ela é desenhada assim que chega.
+              Esconder a foto até o `onLoad` a deixava invisível até o JavaScript
+              hidratar — no navegador do Instagram (lento) a cliente vinda do
+              anúncio via só o brilho por vários segundos. */}
           {!loaded[activeIndex] && (
             <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />
           )}
@@ -116,9 +120,7 @@ export function ProductGallery({
             alt={nome}
             fill
             sizes="(max-width: 1024px) 100vw, 50vw"
-            className={`object-cover transition-all duration-500 ease-out group-hover:scale-105 ${
-              loaded[activeIndex] ? 'opacity-100' : 'opacity-0'
-            }`}
+            className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
             priority
             onLoad={() => setLoaded(l => ({ ...l, [activeIndex]: true }))}
           />

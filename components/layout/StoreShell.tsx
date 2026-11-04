@@ -6,6 +6,7 @@ import { WhatsAppButton } from '@/components/layout/WhatsAppButton';
 import { FaixaDataComemorativa } from '@/components/layout/FaixaDataComemorativa';
 import { ConsultoriaButton } from '@/components/consultoria/ConsultoriaButton';
 import { linkWhatsApp } from '@/lib/loja';
+import { avisoDataComemorativa, conteudoFaixa, hojeNoBrasil } from '@/lib/utils/datasComemorativas';
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
   const [categorias] = await Promise.all([listParaLoja(), siteConfig.preparar()]);
@@ -23,7 +24,12 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
     // rolagem, o que quebraria o `sticky` do cabeçalho. O Safari do iOS nem sempre
     // respeita só o overflow do body.
     <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
-      {faixaDatasAtiva && <FaixaDataComemorativa slugPersonalizados={SLUG_PERSONALIZADOS} />}
+      {faixaDatasAtiva && (
+        <FaixaDataComemorativa
+          slugPersonalizados={SLUG_PERSONALIZADOS}
+          inicial={conteudoFaixa(avisoDataComemorativa(hojeNoBrasil()), SLUG_PERSONALIZADOS)}
+        />
+      )}
       <Header categorias={categoriasSimple} avisos={avisos} />
       <main className="flex-1">{children}</main>
       <Footer categorias={categoriasSimple} />

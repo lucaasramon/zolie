@@ -76,3 +76,48 @@ export function avisoDataComemorativa(agora = new Date()): AvisoDataComemorativa
   }
   return null;
 }
+
+/**
+ * Hoje no calendário de Brasília, como data local. O servidor da Vercel roda
+ * em UTC: entre 21h e meia-noite ele já estaria no dia seguinte.
+ */
+export function hojeNoBrasil(agora = new Date()): Date {
+  const partes = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Sao_Paulo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+      .formatToParts(agora)
+      .map(p => [p.type, p.value]),
+  );
+  return new Date(Number(partes.year), Number(partes.month) - 1, Number(partes.day));
+}
+
+export interface ConteudoFaixa {
+  texto: string;
+  /** Selo de urgência ("Faltam 3 dias"); vazio quando ainda há folga. */
+  restante: string;
+  href: string;
+}
+
+const ddmm = (d: Date) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+
+function prazoRestante(dias: number): string {
+  if (dias === 0) return 'Último dia!';
+  if (dias === 1) return 'Termina amanhã';
+  if (dias <= 5) return `Faltam ${dias} dias`;
+  return '';
+}
+
+/** Texto pronto da faixa — só strings, para atravessar do servidor ao navegador sem fuso envolvido. */
+export function conteudoFaixa(aviso: AvisoDataComemorativa | null, slugPersonalizados: string): ConteudoFaixa | null {
+  if (!aviso) return null;
+  const texto =
+    aviso.fase === 'todas'
+      ? `${aviso.nome}: peça personalizados até ${ddmm(aviso.limitePersonalizado)} e pronta entrega até ${ddmm(aviso.limiteProntaEntrega)} para receber a tempo`
+      : `${aviso.nome}: peças de pronta entrega ainda chegam a tempo se pedir até ${ddmm(aviso.limiteProntaEntrega)}`;
+  const href = aviso.fase === 'todas' ? `/produtos?categoria=${slugPersonalizados}` : '/produtos';
+  return { texto, restante: prazoRestante(aviso.diasRestantes), href };
+}

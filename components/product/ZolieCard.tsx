@@ -33,6 +33,8 @@ export interface DecoratedProduct {
 
 interface ZolieCardProps {
   product: DecoratedProduct;
+  /** Cards da primeira dobra: a foto é baixada com prioridade (melhora o LCP). */
+  prioridade?: boolean;
 }
 
 function HeartSvg({ filled, className }: { filled: boolean; className?: string }) {
@@ -52,7 +54,7 @@ function HeartSvg({ filled, className }: { filled: boolean; className?: string }
   );
 }
 
-export function ZolieCard({ product: p }: ZolieCardProps) {
+export function ZolieCard({ product: p, prioridade = false }: ZolieCardProps) {
   const [justWished, setJustWished] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const { user } = useAuth();
@@ -118,16 +120,19 @@ export function ZolieCard({ product: p }: ZolieCardProps) {
       >
         {p.imagens?.[0] ? (
           <>
+            {/* Brilho por baixo e foto visível assim que chega: escondê-la até o
+                `onLoad` deixava os cards vazios até o JavaScript hidratar. */}
             {!imgLoaded && <div className="img-skeleton-shine absolute inset-0" aria-hidden="true" />}
             <Image
               src={p.imagens[0]}
               alt={p.nome}
               fill
               sizes="(max-width: 768px) 50vw, 300px"
+              priority={prioridade}
               style={esgotado ? { filter: 'grayscale(0.4)' } : undefined}
               className={`object-cover transition-all duration-700 ease-out ${
                 segundaImagem ? 'group-hover:opacity-0' : 'group-hover:scale-[1.06]'
-              } ${imgLoaded ? (esgotado ? 'opacity-70' : 'opacity-100') : 'opacity-0'}`}
+              } ${esgotado ? 'opacity-70' : ''}`}
               onLoad={() => setImgLoaded(true)}
             />
             {segundaImagem && (

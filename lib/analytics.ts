@@ -185,3 +185,10 @@ export function trackSearch(termo: string) {
   fbqEvent('Search', { search_string: termo });
   clarityEvent('search');
 }
+
+/** Toque no botão de WhatsApp: para quem vem do Instagram, é uma conversão tão real quanto o carrinho. */
+export function trackWhatsApp(origem: string) {
+  gtagEvent('contact', { method: 'whatsapp', origem });
+  fbqEvent('Contact', {});
+  clarityEvent('whatsapp', { whatsapp_origem: origem });
+}
