@@ -55,6 +55,16 @@ export function lerOpcoes(valor: unknown): OpcaoPersonalizacao[] {
   return r.success ? r.data : [];
 }
 
+export type FormatoPingente = 'redondo' | 'coracao' | 'placa';
+
+/** Formato do desenho do pingente a partir do nome do modelo cadastrado no anúncio (texto livre). */
+export function formatoDoModelo(modelo: string | null | undefined): FormatoPingente {
+  const m = (modelo || '').toLowerCase();
+  if (m.includes('cora')) return 'coracao';
+  if (m.includes('placa') || m.includes('retang') || m.includes('escapul')) return 'placa';
+  return 'redondo';
+}
+
 export function rotuloOpcao(o: Pick<OpcaoPersonalizacao, 'modelo' | 'tamanho'>): string {
   return o.tamanho ? `${o.modelo} ${o.tamanho}` : o.modelo;
 }

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { lerCupomGuardado } from '@/lib/cupomGuardado';
 import { api, ApiError } from '@/lib/api-client';
 import { brl } from '@/lib/utils/money';
 import { useCart } from '@/components/providers/CartProvider';
@@ -60,7 +61,10 @@ export default function CarrinhoPage() {
   }, []);
 
   useEffect(() => {
-    load().catch(() => {});
+    // Cupom ganho na página do anúncio entra sozinho; se não valer mais
+    // (validade da campanha, pedido mínimo...), a sacola carrega sem ele.
+    const guardado = lerCupomGuardado()?.codigo;
+    (guardado ? load({ cupom: guardado }).catch(() => load()) : load()).catch(() => {});
   }, [load]);
 
   async function updateQty(itemId: string, quantidade: number) {
@@ -221,6 +225,11 @@ export default function CarrinhoPage() {
 
             <div className="flex flex-col gap-2 border-t border-border-subtle pt-4">
               <span className="text-xs font-medium uppercase tracking-wider text-ink">Cupom de desconto</span>
+              {cart.cupom && (
+                <span className="text-xs text-success">
+                  Cupom <strong>{cart.cupom.codigo}</strong> aplicado ✓
+                </span>
+              )}
               <div className="flex gap-2">
                 <input
                   value={cupomInput}

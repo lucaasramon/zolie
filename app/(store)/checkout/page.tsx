@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { esquecerCupomGuardado, lerCupomGuardado } from '@/lib/cupomGuardado';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api-client';
@@ -150,7 +151,10 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (modo === 'escolha') return;
     (async () => {
-      await loadCart();
+      // Cupom ganho na página do anúncio entra sozinho; se não valer mais, segue sem ele.
+      const guardado = lerCupomGuardado()?.codigo;
+      if (guardado) await loadCart(guardado).catch(() => loadCart());
+      else await loadCart();
       if (modo === 'conta') await loadAddresses();
     })();
   }, [modo, loadCart, loadAddresses]);
@@ -359,6 +363,7 @@ export default function CheckoutPage() {
   }
 
   async function onRemoverCupom() {
+    esquecerCupomGuardado();
     setCupomInput('');
     setCupomMsg(null);
     await loadCart();

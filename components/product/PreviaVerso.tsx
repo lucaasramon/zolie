@@ -1,16 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
+import { formatoDoModelo, type FormatoPingente as Formato } from '@/lib/personalizacao';
 
-type Formato = 'redondo' | 'coracao' | 'placa';
-
-/** Formato do desenho a partir do nome do modelo cadastrado no anúncio (texto livre). */
-function formatoDoModelo(modelo: string | null | undefined): Formato {
-  const m = (modelo || '').toLowerCase();
-  if (m.includes('cora')) return 'coracao';
-  if (m.includes('placa') || m.includes('retang') || m.includes('escapul')) return 'placa';
-  return 'redondo';
-}
+export { formatoDoModelo };
+export type { Formato };
 
 /** Área útil para o texto dentro de cada formato (viewBox 200×200). */
 const AREA: Record<Formato, { largura: number; centroY: number; maxLinhas: number }> = {
@@ -59,20 +53,22 @@ function diagramar(texto: string, formato: Formato) {
   return { linhas, fonte };
 }
 
-interface Props {
+interface DesenhoProps {
   texto: string;
-  modelo?: string | null;
+  formato: Formato;
   /** Material do anúncio (enum do banco): só muda a cor do metal no desenho. */
   material?: string;
+  className?: string;
 }
 
 /**
- * Prévia instantânea da gravação do verso, desenhada no navegador enquanto a
- * cliente digita (sem IA e sem custo). A letra e a posição finais seguem o
- * padrão da loja; a versão mais fiel vem na simulação com IA.
+ * O pingente desenhado em SVG com a gravação "afundada" no metal. Usado na
+ * prévia do verso do produto e, em tamanho grande, na página do anúncio.
  */
-export function PreviaVerso({ texto, modelo, material }: Props) {
-  const formato = formatoDoModelo(modelo);
+export function PingenteDesenho({ texto, formato, material, className = 'h-full w-full drop-shadow-md' }: DesenhoProps) {
+  // Ids únicos: com mais de um desenho na tela (escolha de peças), gradientes
+  // com o mesmo id fariam todos usarem as cores do primeiro.
+  const uid = useId().replace(/:/g, '');
   const dourado = material === 'BANHADO_OURO';
   const limpo = texto.trim();
   const { linhas, fonte } = diagramar(limpo, formato);
@@ -93,53 +89,73 @@ export function PreviaVerso({ texto, modelo, material }: Props) {
     : { claro: '#FBFBFC', medio: '#D3D6DB', escuro: '#9097A1', gravado: '#4F5560' };
 
   return (
+    <svg viewBox="0 0 200 200" className={className} role="img" aria-label={limpo ? `Prévia da gravação: ${limpo}` : 'Prévia da gravação'}>
+      <defs>
+        <linearGradient id={`${uid}-metal`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={metal.claro} />
+          <stop offset="45%" stopColor={metal.medio} />
+          <stop offset="100%" stopColor={metal.escuro} />
+        </linearGradient>
+        <linearGradient id={`${uid}-luz`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="50%" stopColor="#fff" stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+        </linearGradient>
+        <clipPath id={`${uid}-forma`}>
+          <path d={CONTORNO[formato]} />
+        </clipPath>
+      </defs>
+      <path d={CONTORNO[formato]} fill={`url(#${uid}-metal)`} stroke={metal.escuro} strokeWidth="2" />
+      <path d={CONTORNO[formato]} fill="none" stroke={metal.claro} strokeOpacity="0.8" strokeWidth="1.5" transform="translate(100 100) scale(0.93) translate(-100 -100)" />
+      {/* Gravação "afundada": a cópia clara deslocada para baixo imita a luz batendo na borda do sulco. */}
+      {[{ dy: 1, cor: metal.claro, opacidade: 0.9 }, { dy: 0, cor: metal.gravado, opacidade: 1 }].map(camada => (
+        <text
+          key={camada.dy}
+          x="100"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill={camada.cor}
+          fillOpacity={camada.opacidade}
+          fontSize={fonte}
+          fontFamily="var(--font-cormorant), Georgia, serif"
+          fontWeight={600}
+          clipPath={`url(#${uid}-forma)`}
+        >
+          {linhas.map((l, i) => (
+            <tspan key={i} x="100" y={primeiraY + i * alturaLinha + camada.dy}>
+              {l}
+            </tspan>
+          ))}
+        </text>
+      ))}
+      {brilho > 0 && (
+        <g clipPath={`url(#${uid}-forma)`}>
+          <rect key={brilho} className="animate-zbrilho" x="0" y="0" width="66" height="200" fill={`url(#${uid}-luz)`} style={{ transformBox: 'fill-box' }} />
+        </g>
+      )}
+    </svg>
+  );
+}
+
+interface Props {
+  texto: string;
+  modelo?: string | null;
+  /** Material do anúncio (enum do banco): só muda a cor do metal no desenho. */
+  material?: string;
+}
+
+/**
+ * Prévia instantânea da gravação do verso, desenhada no navegador enquanto a
+ * cliente digita (sem IA e sem custo). A letra e a posição finais seguem o
+ * padrão da loja; a versão mais fiel vem na simulação com IA.
+ */
+export function PreviaVerso({ texto, modelo, material }: Props) {
+  const limpo = texto.trim();
+
+  return (
     <div className="flex items-center gap-4 rounded-xl border border-border-subtle bg-bg-alt/50 p-3">
       <div className="h-28 w-28 flex-none sm:h-32 sm:w-32">
-        <svg viewBox="0 0 200 200" className="h-full w-full drop-shadow-md" role="img" aria-label={limpo ? `Prévia do verso com: ${limpo}` : 'Prévia do verso'}>
-          <defs>
-            <linearGradient id="previa-metal" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor={metal.claro} />
-              <stop offset="45%" stopColor={metal.medio} />
-              <stop offset="100%" stopColor={metal.escuro} />
-            </linearGradient>
-            <linearGradient id="previa-luz" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#fff" stopOpacity="0" />
-              <stop offset="50%" stopColor="#fff" stopOpacity="0.85" />
-              <stop offset="100%" stopColor="#fff" stopOpacity="0" />
-            </linearGradient>
-            <clipPath id="previa-forma">
-              <path d={CONTORNO[formato]} />
-            </clipPath>
-          </defs>
-          <path d={CONTORNO[formato]} fill="url(#previa-metal)" stroke={metal.escuro} strokeWidth="2" />
-          <path d={CONTORNO[formato]} fill="none" stroke={metal.claro} strokeOpacity="0.8" strokeWidth="1.5" transform="translate(100 100) scale(0.93) translate(-100 -100)" />
-          {/* Gravação "afundada": a cópia clara deslocada para baixo imita a luz batendo na borda do sulco. */}
-          {[{ dy: 1, cor: metal.claro, opacidade: 0.9 }, { dy: 0, cor: metal.gravado, opacidade: 1 }].map(camada => (
-            <text
-              key={camada.dy}
-              x="100"
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={camada.cor}
-              fillOpacity={camada.opacidade}
-              fontSize={fonte}
-              fontFamily="var(--font-cormorant), Georgia, serif"
-              fontWeight={600}
-              clipPath="url(#previa-forma)"
-            >
-              {linhas.map((l, i) => (
-                <tspan key={i} x="100" y={primeiraY + i * alturaLinha + camada.dy}>
-                  {l}
-                </tspan>
-              ))}
-            </text>
-          ))}
-          {brilho > 0 && (
-            <g clipPath="url(#previa-forma)">
-              <rect key={brilho} className="animate-zbrilho" x="0" y="0" width="66" height="200" fill="url(#previa-luz)" style={{ transformBox: 'fill-box' }} />
-            </g>
-          )}
-        </svg>
+        <PingenteDesenho texto={texto} formato={formatoDoModelo(modelo)} material={material} />
       </div>
       <div className="flex min-w-0 flex-col gap-1">
         <span className="text-xs font-semibold uppercase tracking-wider text-ink">Prévia do verso</span>

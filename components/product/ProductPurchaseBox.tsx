@@ -17,17 +17,7 @@ import {
 } from '@/components/product/PersonalizacaoForm';
 import { assinaturaEscolhas, ResultadoSimulacao, SimulacaoIA } from '@/components/product/SimulacaoIA';
 import { diasPreparo, somarDiasUteis } from '@/lib/utils/prazoEntrega';
-
-/** A personalização em andamento fica guardada no navegador por uma semana. */
-const RASCUNHO_VALIDADE_MS = 7 * 86_400_000;
-const chaveRascunho = (productId: string) => `zolie:personalizacao:${productId}`;
-
-interface Rascunho {
-  personalizacao: PersonalizacaoState;
-  tamanho: string;
-  simulacao: ResultadoSimulacao | null;
-  salvoEm: number;
-}
+import { chaveRascunho, RASCUNHO_VALIDADE_MS, type Rascunho } from '@/lib/rascunhoPersonalizacao';
 
 const dataCurta = (d: Date) => d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
 

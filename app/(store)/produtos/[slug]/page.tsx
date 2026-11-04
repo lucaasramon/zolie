@@ -9,6 +9,7 @@ import { list as listReviews } from '@/lib/services/review.service';
 import { ZolieCard } from '@/components/product/ZolieCard';
 import { SetSuggestion } from '@/components/product/SetSuggestion';
 import { ProductPurchaseBox } from '@/components/product/ProductPurchaseBox';
+import { AvisoCupomGuardado } from '@/components/product/AvisoCupomGuardado';
 import { NotifyStockForm } from '@/components/product/NotifyStockForm';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { ProductSocialProof } from '@/components/product/ProductSocialProof';
@@ -212,6 +213,10 @@ export default async function ProdutoPage({ params }: Props) {
 
           <ProductSocialProof productId={produto.id} />
 
+          {/* `#comprar`: a página do anúncio (/s/gravacao) traz a cliente direto
+              para cá, com a personalização dela já preenchida. */}
+          <div id="comprar" className="scroll-mt-36">
+          <AvisoCupomGuardado />
           {produto.disponivel ? (
             <ProductPurchaseBox
               productId={produto.id}
@@ -229,6 +234,7 @@ export default async function ProdutoPage({ params }: Props) {
           ) : (
             <NotifyStockForm productId={produto.id} />
           )}
+          </div>
         </div>
       </div>
 

@@ -192,3 +192,12 @@ export function trackWhatsApp(origem: string) {
   fbqEvent('Contact', {});
   clarityEvent('whatsapp', { whatsapp_origem: origem });
 }
+
+/**
+ * Etapas da página de story do anúncio (/s/gravacao). No Clarity, filtrar
+ * sessões por `story_<etapa>` mostra exatamente em qual tela as pessoas saem.
+ */
+export function trackStory(etapa: string, tags?: Record<string, string>) {
+  gtagEvent('story_etapa', { etapa });
+  clarityEvent(`story_${etapa}`, tags);
+}

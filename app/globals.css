@@ -361,3 +361,45 @@ a:hover {
     display: none;
   }
 }
+
+/* ——— Página de story do anúncio (/s/gravacao) ———
+   Barra de progresso que enche como a dos stories (pausa enquanto o dedo
+   segura a tela), o cupom "saindo do envelope" e o balançar do pingente. */
+@keyframes zstory-barra {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+@keyframes zcupom {
+  0% { opacity: 0; transform: translateY(46px) rotate(-6deg) scale(0.92); }
+  60% { opacity: 1; transform: translateY(-6px) rotate(1.5deg) scale(1.01); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes zbalanco {
+  0%, 100% { transform: rotate(-2.2deg); }
+  50% { transform: rotate(2.2deg); }
+}
+@keyframes zbrilho-cupom {
+  0%, 55% { transform: translateX(-130%) skewX(-20deg); }
+  100% { transform: translateX(260%) skewX(-20deg); }
+}
+.animate-zstory-barra {
+  animation: zstory-barra linear both;
+  transform-origin: left;
+}
+.animate-zcupom {
+  animation: zcupom 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-zbalanco {
+  animation: zbalanco 4.5s ease-in-out infinite;
+  transform-origin: 50% 0;
+}
+.animate-zbrilho-cupom {
+  animation: zbrilho-cupom 3.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-zcupom,
+  .animate-zbalanco,
+  .animate-zbrilho-cupom {
+    animation: none;
+  }
+}

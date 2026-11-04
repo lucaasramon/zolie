@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { analyticsAtivo, CONSENT_STORAGE_KEY, aplicarConsentimento } from '@/lib/analytics';
 
 /**
@@ -10,6 +11,10 @@ import { analyticsAtivo, CONSENT_STORAGE_KEY, aplicarConsentimento } from '@/lib
  */
 export function CookieConsent() {
   const [visivel, setVisivel] = useState(false);
+  // Na página de story do anúncio (/s/...) o aviso cobriria os botões do story.
+  // Sem decisão, nada é rastreado (padrão negado); ele aparece quando a pessoa
+  // seguir para a loja.
+  const noStory = usePathname()?.startsWith('/s/') ?? false;
 
   useEffect(() => {
     if (!analyticsAtivo) return;
@@ -23,7 +28,7 @@ export function CookieConsent() {
     setVisivel(false);
   }
 
-  if (!visivel) return null;
+  if (!visivel || noStory) return null;
 
   // Faixa fina: no celular o banner antigo cobria a parte de baixo da tela,
   // exatamente onde começam os produtos para quem chega pelo Instagram.
