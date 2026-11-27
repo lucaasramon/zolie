@@ -88,11 +88,6 @@ export function ZolieCard({ product: p, prioridade = false }: ZolieCardProps) {
           </span>
         ) : (
           <>
-            {p.blackFriday && (
-              <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-xs">
-                Black Friday
-              </span>
-            )}
             {p.temDesconto && (
               <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink shadow-xs">
                 -{p.percentualDesconto}%
@@ -181,7 +176,14 @@ export function ZolieCard({ product: p, prioridade = false }: ZolieCardProps) {
             <span className="text-[11px] font-light text-ink-tertiary line-through">{brl(p.preco)}</span>
           )}
           {p.precoVariavel && <span className="text-[10px] font-light uppercase tracking-wider text-ink-tertiary">A partir de</span>}
-          <span className="text-lg font-medium leading-tight tracking-tight text-ink">{brl(p.precoEfetivo)}</span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-lg font-medium leading-tight tracking-tight text-ink">{brl(p.precoEfetivo)}</span>
+            {p.blackFriday && !esgotado && (
+              <span className="whitespace-nowrap rounded-full bg-ink px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-white">
+                Black Friday
+              </span>
+            )}
+          </div>
           <span className="text-[10.5px] font-light text-ink-tertiary">
             ou {p.maxParcelas}x de {brl(p.parcela)}
           </span>

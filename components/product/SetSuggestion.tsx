@@ -58,11 +58,6 @@ function SetPieceCard({ piece, destaque = false }: { piece: SetPiece; destaque?:
       }`}
     >
       <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1">
-        {piece.blackFriday && (
-          <span className="rounded-sm bg-ink px-1.5 py-1 text-[9px] font-medium uppercase tracking-[0.1em] text-white">
-            Black Friday
-          </span>
-        )}
         {piece.temDesconto && (
           <span className="rounded-sm bg-gold px-1.5 py-1 text-[9px] font-medium uppercase tracking-[0.1em] text-ink">
             -{piece.percentualDesconto}%
@@ -105,7 +100,14 @@ function SetPieceCard({ piece, destaque = false }: { piece: SetPiece; destaque?:
           {piece.temDesconto && (
             <span className="text-[10px] font-light text-ink-tertiary line-through">{brl(piece.preco)}</span>
           )}
-          <span className="text-base font-medium leading-tight text-ink">{brl(piece.precoEfetivo)}</span>
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+            <span className="text-base font-medium leading-tight text-ink">{brl(piece.precoEfetivo)}</span>
+            {piece.blackFriday && (
+              <span className="whitespace-nowrap rounded-sm bg-ink px-1.5 py-0.5 text-[8.5px] font-medium uppercase tracking-[0.08em] text-white">
+                Black Friday
+              </span>
+            )}
+          </div>
           <span className="text-[10px] font-light text-ink-tertiary">ou {piece.maxParcelas}x de {brl(piece.parcela)}</span>
         </div>
         {piece.estoqueBaixo && (

@@ -190,11 +190,6 @@ export default async function ProdutoPage({ params }: Props) {
             </div>
 
             <div className="mt-5 flex flex-col gap-1 border-t border-border-subtle bg-bg-alt/60 px-6 py-5">
-              {produto.blackFriday && (
-                <span className="mb-1 self-start rounded-full bg-ink px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white shadow-xs">
-                  Black Friday
-                </span>
-              )}
               {produto.temDesconto && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-light text-ink-tertiary line-through">{brl(produto.preco)}</span>
@@ -202,7 +197,14 @@ export default async function ProdutoPage({ params }: Props) {
                 </div>
               )}
               {produto.precoVariavel && <span className="text-xs font-light uppercase tracking-wider text-ink-tertiary">A partir de</span>}
-              <span className="text-[38px] font-medium leading-tight tracking-tight text-ink">{brl(produto.precoEfetivo)}</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="text-[38px] font-medium leading-tight tracking-tight text-ink">{brl(produto.precoEfetivo)}</span>
+                {produto.blackFriday && (
+                  <span className="whitespace-nowrap rounded-full bg-ink px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white shadow-xs">
+                    Black Friday
+                  </span>
+                )}
+              </div>
               <span className="text-sm font-light text-ink-tertiary">ou {produto.maxParcelas}x de {brl(produto.parcela)} sem juros</span>
             </div>
           </div>
