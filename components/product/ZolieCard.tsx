@@ -29,6 +29,7 @@ export interface DecoratedProduct {
   lancamento?: boolean;
   imagens?: string[];
   precoVariavel?: boolean;
+  blackFriday?: boolean;
 }
 
 interface ZolieCardProps {
@@ -87,6 +88,11 @@ export function ZolieCard({ product: p, prioridade = false }: ZolieCardProps) {
           </span>
         ) : (
           <>
+            {p.blackFriday && (
+              <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-xs">
+                Black Friday
+              </span>
+            )}
             {p.temDesconto && (
               <span className="rounded-full bg-gold px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-ink shadow-xs">
                 -{p.percentualDesconto}%

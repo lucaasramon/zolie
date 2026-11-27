@@ -9,6 +9,7 @@ import * as siteConfig from '@/lib/services/site-config.service';
 import { slugify } from '@/lib/utils/slug';
 import { notificarReposicao } from '@/lib/services/stockNotification.service';
 import { lerOpcoes } from '@/lib/personalizacao';
+import { emBlackFriday } from '@/lib/black-friday';
 
 // Campos de custo/margem — informação interna de negócio, nunca exposta pela
 // API pública. `decorate` os descarta; `decorateAdmin` os inclui para as telas /admin/*.
@@ -47,6 +48,7 @@ export function decorate(p: any) {
     ),
     estoqueBaixo: p.estoque > 0 && p.estoque <= 8,
     disponivel: p.estoque > 0,
+    blackFriday: emBlackFriday(p.slug),
   };
 
   // Rede de segurança: se algum campo de custo escapar da remoção acima (ex: um

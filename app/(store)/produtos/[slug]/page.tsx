@@ -190,6 +190,11 @@ export default async function ProdutoPage({ params }: Props) {
             </div>
 
             <div className="mt-5 flex flex-col gap-1 border-t border-border-subtle bg-bg-alt/60 px-6 py-5">
+              {produto.blackFriday && (
+                <span className="mb-1 self-start rounded-full bg-ink px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-white shadow-xs">
+                  Black Friday
+                </span>
+              )}
               {produto.temDesconto && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-light text-ink-tertiary line-through">{brl(produto.preco)}</span>

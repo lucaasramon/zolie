@@ -23,6 +23,7 @@ export interface SetPiece {
   estoque: number;
   estoqueBaixo: boolean;
   lancamento?: boolean;
+  blackFriday?: boolean;
   imagens?: string[];
   personalizado?: boolean;
 }
@@ -57,6 +58,11 @@ function SetPieceCard({ piece, destaque = false }: { piece: SetPiece; destaque?:
       }`}
     >
       <div className="absolute left-2 top-2 z-[2] flex flex-col items-start gap-1">
+        {piece.blackFriday && (
+          <span className="rounded-sm bg-ink px-1.5 py-1 text-[9px] font-medium uppercase tracking-[0.1em] text-white">
+            Black Friday
+          </span>
+        )}
         {piece.temDesconto && (
           <span className="rounded-sm bg-gold px-1.5 py-1 text-[9px] font-medium uppercase tracking-[0.1em] text-ink">
             -{piece.percentualDesconto}%
