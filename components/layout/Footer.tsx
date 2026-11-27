@@ -36,7 +36,7 @@ const SELOS = [
   { titulo: 'Garantia do banho', texto: 'Ouro 18k reforçado' },
 ];
 
-export function Footer({ categorias }: { categorias: Categoria[] }) {
+export function Footer({ categorias, blackFriday = false }: { categorias: Categoria[]; blackFriday?: boolean }) {
   const { user } = useAuth();
   const whatsapp = linkWhatsApp('Olá! Vim pelo site da Zoliê.');
   const instagram = LOJA.instagram
@@ -57,11 +57,17 @@ export function Footer({ categorias }: { categorias: Categoria[] }) {
         </div>
       </div>
 
-      <div className="z-dark-glow text-[#CFC7B8]">
+      <div className={`${blackFriday ? 'z-black-glow border-t border-gold/40' : 'z-dark-glow'} text-[#CFC7B8]`}>
         <div className="mx-auto grid max-w-[1280px] grid-cols-1 gap-10 px-5 py-14 sm:grid-cols-2 lg:grid-cols-4">
           <div className="flex flex-col gap-4">
             <div className="flex items-center gap-3">
-              <Image src="/images/zolie.png" alt="Zoliê Semijoias" width={38} height={48} className="h-12 w-auto object-contain" />
+              <Image
+                src="/images/zolie.png"
+                alt="Zoliê Semijoias"
+                width={38}
+                height={48}
+                className={`h-12 w-auto object-contain ${blackFriday ? 'invert mix-blend-lighten' : ''}`}
+              />
               <span className="flex flex-col gap-0.5">
                 <span className="font-serif text-[26px] leading-none tracking-[0.14em] text-white">ZOLIÊ</span>
                 <span className="text-[8px] font-light uppercase leading-none tracking-[0.34em] text-gold">semijoias</span>

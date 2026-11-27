@@ -26,7 +26,23 @@ interface Suggestion {
   precoEfetivo: number;
 }
 
-export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; avisos?: string[] }) {
+interface BlackFridayInfo {
+  /** Maior desconto da campanha ("até X% off"); `null` omite o número. */
+  desconto: number | null;
+  /** "Último dia!", "Termina amanhã" ou "Só até 30/11". */
+  prazo: string;
+}
+
+export function Header({
+  categorias,
+  avisos = [],
+  blackFriday = null,
+}: {
+  categorias: Categoria[];
+  avisos?: string[];
+  /** Presente só durante a campanha: faixa e cabeçalho ficam pretos. */
+  blackFriday?: BlackFridayInfo | null;
+}) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [catPos, setCatPos] = useState({ top: 0, left: 0 });
@@ -147,7 +163,25 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
 
   return (
     <>
-      {avisos.length > 0 && (
+      {blackFriday ? (
+        <Link
+          href="/produtos?blackfriday=true"
+          className="z-black-glow group relative block overflow-hidden border-b border-gold/40"
+        >
+          <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-2.5 text-center sm:gap-x-4">
+            <span className="font-serif text-[13px] font-semibold uppercase tracking-[0.28em] text-gold sm:text-sm">Black Friday Zoliê</span>
+            {blackFriday.desconto && (
+              <span className="rounded-full bg-gold px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[#0b0a09] sm:text-[11px]">
+                Até {blackFriday.desconto}% off
+              </span>
+            )}
+            <span className="text-[10px] font-light uppercase tracking-[0.2em] text-[#E8DEC9] sm:text-[11px]">{blackFriday.prazo}</span>
+            <span className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-gold underline-offset-4 group-hover:underline sm:text-[11px]">
+              Ver ofertas →
+            </span>
+          </div>
+        </Link>
+      ) : avisos.length > 0 && (
         <div className="z-dark-glow relative overflow-hidden">
           <div className="mx-auto flex max-w-[1280px] items-center justify-center gap-3 px-5 py-2 sm:gap-5">
             {avisos.map((aviso, i) => (
@@ -162,9 +196,9 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
         </div>
       )}
       <header
-        className={`sticky top-0 z-40 border-b bg-white/85 backdrop-blur-md transition-shadow duration-300 ${
-          scrolled ? 'border-border-subtle shadow-sm' : 'border-transparent'
-        }`}
+        className={`sticky top-0 z-40 border-b backdrop-blur-md transition-shadow duration-300 ${
+          blackFriday ? 'tema-black bg-[#0b0a09]/95' : 'bg-white/85'
+        } ${scrolled ? 'border-border-subtle shadow-sm' : 'border-transparent'}`}
       >
         <div
           className={`mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-[22px] gap-y-3.5 px-5 py-3.5 transition-[padding] duration-300 ${
@@ -190,7 +224,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
               height={48}
               className={`h-11 w-auto flex-none object-contain transition-all duration-300 group-hover:scale-105 ${
                 compact ? 'max-md:h-8' : ''
-              }`}
+              } ${blackFriday ? 'invert mix-blend-lighten' : ''}`}
             />
             <span className={`flex flex-col items-start gap-px ${hideCompact}`}>
               <span className="font-serif text-[26px] leading-none tracking-[0.14em] text-ink">ZOLIÊ</span>
@@ -232,7 +266,7 @@ export function Header({ categorias, avisos = [] }: { categorias: Categoria[]; a
             </div>
 
             {showSuggestions && suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-2 flex flex-col overflow-hidden rounded-xl bg-white py-1.5 shadow-lg animate-zfade">
+              <div className="tema-claro absolute left-0 right-0 top-full z-50 mt-2 flex flex-col overflow-hidden rounded-xl bg-white py-1.5 shadow-lg animate-zfade">
                 {suggestions.map(s => (
                   <Link
                     key={s.id}

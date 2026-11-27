@@ -7,9 +7,16 @@ import { FaixaDataComemorativa } from '@/components/layout/FaixaDataComemorativa
 import { ConsultoriaButton } from '@/components/consultoria/ConsultoriaButton';
 import { linkWhatsApp } from '@/lib/loja';
 import { avisoDataComemorativa, conteudoFaixa, hojeNoBrasil } from '@/lib/utils/datasComemorativas';
+import { blackFridayAtiva, prazoBlackFriday } from '@/lib/black-friday';
+import { maiorDescontoBlackFriday } from '@/lib/services/product.service';
 
 export async function StoreShell({ children }: { children: React.ReactNode }) {
-  const [categorias] = await Promise.all([listParaLoja(), siteConfig.preparar()]);
+  const blackFriday = blackFridayAtiva();
+  const [categorias, , maiorDesconto] = await Promise.all([
+    listParaLoja(),
+    siteConfig.preparar(),
+    blackFriday ? maiorDescontoBlackFriday().catch(() => null) : Promise.resolve(null),
+  ]);
   const { freteGratisAtivo, faixaDatasAtiva } = siteConfig.get();
   const categoriasSimple = categorias.map(c => ({ nome: c.nome, slug: c.slug }));
   const whatsappHref = linkWhatsApp('Olá! Vim pelo site da Zoliê e gostaria de tirar uma dúvida.');
@@ -24,15 +31,21 @@ export async function StoreShell({ children }: { children: React.ReactNode }) {
     // rolagem, o que quebraria o `sticky` do cabeçalho. O Safari do iOS nem sempre
     // respeita só o overflow do body.
     <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
-      {faixaDatasAtiva && (
+      {/* Na Black, a faixa da campanha toma o lugar da de datas comemorativas:
+          duas faixas no topo empurrariam a vitrine para baixo. */}
+      {faixaDatasAtiva && !blackFriday && (
         <FaixaDataComemorativa
           slugPersonalizados={SLUG_PERSONALIZADOS}
           inicial={conteudoFaixa(avisoDataComemorativa(hojeNoBrasil()), SLUG_PERSONALIZADOS)}
         />
       )}
-      <Header categorias={categoriasSimple} avisos={avisos} />
+      <Header
+        categorias={categoriasSimple}
+        avisos={avisos}
+        blackFriday={blackFriday ? { desconto: maiorDesconto, prazo: prazoBlackFriday() } : null}
+      />
       <main className="flex-1">{children}</main>
-      <Footer categorias={categoriasSimple} />
+      <Footer categorias={categoriasSimple} blackFriday={blackFriday} />
       {whatsappHref && <WhatsAppButton href={whatsappHref} />}
       <ConsultoriaButton whatsappHref={whatsappHref} />
     </div>

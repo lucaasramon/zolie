@@ -1,5 +1,6 @@
 import { Material, Prisma, PrismaClient } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
+import { BLACK_FRIDAY_SLUGS } from '@/lib/black-friday';
 
 type Db = PrismaClient | Prisma.TransactionClient;
 
@@ -13,6 +14,8 @@ export interface ProductFilters {
   destaque?: boolean;
   lancamento?: boolean;
   promocao?: boolean;
+  /** Só as peças da campanha Black Friday (lista em lib/black-friday.ts). */
+  blackFriday?: boolean;
   personalizado?: boolean;
   precoMin?: string | number;
   precoMax?: string | number;
@@ -99,6 +102,7 @@ export const productRepo = {
     if (filters.destaque) conditions.push(Prisma.sql`p.destaque = true`);
     if (filters.lancamento) conditions.push(Prisma.sql`p.lancamento = true`);
     if (filters.promocao) conditions.push(Prisma.sql`p.preco_promocional IS NOT NULL`);
+    if (filters.blackFriday) conditions.push(Prisma.sql`p.slug IN (${Prisma.join([...BLACK_FRIDAY_SLUGS])})`);
     const precoMin = numeroOuUndefined(filters.precoMin);
     const precoMax = numeroOuUndefined(filters.precoMax);
     if (precoMin != null) conditions.push(Prisma.sql`${PRECO_EFETIVO_SQL} >= ${precoMin}`);

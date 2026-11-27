@@ -9,7 +9,7 @@ import * as siteConfig from '@/lib/services/site-config.service';
 import { slugify } from '@/lib/utils/slug';
 import { notificarReposicao } from '@/lib/services/stockNotification.service';
 import { lerOpcoes } from '@/lib/personalizacao';
-import { emBlackFriday } from '@/lib/black-friday';
+import { BLACK_FRIDAY_SLUGS, emBlackFriday } from '@/lib/black-friday';
 
 // Campos de custo/margem — informação interna de negócio, nunca exposta pela
 // API pública. `decorate` os descarta; `decorateAdmin` os inclui para as telas /admin/*.
@@ -76,6 +76,20 @@ export async function list(filters: ProductFilters, sort: string, pagination: { 
   await siteConfig.preparar();
   const { total, items } = await productRepo.search(filters, sort, pagination);
   return { total, items: items.map(decorate) };
+}
+
+/**
+ * Maior desconto entre as peças da Black Friday ativas e com preço promocional —
+ * o "até X% off" da faixa. `null` quando nenhuma tem desconto (a faixa omite o número).
+ */
+export async function maiorDescontoBlackFriday(): Promise<number | null> {
+  const pecas = await prisma.product.findMany({
+    where: { slug: { in: [...BLACK_FRIDAY_SLUGS] }, ativo: true, precoPromocional: { not: null } },
+    select: { preco: true, precoPromocional: true },
+  });
+  const descontos = pecas.map(p => Math.round((1 - Number(p.precoPromocional) / Number(p.preco)) * 100));
+  const maior = Math.max(0, ...descontos);
+  return maior > 0 ? maior : null;
 }
 
 /** Igual a `list`, mas com custos visíveis e incluindo produtos pausados — uso restrito à listagem em /admin/produtos. */

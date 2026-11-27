@@ -320,6 +320,59 @@ a:hover {
     var(--color-ink);
 }
 
+/* Black Friday: preto de verdade (não o marrom-escuro da marca), com brilho dourado. */
+.z-black-glow {
+  background:
+    radial-gradient(1200px 400px at 85% -10%, rgba(212, 175, 55, 0.16), transparent 60%),
+    radial-gradient(900px 380px at 0% 110%, rgba(212, 175, 55, 0.08), transparent 55%),
+    #0b0a09;
+}
+
+/*
+ * Tema Black Friday do cabeçalho: inverte os tokens de cor dentro do bloco, então
+ * os mesmos `text-ink`, `bg-bg-alt`, `hover:bg-hoverbg` passam a funcionar sobre o
+ * preto sem duplicar o componente. Painéis brancos que abrem dentro dele (sugestões
+ * da busca) usam `.tema-claro` para voltar aos tokens normais.
+ */
+.tema-black {
+  --color-ink: #f4eee2;
+  --color-ink-secondary: #bdb3a3;
+  --color-ink-muted: #d6ccbb;
+  --color-ink-tertiary: #a39886;
+  --color-gold-text: #e2c46a;
+  --color-gold-text-hover: #f0d27a;
+  --color-bg-alt: #221f1a;
+  --color-hoverbg: #1c1a16;
+  --color-border: #34302a;
+  --color-border-soft: #34302a;
+  --color-border-subtle: #26231e;
+}
+/* Sobre o dourado o texto continua escuro, senão o creme do tema sumiria no ouro. */
+.tema-black .bg-gold,
+.tema-black .group:hover .group-hover\:bg-gold {
+  color: #2e2a24;
+}
+.tema-black .group:hover .group-hover\:bg-ink {
+  color: #0b0a09;
+}
+/* A busca clareia ao focar; no preto ela só fica um tom acima, com o texto legível. */
+.tema-black .focus-within\:bg-white:focus-within {
+  background-color: #26231e;
+}
+.tema-claro {
+  --color-ink: #2e2a24;
+  --color-ink-secondary: #6b6259;
+  --color-ink-muted: #4a443b;
+  --color-ink-tertiary: #8f857c;
+  --color-gold-text: #8a6b12;
+  --color-gold-text-hover: #7e6210;
+  --color-bg-alt: #fbf9f4;
+  --color-hoverbg: #f7f4ec;
+  --color-border: #eae4d8;
+  --color-border-soft: #e3dbcc;
+  --color-border-subtle: #f2eee7;
+}
+
 .img-placeholder {
   background: repeating-linear-gradient(135deg, #F7F4EC 0 7px, #EFE9DC 7px 14px);
 }

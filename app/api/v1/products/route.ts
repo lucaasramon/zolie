@@ -20,6 +20,7 @@ export const GET = withErrorHandling(async req => {
     destaque: sp.get('destaque') === 'true',
     lancamento: sp.get('lancamento') === 'true',
     promocao: sp.get('promocao') === 'true',
+    blackFriday: sp.get('blackfriday') === 'true',
   };
   const { total, items } = await list(filters, sp.get('sort') ?? 'relevancia', pagination);
   return ok(items, meta(total, pagination));

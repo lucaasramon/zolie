@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   // Só a listagem "limpa", as de categoria e a paginação delas são indexáveis.
   // Combinações de filtro, ordenação e busca geram infinitas URLs de conteúdo
   // praticamente igual — indexá-las dilui a relevância e desperdiça crawl budget.
-  const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'sort'];
+  const filtrosSecundarios = ['q', 'material', 'pedra', 'tamanho', 'notaMin', 'precoMin', 'precoMax', 'promocao', 'blackfriday', 'sort'];
   const temFiltroSecundario = filtrosSecundarios.some(f => sp[f]);
   const page = Math.max(1, Math.floor(Number(sp.page)) || 1);
 
@@ -90,6 +90,7 @@ export default async function ProdutosPage({ searchParams }: Props) {
     precoMin: sp.precoMin,
     precoMax: sp.precoMax,
     promocao: sp.promocao === 'true',
+    blackFriday: sp.blackfriday === 'true',
   };
   const sort = sp.sort || 'relevancia';
   // A abertura só aparece na primeira página da categoria, sem busca: em filtros
@@ -118,7 +119,13 @@ export default async function ProdutosPage({ searchParams }: Props) {
   ].slice(0, FOTOS_INTRO);
 
   const categoriaAtual = categorias.find(c => c.slug === sp.categoria);
-  const titulo = sp.q ? `Resultados para "${sp.q}"` : categoriaAtual ? categoriaAtual.nome : 'Todas as peças';
+  const titulo = sp.q
+    ? `Resultados para "${sp.q}"`
+    : sp.blackfriday === 'true'
+      ? 'Black Friday'
+      : categoriaAtual
+        ? categoriaAtual.nome
+        : 'Todas as peças';
   const totalPages = Math.max(1, Math.ceil(total / perPage));
   // Página além da última viraria uma página vazia indexável (conteúdo ralo).
   if (page > totalPages) notFound();

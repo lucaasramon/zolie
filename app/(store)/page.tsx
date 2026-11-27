@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { organizationJsonLd, websiteJsonLd, jsonLdScript } from '@/lib/utils/jsonLd';
 import { OG_BASE } from '@/lib/utils/seo';
-import { list as listProducts } from '@/lib/services/product.service';
+import { list as listProducts, maiorDescontoBlackFriday } from '@/lib/services/product.service';
+import { blackFridayAtiva, prazoBlackFriday } from '@/lib/black-friday';
 import { list as listBanners } from '@/lib/services/banner.service';
 import { listParaLoja, SLUG_PERSONALIZADOS } from '@/lib/services/category.service';
 import * as siteConfig from '@/lib/services/site-config.service';
@@ -78,13 +79,17 @@ const DIFERENCIAIS_BASE = [
 export default async function HomePage() {
   await siteConfig.preparar();
   const { freteGratisAtivo } = siteConfig.get();
-  const [categorias, banners, personalizados, ofertas, maisAmadas, lancamentos] = await Promise.all([
+  const blackFriday = blackFridayAtiva();
+  const semBlackFriday = { total: 0, items: [] as DecoratedProduct[] };
+  const [categorias, banners, personalizados, ofertas, maisAmadas, lancamentos, ofertasBlack, descontoBlack] = await Promise.all([
     listParaLoja(),
     listBanners(),
     listProducts({ personalizado: true }, 'relevancia', { skip: 0, take: 4 }),
     listProducts({ promocao: true }, 'relevancia', { skip: 0, take: 4 }),
     listProducts({ destaque: true }, 'mais_vendidos', { skip: 0, take: 4 }),
     listProducts({ lancamento: true }, 'lancamentos', { skip: 0, take: 4 }),
+    blackFriday ? listProducts({ blackFriday: true }, 'mais_vendidos', { skip: 0, take: 8 }) : Promise.resolve(semBlackFriday),
+    blackFriday ? maiorDescontoBlackFriday() : Promise.resolve(null),
   ]);
   const diferenciais = freteGratisAtivo
     ? [{ icone: TruckIcon, titulo: 'Frete grátis', texto: 'Acima de R$ 199 em todo o Brasil.' }, ...DIFERENCIAIS_BASE]
@@ -100,6 +105,11 @@ export default async function HomePage() {
           o h1 diz ao Google do que a loja trata sem alterar o layout. */}
       <h1 className="sr-only">Zoliê Semijoias — semijoias em prata 925 e banho de ouro 18k</h1>
       <HeroCarousel banners={banners} />
+
+      {/* Sem <Reveal>: logo abaixo do banner, a vitrine já aparece na primeira dobra. */}
+      {ofertasBlack.items.length > 0 && (
+        <SecaoBlackFriday products={ofertasBlack.items} total={ofertasBlack.total} desconto={descontoBlack} prazo={prazoBlackFriday()} />
+      )}
 
       <Reveal>
         <section className="mx-auto max-w-[1280px] px-5 pt-12">
@@ -206,6 +216,56 @@ export default async function HomePage() {
         </section>
       </Reveal>
     </div>
+  );
+}
+
+/** Vitrine da Black Friday: fundo preto com dourado; os cards seguem brancos para as fotos brilharem. */
+function SecaoBlackFriday({
+  products,
+  total,
+  desconto,
+  prazo,
+}: {
+  products: DecoratedProduct[];
+  total: number;
+  desconto: number | null;
+  prazo: string;
+}) {
+  const href = '/produtos?blackfriday=true';
+  return (
+    <section className="z-black-glow border-y border-gold/40">
+      <div className="mx-auto max-w-[1280px] px-5 py-10 sm:py-12">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div className="flex max-w-xl flex-col gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-[0.3em] text-gold">{prazo}</span>
+            <h2 className="font-serif text-[34px] font-medium uppercase leading-none tracking-[0.08em] text-white sm:text-[44px]">
+              Black Friday
+            </h2>
+            <p className="text-sm font-light leading-relaxed text-[#CFC7B8]">
+              {desconto ? (
+                <>
+                  Peças selecionadas com <span className="font-semibold text-gold">até {desconto}% off</span>, em até 12x sem juros.
+                </>
+              ) : (
+                'Peças selecionadas com preço especial, em até 12x sem juros.'
+              )}
+            </p>
+          </div>
+          <Link
+            href={href}
+            className="group mb-1 flex items-center gap-2 rounded-full border border-gold/60 px-5 py-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-gold transition-colors hover:bg-gold hover:text-[#0b0a09]"
+          >
+            Ver as {total} ofertas
+            <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+          {products.map((p, i) => (
+            <ZolieCard key={p.id} product={p} prioridade={i < 2} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
