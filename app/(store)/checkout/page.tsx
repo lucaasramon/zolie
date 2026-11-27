@@ -15,6 +15,7 @@ import { tokenizeCard } from '@/lib/asaasJs';
 import { cpfValido, formatarCpf, normalizarCpf } from '@/lib/utils/cpf';
 import { trackBeginCheckout, trackPurchase } from '@/lib/analytics';
 import { diasPreparo, somarDiasUteis } from '@/lib/utils/prazoEntrega';
+import { RETIRADA } from '@/lib/loja';
 
 interface Address {
   id: string;
@@ -68,6 +69,12 @@ async function buscarEnderecoPorCep(cepLimpo: string): Promise<{ rua: string; ba
   }
 }
 
+// Retirada sem e-mail: o CPF identifica o pedido na consulta pública de status.
+function urlStatusPublico(p: { numero: string; email: string; cpf: string }): string {
+  const segredo = p.email ? `email=${encodeURIComponent(p.email)}` : `cpf=${encodeURIComponent(normalizarCpf(p.cpf))}`;
+  return `/orders/publico/status?numero=${encodeURIComponent(p.numero)}&${segredo}`;
+}
+
 function describeError(err: unknown, fallback: string): string {
   if (!(err instanceof ApiError)) return fallback;
   const issues = err.issues as ZodIssue[] | undefined;
@@ -98,7 +105,7 @@ export default function CheckoutPage() {
   const [parcelas, setParcelas] = useState(1);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
-  const [pedidoConcluido, setPedidoConcluido] = useState<{ numero: string; pagamento: any; email: string } | null>(null);
+  const [pedidoConcluido, setPedidoConcluido] = useState<{ numero: string; pagamento: any; email: string; cpf: string; retirada: boolean } | null>(null);
   // Só passa a `true` quando a consulta pública de status confirma o pagamento
   // (Pix/boleto) — cartão já confirma (ou não) na hora, então não faz polling.
   const [pagamentoConfirmado, setPagamentoConfirmado] = useState(false);
@@ -117,6 +124,12 @@ export default function CheckoutPage() {
   const [cupomAplicado, setCupomAplicado] = useState<{ codigo: string; descricao: string; freteGratis: boolean } | null>(null);
   const [cupomMsg, setCupomMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [aplicandoCupom, setAplicandoCupom] = useState(false);
+  // Retirada em Fortaleza/CE: pula endereço e frete; a entrega é combinada pelo WhatsApp.
+  const [retirada, setRetirada] = useState(false);
+  // CEP e número do titular do cartão — só pedidos na retirada (sem endereço de entrega).
+  const [titular, setTitular] = useState({ cep: '', numero: '' });
+  // Convidada que não deu e-mail: o cartão pede um, então o campo aparece no pagamento.
+  const [pedirEmailTitular, setPedirEmailTitular] = useState(false);
 
   // Declarado cedo (não junto de `guestContatoValido`, mais abaixo) porque o
   // effect de verificação de e-mail existente, logo a seguir, já depende dele.
@@ -244,9 +257,7 @@ export default function CheckoutPage() {
 
     const checar = async () => {
       try {
-        const { data } = await api.get<{ pago: boolean }>(
-          `/orders/publico/status?numero=${encodeURIComponent(pedidoConcluido.numero)}&email=${encodeURIComponent(pedidoConcluido.email)}`,
-        );
+        const { data } = await api.get<{ pago: boolean }>(urlStatusPublico(pedidoConcluido));
         if (!cancelado && data.pago) setPagamentoConfirmado(true);
       } catch {
         // Tenta de novo no próximo tick do polling.
@@ -318,9 +329,7 @@ export default function CheckoutPage() {
     setVerificandoPagamentoAgora(true);
     setPagamentoAindaPendente(false);
     try {
-      const { data } = await api.get<{ pago: boolean }>(
-        `/orders/publico/status?numero=${encodeURIComponent(pedidoConcluido.numero)}&email=${encodeURIComponent(pedidoConcluido.email)}`,
-      );
+      const { data } = await api.get<{ pago: boolean }>(urlStatusPublico(pedidoConcluido));
       if (data.pago) setPagamentoConfirmado(true);
       else setPagamentoAindaPendente(true);
     } catch (err) {
@@ -338,6 +347,16 @@ export default function CheckoutPage() {
     guestContato.telefone.replace(/\D/g, '').length >= 10 &&
     !emailExiste &&
     !verificandoEmail;
+
+  // Retirada: nome, WhatsApp e CPF. E-mail é opcional, mas, se vier, precisa ser válido.
+  const emailRetiradaVazio = guestContato.email.trim() === '';
+  const guestRetiradaValido =
+    guestContato.nome.trim().length >= 3 &&
+    cpfValido(guestContato.cpf) &&
+    guestContato.telefone.replace(/\D/g, '').length >= 10 &&
+    (emailRetiradaVazio || (emailFormatoValido && !emailExiste && !verificandoEmail));
+
+  const titularValido = /^\d{5}-?\d{3}$/.test(titular.cep.trim()) && titular.numero.trim().length >= 1;
 
   const guestEnderecoValido =
     guestEndereco.cep.trim().length >= 8 &&
@@ -369,6 +388,22 @@ export default function CheckoutPage() {
     await loadCart();
   }
 
+  // Depois da identificação: na retirada vai direto ao pagamento (sem endereço nem frete).
+  function onContinuarIdentificacao() {
+    setErro('');
+    if (!retirada) {
+      setStep(2);
+      return;
+    }
+    setShippingOptions([]);
+    if (formaPagamento === 'BOLETO') setFormaPagamento('PIX');
+    setPedirEmailTitular(modo === 'convidado' && guestContato.email.trim() === '');
+    // Cliente com conta: o endereço salvo já serve de endereço do titular do cartão.
+    const salvo = addresses.find(a => a.id === enderecoId) ?? addresses[0];
+    if (salvo) setTitular(t => (t.cep || t.numero ? t : { cep: salvo.cep, numero: salvo.numero }));
+    setStep(3);
+  }
+
   async function onAdvanceToPayment() {
     const cep = modo === 'conta' ? addresses.find(a => a.id === enderecoId)?.cep : guestEndereco.cep;
     if (!cep) {
@@ -394,27 +429,35 @@ export default function CheckoutPage() {
     setLoading(true);
     setErro('');
     try {
-      const endereco = modo === 'conta' ? addresses.find(a => a.id === enderecoId) : guestEndereco;
-      if (!endereco) throw new Error('Endereço não encontrado');
+      // Na retirada não há endereço de entrega: no cartão, vale o CEP/número do titular.
+      const endereco = retirada ? null : modo === 'conta' ? addresses.find(a => a.id === enderecoId) : guestEndereco;
+      if (!retirada && !endereco) throw new Error('Endereço não encontrado');
+      const cobranca = retirada ? titular : { cep: endereco!.cep, numero: endereco!.numero };
 
       const contatoTitular =
         modo === 'conta'
           ? { nome: user!.nome, email: user!.email, cpf: user!.cpf || '', telefone: user!.telefone || undefined }
-          : { nome: guestContato.nome, email: guestContato.email, cpf: guestContato.cpf, telefone: guestContato.telefone };
+          : { nome: guestContato.nome, email: guestContato.email.trim(), cpf: guestContato.cpf, telefone: guestContato.telefone };
 
       const guestPayload =
-        modo === 'convidado'
+        modo === 'convidado' && !retirada
           ? { nome: guestContato.nome, email: guestContato.email, telefone: guestContato.telefone, cpf: guestContato.cpf, ...guestEndereco, complemento: guestEndereco.complemento || undefined }
           : undefined;
+      const guestRetiradaPayload =
+        modo === 'convidado' && retirada
+          ? { nome: guestContato.nome, telefone: guestContato.telefone, cpf: guestContato.cpf, email: guestContato.email.trim() || undefined }
+          : undefined;
+      const destino = retirada
+        ? { retirada: true, guestRetirada: guestRetiradaPayload, ...(formaPagamento === 'CARTAO_CREDITO' && { titular }) }
+        : modo === 'conta'
+          ? { enderecoId }
+          : { guest: guestPayload };
 
       let creditCardToken: string | undefined;
       let cartaoFallback: typeof cartao | undefined;
       if (formaPagamento === 'CARTAO_CREDITO') {
         try {
-          const { data: customerData } = await api.post<{ asaasCustomerId: string }>(
-            '/payments/asaas-customer',
-            modo === 'conta' ? { enderecoId } : { guest: guestPayload },
-          );
+          const { data: customerData } = await api.post<{ asaasCustomerId: string }>('/payments/asaas-customer', destino);
           creditCardToken = await tokenizeCard({
             customerId: customerData.asaasCustomerId,
             cartao,
@@ -422,8 +465,8 @@ export default function CheckoutPage() {
               nome: contatoTitular.nome,
               email: contatoTitular.email,
               cpf: contatoTitular.cpf,
-              cep: endereco.cep,
-              numero: endereco.numero,
+              cep: cobranca.cep,
+              numero: cobranca.numero,
               telefone: contatoTitular.telefone,
             },
           });
@@ -435,11 +478,10 @@ export default function CheckoutPage() {
       }
 
       const { data } = await api.post<{ order: { numero: string }; pagamento: any }>('/orders', {
-        ...(modo === 'conta' ? { enderecoId } : { guest: guestPayload }),
+        ...destino,
         formaPagamento,
         parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
-        cep: endereco.cep,
-        envioId,
+        ...(endereco && { cep: endereco.cep, envioId }),
         creditCardToken,
         cartao: cartaoFallback,
         cupom: cupomAplicado?.codigo,
@@ -462,7 +504,7 @@ export default function CheckoutPage() {
         });
       }
 
-      setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento, email: contatoTitular.email });
+      setPedidoConcluido({ numero: data.order.numero, pagamento: data.pagamento, email: contatoTitular.email, cpf: contatoTitular.cpf, retirada });
       setPagamentoConfirmado(formaPagamento === 'CARTAO_CREDITO');
       setStep(5);
       await refreshCart();
@@ -491,7 +533,9 @@ export default function CheckoutPage() {
         <span className="z-eyebrow">Checkout</span>
         <h1 className="z-title text-3xl sm:text-4xl">Como você quer continuar?</h1>
         <span className="z-rule" />
-        <p className="text-sm font-light leading-relaxed text-ink-muted">Você pode comprar sem criar conta, informando só os dados necessários para a entrega.</p>
+        <p className="text-sm font-light leading-relaxed text-ink-muted">
+          Você pode comprar sem criar conta, informando só os dados necessários para a entrega. Está em {RETIRADA.cidade}? Escolha a retirada e pague sem frete.
+        </p>
         <div className="mt-4 flex w-full flex-col gap-3 sm:flex-row">
           <button
             type="button"
@@ -526,9 +570,17 @@ export default function CheckoutPage() {
             {aguardandoPix || aguardandoBoleto ? 'Pedido recebido!' : 'Pagamento confirmado!'}
           </p>
           <p className="mt-2 text-sm text-ink-muted">Número do pedido: <strong>{pedidoConcluido.numero}</strong></p>
-          <p className="mt-1 text-xs text-ink-tertiary">
-            Enviamos a confirmação para {pedidoConcluido.email}.
-          </p>
+          {pedidoConcluido.email && (
+            <p className="mt-1 text-xs text-ink-tertiary">
+              Enviamos a confirmação para {pedidoConcluido.email}.
+            </p>
+          )}
+          {pedidoConcluido.retirada && (
+            <p className="mt-3 rounded-lg border border-border-subtle bg-white px-4 py-3 text-sm text-ink-muted">
+              <strong className="text-ink">{RETIRADA.rotulo}.</strong> Assim que o pagamento for confirmado, você recebe a confirmação no seu
+              WhatsApp, e logo entraremos em contato para combinar a entrega.
+            </p>
+          )}
           {aguardandoPix && (
             <div className="mt-3 flex flex-col items-center gap-2">
               <p className="text-xs text-ink-muted">Assim que o pagamento for identificado, esta página atualiza sozinha.</p>
@@ -598,7 +650,11 @@ export default function CheckoutPage() {
   // Cupom de frete grátis zera o frete cobrado — sem isso o total exibido/cobrado
   // no client incluía o valor do frete mesmo com o cupom aplicado, já que a cotação
   // de frete (etapa 3) não sabe nada sobre o cupom.
-  const freteSelecionado = cupomAplicado?.freteGratis ? (freteSelecionadoBruto === null ? null : 0) : freteSelecionadoBruto;
+  const freteSelecionado = retirada ? 0 : cupomAplicado?.freteGratis ? (freteSelecionadoBruto === null ? null : 0) : freteSelecionadoBruto;
+  const formasPagamento = retirada ? (['CARTAO_CREDITO', 'PIX'] as const) : (['CARTAO_CREDITO', 'PIX', 'BOLETO'] as const);
+  // Cartão na retirada: o Asaas exige CEP/número do titular e, sem conta, também um e-mail.
+  const cartaoRetiradaIncompleto =
+    retirada && formaPagamento === 'CARTAO_CREDITO' && (!titularValido || (modo === 'convidado' && !emailFormatoValido));
   const totalComFrete = round(resumo.subtotal - resumo.desconto + (freteSelecionado ?? 0));
 
   return (
@@ -637,6 +693,7 @@ export default function CheckoutPage() {
         <div className="flex-1">
           {step === 1 && modo === 'conta' && user && (
             <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <RecebimentoToggle retirada={retirada} onChange={setRetirada} />
               <h2 className="z-title text-2xl">Identificação</h2>
               <p className="text-sm text-ink-muted">Olá, {user.nome}! Confirme seus dados para continuar.</p>
               <div className="text-sm text-ink-muted">
@@ -667,10 +724,15 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               )}
+              {retirada && !user.telefone && (
+                <p className="text-xs text-danger">
+                  Cadastre seu celular em <Link href="/conta" className="underline">Minha conta</Link> para recebermos você pelo WhatsApp.
+                </p>
+              )}
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                disabled={!user.cpf}
+                onClick={onContinuarIdentificacao}
+                disabled={!user.cpf || (retirada && !user.telefone)}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
@@ -680,7 +742,51 @@ export default function CheckoutPage() {
 
           {step === 1 && modo === 'convidado' && (
             <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              <RecebimentoToggle retirada={retirada} onChange={setRetirada} />
               <h2 className="z-title text-2xl">Identificação</h2>
+              {retirada ? (
+                <>
+                  <p className="text-sm text-ink-muted">Só precisamos do seu nome e do seu WhatsApp. O CPF é exigido para gerar o pagamento.</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="sm:col-span-2" />
+                    <Field label="WhatsApp (com DDD)" value={guestContato.telefone} onChange={v => setGuestContato(c => ({ ...c, telefone: v }))} required />
+                    <label className="flex flex-col gap-1.5 text-sm">
+                      <span className="text-ink-muted">CPF</span>
+                      <input
+                        value={guestContato.cpf}
+                        onChange={e => setGuestContato(c => ({ ...c, cpf: formatarCpf(e.target.value) }))}
+                        inputMode="numeric"
+                        maxLength={14}
+                        placeholder="000.000.000-00"
+                        required
+                        className="rounded-md border border-border-subtle px-3.5 py-2.5 outline-none transition-colors focus:border-gold"
+                      />
+                    </label>
+                    <div className="flex flex-col gap-1.5 sm:col-span-2">
+                      <Field label="E-mail (opcional)" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} />
+                      {!emailRetiradaVazio && !emailFormatoValido && <span className="text-xs text-danger">E-mail inválido.</span>}
+                      {emailFormatoValido && !verificandoEmail && emailExiste && (
+                        <p className="text-xs text-danger">
+                          Este e-mail já tem uma conta na Zoliê.{' '}
+                          <button type="button" onClick={() => router.push('/login?next=/checkout')} className="underline hover:text-danger">
+                            Entrar
+                          </button>{' '}
+                          ou deixe o campo em branco.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onContinuarIdentificacao}
+                    disabled={!guestRetiradaValido}
+                    className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
+                  >
+                    Continuar para o pagamento
+                  </button>
+                </>
+              ) : (
+              <>
               <p className="text-sm text-ink-muted">Informe seus dados para continuar como convidado.</p>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="Nome completo" value={guestContato.nome} onChange={v => setGuestContato(c => ({ ...c, nome: v }))} required className="sm:col-span-2" />
@@ -719,12 +825,14 @@ export default function CheckoutPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setStep(2)}
+                onClick={onContinuarIdentificacao}
                 disabled={!guestContatoValido}
                 className="self-start rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50"
               >
                 Continuar
               </button>
+              </>
+              )}
             </div>
           )}
 
@@ -808,8 +916,23 @@ export default function CheckoutPage() {
 
           {step === 3 && (
             <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
+              {retirada ? (
+                <>
+                  <h2 className="z-title text-2xl">Retirada</h2>
+                  <div className="flex flex-col gap-1 rounded-md border border-gold bg-bg-alt/60 p-3 text-sm">
+                    <span className="flex items-center justify-between font-medium text-ink">
+                      {RETIRADA.rotulo}
+                      <span>Grátis</span>
+                    </span>
+                    <span className="text-ink-muted">
+                      Depois do pagamento, você recebe a confirmação no WhatsApp e nós entramos em contato para combinar a entrega.
+                    </span>
+                  </div>
+                </>
+              ) : (
               <h2 className="z-title text-2xl">Forma de envio</h2>
-              {shippingOptions.map(o => (
+              )}
+              {!retirada && shippingOptions.map(o => (
                 <label key={o.id} className={`flex cursor-pointer items-center justify-between rounded-md border p-3 text-sm ${envioId === o.id ? 'border-gold' : 'border-border-soft'}`}>
                   <span className="flex items-center gap-3">
                     <input type="radio" checked={envioId === o.id} onChange={() => setEnvioId(o.id)} />
@@ -824,7 +947,7 @@ export default function CheckoutPage() {
                   <span className="font-medium text-ink">{o.valor === 0 || cupomAplicado?.freteGratis ? 'Grátis' : brl(o.valor)}</span>
                 </label>
               ))}
-              {freteEstimado && (
+              {freteEstimado && !retirada && (
                 <p className="text-xs text-ink-tertiary">
                   Não foi possível consultar a transportadora agora, então este é um valor estimado.
                   Confirmamos o frete real antes do envio e avisamos se houver qualquer diferença.
@@ -833,7 +956,7 @@ export default function CheckoutPage() {
 
               <h2 className="mt-2 z-title text-2xl">Pagamento</h2>
               <div className="flex flex-wrap gap-2">
-                {(['CARTAO_CREDITO', 'PIX', 'BOLETO'] as const).map(m => (
+                {formasPagamento.map(m => (
                   <button
                     key={m}
                     type="button"
@@ -877,6 +1000,16 @@ export default function CheckoutPage() {
                     </select>
                   </label>
                   <Field label="CVV" value={cartao.cvv} onChange={v => setCartao(c => ({ ...c, cvv: v.replace(/\D/g, '').slice(0, 4) }))} />
+                  {retirada && (
+                    <>
+                      <p className="text-xs text-ink-tertiary sm:col-span-2">Endereço de cobrança do cartão (exigido pela operadora):</p>
+                      <Field label="CEP do titular" value={titular.cep} onChange={v => setTitular(t => ({ ...t, cep: v }))} required />
+                      <Field label="Número" value={titular.numero} onChange={v => setTitular(t => ({ ...t, numero: v }))} required />
+                      {pedirEmailTitular && (
+                        <Field label="E-mail do titular" value={guestContato.email} onChange={v => setGuestContato(c => ({ ...c, email: v }))} required className="sm:col-span-2" />
+                      )}
+                    </>
+                  )}
                 </div>
               )}
               {formaPagamento === 'PIX' && (
@@ -887,10 +1020,15 @@ export default function CheckoutPage() {
               {formaPagamento === 'BOLETO' && <p className="text-sm text-ink-muted">Vencimento em 3 dias úteis após a confirmação.</p>}
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button type="button" onClick={() => setStep(2)} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text sm:w-auto sm:self-start">
+                <button type="button" onClick={() => setStep(retirada ? 1 : 2)} className="w-full rounded-full border border-border-soft px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink-muted hover:border-gold-text sm:w-auto sm:self-start">
                   Voltar
                 </button>
-                <button type="button" onClick={() => setStep(4)} className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover sm:w-auto sm:self-start">
+                <button
+                  type="button"
+                  onClick={() => setStep(4)}
+                  disabled={cartaoRetiradaIncompleto}
+                  className="w-full rounded-full bg-gold px-6 py-3 text-xs font-medium uppercase tracking-wider text-ink shadow-xs hover:bg-gold-hover disabled:opacity-50 sm:w-auto sm:self-start"
+                >
                   Revisar pedido
                 </button>
               </div>
@@ -900,6 +1038,12 @@ export default function CheckoutPage() {
           {step === 4 && (
             <div className="flex flex-col gap-4 z-card p-5 sm:p-6">
               <h2 className="z-title text-2xl">Confirmação</h2>
+              {retirada && (
+                <p className="rounded-md border border-border-subtle bg-bg-alt/60 px-3 py-2 text-sm text-ink-muted">
+                  <strong className="text-ink">{RETIRADA.rotulo}</strong>: sem frete. Entraremos em contato pelo WhatsApp{' '}
+                  {modo === 'conta' ? user?.telefone : guestContato.telefone} para combinar a entrega.
+                </p>
+              )}
               <div className="flex flex-col gap-2">
                 {cart.items.map(item => (
                   <div key={item.id} className="flex justify-between text-sm text-ink-muted">
@@ -929,7 +1073,10 @@ export default function CheckoutPage() {
           <div className="flex flex-col gap-2 z-card p-5 sm:p-6 text-sm lg:sticky lg:top-24">
             <h2 className="z-title text-xl">Resumo do pedido</h2>
             <Row label="Subtotal" value={brl(resumo.subtotal)} />
-            <Row label="Frete" value={freteSelecionado === null ? 'A calcular' : freteSelecionado === 0 ? 'Grátis' : brl(freteSelecionado)} />
+            <Row
+              label={retirada ? 'Retirada' : 'Frete'}
+              value={retirada ? `${RETIRADA.cidade} · Grátis` : freteSelecionado === null ? 'A calcular' : freteSelecionado === 0 ? 'Grátis' : brl(freteSelecionado)}
+            />
             {resumo.desconto > 0 && <Row label="Desconto" value={`- ${brl(resumo.desconto)}`} />}
 
             <div className="border-t border-border-subtle pt-2">
@@ -969,6 +1116,35 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Entrega pelos Correios ou retirada em Fortaleza/CE (sem endereço da loja, só a cidade). */
+function RecebimentoToggle({ retirada, onChange }: { retirada: boolean; onChange: (v: boolean) => void }) {
+  const opcoes = [
+    { valor: false, titulo: 'Receber em casa', texto: 'Enviamos para o seu endereço' },
+    { valor: true, titulo: `Retirar em ${RETIRADA.cidade}`, texto: 'Sem frete · combinamos a entrega pelo WhatsApp' },
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-xs font-medium uppercase tracking-[0.12em] text-ink-tertiary">Como você quer receber?</span>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {opcoes.map(o => (
+          <button
+            key={String(o.valor)}
+            type="button"
+            onClick={() => onChange(o.valor)}
+            aria-pressed={retirada === o.valor}
+            className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left text-sm transition-colors ${
+              retirada === o.valor ? 'border-gold bg-bg-alt/60 shadow-[0_0_0_3px_rgba(212,175,55,0.15)]' : 'border-border-soft hover:border-gold-soft'
+            }`}
+          >
+            <span className="font-medium text-ink">{o.titulo}</span>
+            <span className="text-xs text-ink-tertiary">{o.texto}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

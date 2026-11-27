@@ -9,6 +9,8 @@ import { CancelOrderButton } from '@/components/admin/CancelOrderButton';
 import { InvoicePanel } from '@/components/admin/InvoicePanel';
 import { PrevisaoEntrega } from '@/components/ui/PrevisaoEntrega';
 import { PersonalizacaoResumo } from '@/components/product/PersonalizacaoResumo';
+import { RETIRADA } from '@/lib/loja';
+import { linkWhatsapp } from '@/lib/services/whatsapp/mensagens';
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -94,13 +96,15 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
           />
         </div>
 
-        <LabelPanel
-          orderId={order.id}
-          status={order.status}
-          melhorEnvioId={order.melhorEnvioId}
-          etiquetaUrl={order.etiquetaUrl}
-          codigoRastreio={order.codigoRastreio}
-        />
+        {!order.retirada && (
+          <LabelPanel
+            orderId={order.id}
+            status={order.status}
+            melhorEnvioId={order.melhorEnvioId}
+            etiquetaUrl={order.etiquetaUrl}
+            codigoRastreio={order.codigoRastreio}
+          />
+        )}
 
         <div className="flex flex-col gap-2 rounded-xl bg-white p-4 text-sm shadow-xs">
           <h3 className="font-sans text-lg font-semibold text-ink">
@@ -109,13 +113,25 @@ export default async function AdminPedidoDetailPage({ params }: Props) {
           </h3>
           <div className="text-ink-muted">
             <div>{order.user?.nome ?? order.guestNome}</div>
-            <div>{order.user?.email ?? order.guestEmail}</div>
+            {(order.user?.email ?? order.guestEmail) && <div>{order.user?.email ?? order.guestEmail}</div>}
             {(order.user?.telefone ?? order.guestTelefone) && <div>{order.user?.telefone ?? order.guestTelefone}</div>}
             {(order.user?.cpf ?? order.guestCpf) && <div>CPF: {order.user?.cpf ?? order.guestCpf}</div>}
           </div>
-          <div className="border-t border-border-subtle pt-2 text-ink-muted">
-            {order.endereco?.rua ?? order.guestRua}, {order.endereco?.numero ?? order.guestNumero} · {order.endereco?.bairro ?? order.guestBairro} · {order.endereco?.cidade ?? order.guestCidade}/{order.endereco?.estado ?? order.guestEstado} · {order.endereco?.cep ?? order.guestCep}
-          </div>
+          {order.retirada ? (
+            <div className="flex flex-col gap-1 border-t border-border-subtle pt-2 text-ink-muted">
+              <span className="self-start rounded-full bg-gold px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink">{RETIRADA.rotulo}</span>
+              <span>Sem frete. Chame a cliente no WhatsApp para combinar a entrega.</span>
+              {linkWhatsapp(order.user?.telefone ?? order.guestTelefone) && (
+                <a href={linkWhatsapp(order.user?.telefone ?? order.guestTelefone)!} target="_blank" rel="noreferrer" className="text-gold-text hover:text-gold-text-hover">
+                  Abrir conversa no WhatsApp
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="border-t border-border-subtle pt-2 text-ink-muted">
+              {order.endereco?.rua ?? order.guestRua}, {order.endereco?.numero ?? order.guestNumero} · {order.endereco?.bairro ?? order.guestBairro} · {order.endereco?.cidade ?? order.guestCidade}/{order.endereco?.estado ?? order.guestEstado} · {order.endereco?.cep ?? order.guestCep}
+            </div>
+          )}
           <div className="border-t border-border-subtle pt-2 text-ink-muted">
             Pagamento: {order.formaPagamento} {order.parcelas > 1 ? `em ${order.parcelas}x` : ''}
           </div>

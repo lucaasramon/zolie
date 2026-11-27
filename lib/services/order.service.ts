@@ -20,6 +20,7 @@ import { logger } from '@/lib/logger';
 import * as whatsapp from '@/lib/services/whatsapp';
 import { linkWhatsapp, pagamentoLabel } from '@/lib/services/whatsapp/mensagens';
 import { env } from '@/lib/env';
+import { RETIRADA } from '@/lib/loja';
 import { prisma } from '@/lib/prisma';
 import { OrderStatus } from '@prisma/client';
 
@@ -47,8 +48,20 @@ interface GuestInput {
   estado: string;
 }
 
+interface GuestRetiradaInput {
+  nome: string;
+  telefone: string;
+  cpf: string;
+  email?: string;
+}
+
 interface CreateOrderInput {
   enderecoId?: string;
+  /** Retirada em Fortaleza/CE: sem endereço, sem frete. */
+  retirada?: boolean;
+  guestRetirada?: GuestRetiradaInput;
+  /** CEP e número do titular do cartão — só na retirada, onde não há endereço de entrega. */
+  titular?: { cep: string; numero: string };
   formaPagamento: 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
   parcelas?: number;
   cep?: string;
@@ -62,7 +75,8 @@ interface CreateOrderInput {
 
 interface ContatoResolvido {
   nome: string;
-  email: string;
+  /** Só pode faltar na retirada de convidado, onde o e-mail é opcional. */
+  email: string | null;
   cpf: string;
   telefone?: string | null;
 }
@@ -86,8 +100,22 @@ interface EnderecoResolvido {
  */
 async function resolveContatoEEndereco(
   userId: string | null,
-  { enderecoId, guest }: Pick<CreateOrderInput, 'enderecoId' | 'guest'>,
-): Promise<{ contato: ContatoResolvido; endereco: EnderecoResolvido }> {
+  { enderecoId, guest, retirada, guestRetirada }: Pick<CreateOrderInput, 'enderecoId' | 'guest' | 'retirada' | 'guestRetirada'>,
+): Promise<{ contato: ContatoResolvido; endereco: EnderecoResolvido | null }> {
+  if (retirada) {
+    if (userId) {
+      const user = await userRepo.findById(userId);
+      if (!user) throw notFound('Usuário');
+      if (!user.cpf) throw new AppError('Cadastre seu CPF antes de finalizar a compra', 422, 'CPF_REQUIRED');
+      return { contato: { nome: user.nome, email: user.email, cpf: user.cpf, telefone: user.telefone }, endereco: null };
+    }
+    if (!guestRetirada) throw new AppError('Informe seu nome, WhatsApp e CPF para finalizar a compra', 422, 'GUEST_DATA_REQUIRED');
+    return {
+      contato: { nome: guestRetirada.nome, email: guestRetirada.email ?? null, cpf: guestRetirada.cpf, telefone: guestRetirada.telefone },
+      endereco: null,
+    };
+  }
+
   if (userId) {
     const user = await userRepo.findById(userId);
     if (!user) throw notFound('Usuário');
@@ -116,7 +144,7 @@ async function resolveContatoEEndereco(
 /** Alerta de compra que não foi concluída, com o contato da cliente para recuperar a venda. */
 function alertarCheckout(
   titulo: string,
-  contato: { nome: string; email: string; telefone?: string | null },
+  contato: { nome: string; email: string | null; telefone?: string | null },
   detalhes: Record<string, unknown>,
   nivel: 'erro' | 'aviso' = 'erro',
 ) {
@@ -126,17 +154,20 @@ function alertarCheckout(
     {
       Cliente: contato.nome,
       Telefone: contato.telefone ? `${contato.telefone}${zap ? ` · ${zap}` : ''}` : undefined,
-      'E-mail': contato.email,
+      'E-mail': contato.email ?? undefined,
       ...detalhes,
     },
     // Uma cliente tentando de novo em seguida não gera vários avisos iguais.
-    { nivel, chave: `${titulo}:${contato.email}` },
+    { nivel, chave: `${titulo}:${contato.email ?? contato.telefone ?? contato.nome}` },
   );
 }
 
-export async function create(userId: string | null, cartOwner: CartOwner, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp, guest }: CreateOrderInput) {
+export async function create(userId: string | null, cartOwner: CartOwner, { enderecoId, formaPagamento, parcelas = 1, cep, cupom, envioId = 'pac', creditCardToken, cartao, remoteIp, guest, retirada = false, guestRetirada, titular }: CreateOrderInput) {
   await siteConfig.preparar();
-  const { contato, endereco } = await resolveContatoEEndereco(userId, { enderecoId, guest });
+  if (retirada && formaPagamento === 'BOLETO') {
+    throw new AppError('Na retirada, pague com Pix ou cartão', 422, 'PICKUP_PAYMENT_METHOD');
+  }
+  const { contato, endereco } = await resolveContatoEEndereco(userId, { enderecoId, guest, retirada, guestRetirada });
 
   const cart = await cartRepo.getByOwner(cartOwner);
   const items = cart.items.filter(i => i.product);
@@ -161,10 +192,16 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
   }
 
   const base = pricing.resumo(items);
-  const cotacao = await shipping.cotar(cep || endereco.cep, base.subtotal, {
-    itens: items.map(i => ({ quantidade: i.quantidade, pesoGramas: i.product.pesoGramas })),
-  });
-  const opcao = cotacao.opcoes.find(o => o.id === envioId) || cotacao.opcoes[0];
+  // Retirada não passa pela transportadora: frete zero, sem prazo nem serviço de envio.
+  let opcao: { id: string | null; nome: string; valor: number; prazoDias: number | null };
+  if (retirada || !endereco) {
+    opcao = { id: null, nome: RETIRADA.rotulo, valor: 0, prazoDias: null };
+  } else {
+    const cotacao = await shipping.cotar(cep || endereco.cep, base.subtotal, {
+      itens: items.map(i => ({ quantidade: i.quantidade, pesoGramas: i.product.pesoGramas })),
+    });
+    opcao = cotacao.opcoes.find(o => o.id === envioId) || cotacao.opcoes[0];
+  }
   let frete = opcao.valor;
   let desconto = 0;
   let cupomCodigo: string | null = null;
@@ -192,7 +229,8 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
       {
         numero,
         userId,
-        enderecoId: endereco.enderecoId,
+        enderecoId: endereco?.enderecoId ?? null,
+        retirada,
         status: 'AGUARDANDO_PAGAMENTO',
         formaPagamento,
         parcelas: formaPagamento === 'CARTAO_CREDITO' ? parcelas : 1,
@@ -211,13 +249,13 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
         guestEmail: userId ? null : contato.email,
         guestTelefone: userId ? null : contato.telefone,
         guestCpf: userId ? null : contato.cpf,
-        guestCep: userId ? null : endereco.cep,
-        guestRua: userId ? null : endereco.rua,
-        guestNumero: userId ? null : endereco.numero,
-        guestComplemento: userId ? null : endereco.complemento,
-        guestBairro: userId ? null : endereco.bairro,
-        guestCidade: userId ? null : endereco.cidade,
-        guestEstado: userId ? null : endereco.estado,
+        guestCep: userId ? null : endereco?.cep ?? null,
+        guestRua: userId ? null : endereco?.rua ?? null,
+        guestNumero: userId ? null : endereco?.numero ?? null,
+        guestComplemento: userId ? null : endereco?.complemento ?? null,
+        guestBairro: userId ? null : endereco?.bairro ?? null,
+        guestCidade: userId ? null : endereco?.cidade ?? null,
+        guestEstado: userId ? null : endereco?.estado ?? null,
       },
       items.map(i => ({
         productId: i.productId,
@@ -259,7 +297,11 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
       cartao,
       remoteIp,
       user: { id: userId, nome: contato.nome, email: contato.email, cpf: contato.cpf, telefone: contato.telefone },
-      endereco: { cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, bairro: endereco.bairro, complemento: endereco.complemento },
+      endereco: endereco
+        ? { cep: endereco.cep, rua: endereco.rua, numero: endereco.numero, bairro: endereco.bairro, complemento: endereco.complemento }
+        : titular
+          ? { cep: titular.cep, numero: titular.numero }
+          : null,
     });
   } catch (err) {
     await prisma.$transaction(async (tx) => {
@@ -312,7 +354,7 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
   // é o mesmo em toda compra futura do mesmo e-mail — reusar em vez de gerar um
   // novo é o que faz o link salvo pelo cliente continuar valendo depois.
   let guestOrderAccessToken: string | null = null;
-  if (!userId) {
+  if (!userId && contato.email) {
     const emailNormalizado = contato.email.trim().toLowerCase();
     const existente = await guestOrderAccessRepo.findByEmail(emailNormalizado);
     guestOrderAccessToken = existente?.token ?? null;
@@ -322,7 +364,10 @@ export async function create(userId: string | null, cartOwner: CartOwner, { ende
     }
   }
 
-  await email.enviarConfirmacaoPedido(contato.email, contato.nome, order.numero, order.items, order.total, guestOrderAccessToken);
+  // Retirada sem e-mail: a confirmação vai só pelo WhatsApp, quando o pagamento entra.
+  if (contato.email) {
+    await email.enviarConfirmacaoPedido(contato.email, contato.nome, order.numero, order.items, order.total, guestOrderAccessToken);
+  }
 
   return { order: { ...order, asaasPaymentId: pagamento.asaasPaymentId, asaasStatus: pagamento.asaasStatus }, pagamento };
 }
@@ -343,8 +388,12 @@ export async function detail(userId: string, id: string, isAdmin = false) {
  * checkout para saber quando um Pix/boleto foi pago e trocar a tela sozinha. Só
  * expõe o mínimo (status pago ou não), nunca dados do pedido.
  */
-export async function statusPublico(numero: string, email: string) {
-  const order = await orderRepo.findByNumeroAndEmail(numero, email.trim().toLowerCase());
+export async function statusPublico(numero: string, segredo: { email?: string; cpf?: string }) {
+  const order = segredo.email
+    ? await orderRepo.findByNumeroAndEmail(numero, segredo.email.trim().toLowerCase())
+    : segredo.cpf
+      ? await orderRepo.findByNumeroAndCpf(numero, segredo.cpf)
+      : null;
   if (!order) throw notFound('Pedido');
   return { status: order.status, pago: order.status !== 'AGUARDANDO_PAGAMENTO' && order.status !== 'CANCELADO' };
 }
@@ -506,7 +555,10 @@ export async function updateStatus(id: string, status: OrderStatus, opts: Update
   if (!order) throw notFound('Pedido');
 
   // Antes dos e-mails: uma falha no envio de e-mail não pode impedir o aviso da venda.
-  if (motivo === 'PAGAMENTO_CONFIRMADO') whatsapp.notificarVendaConfirmada(order.id);
+  if (motivo === 'PAGAMENTO_CONFIRMADO') {
+    whatsapp.notificarVendaConfirmada(order.id);
+    whatsapp.notificarClienteCompraConfirmada(order.id);
+  }
 
   const emailStatus = order.user?.email ?? order.guestEmail;
   const nomeStatus = order.user?.nome ?? order.guestNome ?? '';

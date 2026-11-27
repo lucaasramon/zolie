@@ -4,10 +4,12 @@ import { userRepo } from '@/lib/repositories/user.repo';
 interface ResolveCustomerInput {
   userId: string | null;
   nome: string;
-  email: string;
+  /** Vazio na retirada sem e-mail: o Asaas aceita customer só com nome e CPF. */
+  email?: string | null;
   cpf: string;
   telefone?: string | null;
-  endereco: { cep: string; rua: string; numero: string; bairro: string };
+  /** Na retirada não há endereço de entrega: no máximo o CEP/número do titular do cartão. */
+  endereco?: { cep: string; rua?: string; numero: string; bairro?: string } | null;
 }
 
 export async function resolveCustomerId(input: ResolveCustomerInput): Promise<string> {
@@ -28,12 +30,12 @@ export async function resolveCustomerId(input: ResolveCustomerInput): Promise<st
   const customer = await asaasClient.createCustomer({
     name: input.nome,
     cpfCnpj: cpfLimpo,
-    email: input.email,
+    email: input.email || undefined,
     mobilePhone: telefone,
-    postalCode: input.endereco.cep.replace(/\D/g, ''),
-    address: input.endereco.rua,
-    addressNumber: input.endereco.numero,
-    province: input.endereco.bairro,
+    postalCode: input.endereco?.cep.replace(/\D/g, '') || undefined,
+    address: input.endereco?.rua || undefined,
+    addressNumber: input.endereco?.numero || undefined,
+    province: input.endereco?.bairro || undefined,
     externalReference: input.userId ?? undefined,
   });
 

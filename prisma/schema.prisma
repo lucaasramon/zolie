@@ -353,6 +353,9 @@ model Order {
   // Anotação livre do admin sobre a venda presencial (ex: "feira de artesanato",
   // "encomenda da vizinha"). Nunca exibida ao cliente.
   observacao     String?
+  // Retirada em Fortaleza/CE: sem endereço, sem frete e sem etiqueta. A equipe
+  // combina a entrega com a cliente pelo WhatsApp depois do pagamento.
+  retirada       Boolean       @default(false)
   formaPagamento PaymentMethod @map("forma_pagamento")
   parcelas       Int           @default(1)
   subtotal       Decimal       @db.Decimal(10, 2)

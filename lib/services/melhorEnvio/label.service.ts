@@ -97,6 +97,9 @@ export async function comprarEtiqueta(orderId: string) {
   if (order.melhorEnvioId && order.etiquetaUrl) {
     throw new AppError('Este pedido já tem etiqueta comprada', 422, 'LABEL_ALREADY_BOUGHT');
   }
+  if (order.retirada) {
+    throw new AppError('Pedido de retirada não usa etiqueta: a entrega é combinada com a cliente', 422, 'ORDER_IS_PICKUP');
+  }
   if (order.status === 'CANCELADO') {
     throw new AppError('Não é possível gerar etiqueta de um pedido cancelado', 422, 'ORDER_CANCELLED');
   }

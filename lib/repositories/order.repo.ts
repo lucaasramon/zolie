@@ -170,6 +170,12 @@ export const orderRepo = {
    * funciona como segredo compartilhado: impede que alguém descubra o status de
    * outro pedido só incrementando o número sequencial.
    */
+  /** Retirada sem e-mail: o CPF da cliente faz o papel de segredo na consulta pública. */
+  findByNumeroAndCpf: (numero: string, cpf: string) =>
+    prisma.order.findFirst({
+      where: { numero, OR: [{ user: { cpf } }, { guestCpf: cpf }] },
+      select: { status: true, asaasStatus: true, formaPagamento: true },
+    }),
   findByNumeroAndEmail: (numero: string, email: string) =>
     prisma.order.findFirst({
       where: {

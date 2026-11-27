@@ -15,6 +15,15 @@ export const LOJA = {
   instagram: process.env.NEXT_PUBLIC_LOJA_INSTAGRAM || '',
 } as const;
 
+/**
+ * Retirada: o site só diz a cidade, nunca o endereço da loja. A equipe combina a
+ * entrega com a cliente pelo WhatsApp depois do pagamento.
+ */
+export const RETIRADA = {
+  cidade: 'Fortaleza/CE',
+  rotulo: 'Retirada em Fortaleza/CE',
+} as const;
+
 /** `11987654321` → `(11) 98765-4321`. Devolve vazio se não houver número. */
 export function formatarTelefone(digitos: string): string {
   const d = digitos.replace(/\D/g, '');

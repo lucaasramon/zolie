@@ -11,7 +11,23 @@ import { asaasCustomerSchema } from '@/lib/validation/schemas';
 // Funciona tanto para usuário autenticado (enderecoId de uma conta) quanto para
 // convidado (dados informados inline no checkout).
 export const POST = withOptionalAuth(async (req, _ctx, authUser) => {
-  const { enderecoId, guest } = asaasCustomerSchema.parse(await req.json());
+  const { enderecoId, guest, retirada, guestRetirada, titular } = asaasCustomerSchema.parse(await req.json());
+
+  // Retirada: sem endereço de entrega — o customer leva só o CEP/número do titular.
+  if (retirada) {
+    const contato = authUser ? await userRepo.findById(authUser.sub) : guestRetirada;
+    if (!contato) throw new AppError('Informe seus dados para continuar', 422, 'GUEST_DATA_REQUIRED');
+    if (!contato.cpf) throw new AppError('Cadastre seu CPF antes de continuar', 422, 'CPF_REQUIRED');
+    const customerId = await resolveCustomerId({
+      userId: authUser?.sub ?? null,
+      nome: contato.nome,
+      email: contato.email,
+      cpf: contato.cpf,
+      telefone: contato.telefone,
+      endereco: titular ? { cep: titular.cep, numero: titular.numero } : null,
+    });
+    return ok({ asaasCustomerId: customerId });
+  }
 
   if (authUser) {
     const user = await userRepo.findById(authUser.sub);

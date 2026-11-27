@@ -65,10 +65,28 @@ export const guestCheckoutSchema = z.object({
   estado: z.string().length(2),
 });
 
+// Retirada sem conta: só o que o pagamento exige (o Asaas não cobra sem CPF).
+// E-mail é opcional; quando vem, a cliente também recebe a confirmação por e-mail.
+export const guestRetiradaSchema = z.object({
+  nome: z.string().trim().min(3),
+  telefone: z.string().trim().refine(v => v.replace(/\D/g, '').length >= 10, 'Informe o WhatsApp com DDD'),
+  cpf,
+  email: z.preprocess(v => (typeof v === 'string' && v.trim() === '' ? undefined : v), email.optional()),
+});
+
+// Titular do cartão na retirada: sem endereço de entrega, o Asaas ainda pede CEP e número.
+const titularCartaoSchema = z.object({
+  cep: z.string().regex(/^\d{5}-?\d{3}$/, 'CEP inválido'),
+  numero: z.string().trim().min(1),
+});
+
 export const orderSchema = z
   .object({
     enderecoId: z.string().min(1).optional(),
     guest: guestCheckoutSchema.optional(),
+    retirada: z.boolean().optional(),
+    guestRetirada: guestRetiradaSchema.optional(),
+    titular: titularCartaoSchema.optional(),
     formaPagamento: z.enum(['CARTAO_CREDITO', 'PIX', 'BOLETO']),
     parcelas: z.number().int().min(1).max(18).optional(),
     cep: z.string().optional(),
@@ -78,7 +96,14 @@ export const orderSchema = z
     cartao: cardSchema.optional(),
   })
   .superRefine((data, ctx) => {
-    if (!data.enderecoId && !data.guest) {
+    if (data.retirada) {
+      if (data.formaPagamento === 'BOLETO') {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['formaPagamento'], message: 'Na retirada, pague com Pix ou cartão' });
+      }
+      if (data.formaPagamento === 'CARTAO_CREDITO' && !data.titular) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['titular'], message: 'Informe o CEP e o número do endereço do titular do cartão' });
+      }
+    } else if (!data.enderecoId && !data.guest) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enderecoId'], message: 'Selecione um endereço ou informe os dados de convidado' });
     }
     if (data.formaPagamento === 'CARTAO_CREDITO' && !data.creditCardToken && !data.cartao) {
@@ -116,9 +141,16 @@ export const asaasCustomerSchema = z
   .object({
     enderecoId: z.string().min(1).optional(),
     guest: guestCheckoutSchema.optional(),
+    retirada: z.boolean().optional(),
+    guestRetirada: guestRetiradaSchema.optional(),
+    titular: titularCartaoSchema.optional(),
   })
   .superRefine((data, ctx) => {
-    if (!data.enderecoId && !data.guest) {
+    if (data.retirada) {
+      if (!data.titular) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['titular'], message: 'Informe o CEP e o número do endereço do titular do cartão' });
+      }
+    } else if (!data.enderecoId && !data.guest) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['enderecoId'], message: 'Selecione um endereço ou informe os dados de convidado' });
     }
   });

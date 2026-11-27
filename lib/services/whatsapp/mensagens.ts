@@ -1,5 +1,7 @@
 import { brl } from '@/lib/utils/money';
 import { lerPersonalizacao, Personalizacao, resumoPersonalizacao } from '@/lib/personalizacao';
+import { RETIRADA } from '@/lib/loja';
+import { STATUS_LABEL } from '@/lib/utils/format';
 
 /**
  * Textos dos avisos internos enviados aos grupos de WhatsApp da loja. Funções
@@ -25,6 +27,8 @@ export interface PedidoParaAviso {
   desconto: unknown;
   total: unknown;
   cupomCodigo: string | null;
+  /** Ausente nos pedidos de antes da retirada existir. */
+  retirada?: boolean;
   transportadora: string | null;
   prazoDiasEnvio: number | null;
   user: { nome: string; email: string; telefone: string | null; cpf: string | null } | null;
@@ -138,10 +142,11 @@ export function mensagemVendaConfirmada(o: PedidoParaAviso, appUrl: string): str
 
   return [
     `🛍️ *NOVA VENDA CONFIRMADA* — Pedido *${o.numero}*${temPersonalizado ? '\n✨ _Contém peça personalizada_' : ''}`,
+    o.retirada ? `🏬 *RETIRADA EM ${RETIRADA.cidade.toUpperCase()}* — chamar a cliente no WhatsApp para combinar a entrega` : null,
     '',
     `👤 *Cliente:* ${c.nome}${c.convidado ? ' _(sem conta)_' : ''}`,
     c.telefone ? `📱 ${c.telefone}${zap ? ` · ${zap}` : ''}` : null,
-    `✉️ ${c.email}`,
+    c.email !== '—' ? `✉️ ${c.email}` : null,
     c.cpf ? `🪪 CPF ${c.cpf}` : null,
     end ? `📍 *${end.cidade}*\n${end.linha}` : null,
     '',
@@ -149,7 +154,9 @@ export function mensagemVendaConfirmada(o: PedidoParaAviso, appUrl: string): str
     ...itens,
     '',
     `Subtotal: ${brl(num(o.subtotal))}`,
-    `Frete: ${frete === 0 ? 'Grátis' : brl(frete)}${o.transportadora ? ` · ${o.transportadora}` : ''}${o.prazoDiasEnvio ? ` (até ${o.prazoDiasEnvio} dias úteis)` : ''}`,
+    o.retirada
+      ? `Entrega: ${RETIRADA.rotulo} (sem frete)`
+      : `Frete: ${frete === 0 ? 'Grátis' : brl(frete)}${o.transportadora ? ` · ${o.transportadora}` : ''}${o.prazoDiasEnvio ? ` (até ${o.prazoDiasEnvio} dias úteis)` : ''}`,
     desconto > 0 ? `Desconto: - ${brl(desconto)}${o.cupomCodigo ? ` (cupom ${o.cupomCodigo})` : ''}` : null,
     `💰 *Total: ${brl(num(o.total))}* — ${pagamentoLabel(o.formaPagamento, o.parcelas)}`,
     '',
@@ -157,6 +164,39 @@ export function mensagemVendaConfirmada(o: PedidoParaAviso, appUrl: string): str
   ]
     .filter(l => l !== null)
     .join('\n');
+}
+
+/** Número no formato que a Evolution espera para conversa individual (55 + DDD + número). */
+export function numeroWhatsapp(telefone: string | null): string | null {
+  const d = (telefone || '').replace(/\D/g, '');
+  if (d.length < 10) return null;
+  return d.startsWith('55') && d.length >= 12 ? d : `55${d}`;
+}
+
+/** Mensagem para a própria cliente assim que o pagamento é confirmado. */
+export function mensagemClienteCompraConfirmada(o: PedidoParaAviso & { status: string }): string {
+  const c = cliente(o);
+  const primeiroNome = c.nome.split(' ')[0] || c.nome;
+  const itens = o.items.map(i => `▪️ ${i.quantidade}x ${i.nomeProduto}${i.tamanho ? ` (${i.tamanho})` : ''}`);
+  const status = STATUS_LABEL[o.status] ?? o.status;
+
+  return [
+    `Olá, ${primeiroNome}! 💛`,
+    '',
+    `Sua compra na *Zoliê Semijoias* foi *confirmada* ✅`,
+    '',
+    `🧾 *Pedido:* ${o.numero}`,
+    `📦 *Status:* Pagamento confirmado — ${status.toLowerCase()}`,
+    '',
+    ...itens,
+    `💰 *Total:* ${brl(num(o.total))} — ${pagamentoLabel(o.formaPagamento, o.parcelas)}`,
+    '',
+    o.retirada
+      ? `🏬 *Retirada em ${RETIRADA.cidade}*\nLogo entraremos em contato por aqui para combinar a entrega com você.`
+      : 'Logo entraremos em contato por aqui, e você recebe o código de rastreio assim que o pedido for enviado.',
+    '',
+    'Qualquer dúvida, é só responder esta mensagem. Obrigada por escolher a Zoliê! ✨',
+  ].join('\n');
 }
 
 export type NivelAlerta = 'erro' | 'aviso';

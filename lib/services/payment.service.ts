@@ -14,8 +14,9 @@ interface CriarCobrancaOpts {
   order: { id: string; total: unknown; numero: string };
   formaPagamento: 'CARTAO_CREDITO' | 'PIX' | 'BOLETO';
   parcelas?: number;
-  user: { id: string | null; nome: string; email: string; cpf: string; telefone?: string | null };
-  endereco: { cep: string; rua: string; numero: string; bairro: string; complemento?: string | null };
+  user: { id: string | null; nome: string; email?: string | null; cpf: string; telefone?: string | null };
+  /** Na retirada é só o CEP e o número do titular do cartão (ou nada, no Pix). */
+  endereco: { cep: string; rua?: string; numero: string; bairro?: string; complemento?: string | null } | null;
   /** Token gerado no client via Asaas.js — preferencial, evita que o PAN/CVV trafeguem pelo backend. */
   creditCardToken?: string;
   /** Fallback legado: dados crus do cartão, usados apenas se nenhum token for enviado. */
@@ -65,9 +66,10 @@ export async function criarCobranca({ order, formaPagamento, parcelas = 1, user,
         expiryYear: cartao.validadeAno,
         ccv: cartao.cvv,
       };
+      if (!endereco) throw new AppError('Informe o CEP e o número do endereço do titular do cartão', 422, 'CARD_HOLDER_ADDRESS_REQUIRED');
       payload.creditCardHolderInfo = {
         name: user.nome,
-        email: user.email,
+        email: user.email || undefined,
         cpfCnpj: user.cpf.replace(/\D/g, ''),
         postalCode: endereco.cep.replace(/\D/g, ''),
         addressNumber: endereco.numero,

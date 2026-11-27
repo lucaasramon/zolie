@@ -3,7 +3,16 @@ import { env } from '@/lib/env';
 import { orderRepo } from '@/lib/repositories/order.repo';
 import { productRepo } from '@/lib/repositories/product.repo';
 import { enviarImagem, enviarTexto, whatsappConfigurado } from './evolution';
-import { imagensPersonalizacao, mensagemAlerta, mensagemVendaConfirmada, NivelAlerta, PedidoParaAviso } from './mensagens';
+import {
+  cliente,
+  imagensPersonalizacao,
+  mensagemAlerta,
+  mensagemClienteCompraConfirmada,
+  mensagemVendaConfirmada,
+  NivelAlerta,
+  numeroWhatsapp,
+  PedidoParaAviso,
+} from './mensagens';
 
 /**
  * Avisos internos nos grupos de WhatsApp da loja:
@@ -53,6 +62,33 @@ export function notificarVendaConfirmada(orderId: string) {
           chave: `esgotou:${p.id}`,
         });
       }
+    }
+  });
+}
+
+/**
+ * Mensagem direta para a cliente (mesmo número da loja que faz os avisos):
+ * compra confirmada, status do pedido e, na retirada, que vamos chamar para
+ * combinar a entrega. Sem celular válido no pedido, não envia nada.
+ */
+export function notificarClienteCompraConfirmada(orderId: string) {
+  if (!whatsappConfigurado()) return;
+  agendar(async () => {
+    const order = await orderRepo.findById(orderId);
+    if (!order) return;
+    const pedido = order as unknown as PedidoParaAviso & { status: string };
+    const numero = numeroWhatsapp(cliente(pedido).telefone);
+    if (!numero) return;
+    try {
+      await enviarTexto(numero, mensagemClienteCompraConfirmada(pedido));
+    } catch (err) {
+      // A equipe precisa saber que a cliente ficou sem a confirmação para avisá-la à mão.
+      alertar('Não foi possível enviar a confirmação no WhatsApp da cliente', {
+        Pedido: order.numero,
+        Cliente: cliente(pedido).nome,
+        Telefone: cliente(pedido).telefone,
+        Erro: err instanceof Error ? err.message : String(err),
+      }, { nivel: 'aviso', chave: `confirmacao-cliente:${order.id}` });
     }
   });
 }
