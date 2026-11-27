@@ -26,6 +26,7 @@ export const BLACK_FRIDAY_SLUGS = new Set<string>([
   'colar-personalizado-com-pingente-retangular',
   'brinco-prata-coracao-cravejado',
   'brinco-banhado-a-ouro-argola-organica-cravejada',
+  'anel-prata-aro-trevo-cravejado',
 ]);
 
 /** Fim da campanha: 30/11/2026 às 23:59 de Brasília. Depois disso o selo some sozinho. */
